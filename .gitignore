@@ -4,14 +4,11 @@
 
 /conf/*
 !/conf/dist
-/modules/*
-!/modules/*.md
-!/modules/*.sh
-!/modules/CMakeLists.txt
-!/modules/*.h
-!/modules/*.cmake
+# /modules/*  
+!/modules/  
 /build*/
 /var/*
+
 !/var/build/.gitkeep
 !/var/ccache/.gitkeep
 /env/dist/*
