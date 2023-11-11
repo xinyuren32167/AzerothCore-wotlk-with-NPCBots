@@ -27,6 +27,7 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "Spell.h"
 
 enum WarriorSpells
 {
@@ -75,6 +76,73 @@ enum MiscSpells
     SPELL_PRIEST_RENEWED_HOPE                       = 63944,
     SPELL_GEN_DAMAGE_REDUCTION_AURA                 = 68066,
 };
+
+class spell_warrior : public PlayerScript
+{
+public:
+    spell_warrior() : PlayerScript("spell_warrior")
+    {
+        execute_spell_set.insert(EXECUTE_SPELL_IDS.begin(), EXECUTE_SPELL_IDS.end());
+        devastate_spell_set.insert(DEVASTATE_SPELL_IDS.begin(), DEVASTATE_SPELL_IDS.end());
+    }
+
+    std::vector<uint32> REQUIRED_ITEM_IDS = { 60102, 800030 };
+    uint32 JUGGERNAUT_SPELL_ID = 100248;
+    std::vector<uint32> EXECUTE_SPELL_IDS = { 47471, 47470, 25236, 25234, 20662, 20661, 20660, 20658, 5308 };
+    uint32 VANGUARD_DEFENSE_SPELL_ID = 100250;
+    std::vector<uint32> DEVASTATE_SPELL_IDS = { 47498, 20243, 30016, 30022, 47497 };
+    std::unordered_set<uint32> execute_spell_set;
+    std::unordered_set<uint32> devastate_spell_set;
+
+    bool hasRequiredItemEquipped(Player* player)
+    {
+        for (uint32 itemId : REQUIRED_ITEM_IDS)
+        {
+            if (Item* item = player->GetItemByEntry(itemId))
+            {
+                if (item->IsEquipped())
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
+    {
+        if (!hasRequiredItemEquipped(player))
+        {
+            return;
+        }
+
+        uint32 spellId = spell->GetSpellInfo()->Id;
+        auto execute_found = execute_spell_set.find(spellId);
+        auto devastate_found = devastate_spell_set.find(spellId);
+
+        // If the spell is not an Execute or Devastate spell, return early
+        if (execute_found == execute_spell_set.end() && devastate_found == devastate_spell_set.end())
+        {
+            return;
+        }
+
+        // Now cast the corresponding spell
+        if (execute_found != execute_spell_set.end())
+        {
+            player->CastSpell(player, JUGGERNAUT_SPELL_ID, true);
+        }
+        else
+        {
+            player->CastSpell(player, VANGUARD_DEFENSE_SPELL_ID, true);
+        }
+    }
+};
+
+void AddSC_spell_warrior()
+{
+    new spell_warrior();
+}
+
 
 class spell_warr_mocking_blow : public SpellScript
 {
@@ -634,54 +702,60 @@ class spell_warr_sweeping_strikes : public AuraScript
     bool CheckProc(ProcEventInfo& eventInfo)
     {
         Unit* actor = eventInfo.GetActor();
-        if (!actor)
+        if (!actor || !IsSpellValid(eventInfo.GetSpellInfo(), actor))
         {
             return false;
-        }
-
-        if (SpellInfo const* spellInfo = eventInfo.GetSpellInfo())
-        {
-            switch (spellInfo->Id)
-            {
-                case SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_1:
-                case SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_2:
-                case SPELL_WARRIOR_WHIRLWIND_OFF:
-                    return false;
-                case SPELL_WARRIOR_WHIRLWIND_MAIN:
-                    if (actor->HasSpellCooldown(SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_1))
-                    {
-                        return false;
-                    }
-                    break;
-                default:
-                    break;
-            }
         }
 
         _procTarget = actor->SelectNearbyNoTotemTarget(eventInfo.GetProcTarget());
         return _procTarget != nullptr;
     }
 
+    bool IsSpellValid(SpellInfo const* spellInfo, Unit* actor)
+    {
+        if (!spellInfo)
+            return true;
+
+        switch (spellInfo->Id)
+        {
+        case SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_1:
+        case SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_2:
+        case SPELL_WARRIOR_WHIRLWIND_OFF:
+            return false;
+        case SPELL_WARRIOR_WHIRLWIND_MAIN:
+            return !actor->HasSpellCooldown(SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_1);
+        default:
+            return true;
+        }
+    }
+
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
+        Unit* actor = eventInfo.GetActor();
+        Unit* target = GetTarget();
+
+        if (!actor || !target || !_procTarget)
+            return;
+
         if (DamageInfo* damageInfo = eventInfo.GetDamageInfo())
         {
             SpellInfo const* spellInfo = damageInfo->GetSpellInfo();
+            int32 damage = damageInfo->GetUnmitigatedDamage();
+
             if (spellInfo && spellInfo->Id == SPELL_WARRIOR_EXECUTE && !_procTarget->HasAuraState(AURA_STATE_HEALTHLESS_20_PERCENT))
             {
                 // If triggered by Execute (while target is not under 20% hp) deals normalized weapon damage
-                GetTarget()->CastSpell(_procTarget, SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_2, aurEff);
+                target->CastSpell(_procTarget, SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_2, aurEff);
             }
             else
             {
                 if (spellInfo && spellInfo->Id == SPELL_WARRIOR_WHIRLWIND_MAIN)
                 {
-                    eventInfo.GetActor()->AddSpellCooldown(SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_1, 0, 500);
+                    actor->AddSpellCooldown(SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_1, 0, 500);
                 }
 
-                int32 damage = damageInfo->GetUnmitigatedDamage();
-                GetTarget()->CastCustomSpell(_procTarget, SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_1, &damage, 0, 0, true, nullptr, aurEff);
+                target->CastCustomSpell(_procTarget, SPELL_WARRIOR_SWEEPING_STRIKES_EXTRA_ATTACK_1, &damage, 0, 0, true, nullptr, aurEff);
             }
         }
     }
@@ -777,7 +851,7 @@ class spell_warr_vigilance : public AuraScript
     }
 
 private:
-    Unit* _procTarget;
+    Unit* _procTarget = nullptr; // Initialize _procTarget to nullptr here
 };
 
 // 50725 - Vigilance
@@ -922,4 +996,5 @@ void AddSC_warrior_spell_scripts()
     RegisterSpellScript(spell_warr_vigilance);
     RegisterSpellScript(spell_warr_vigilance_trigger);
     RegisterSpellScript(spell_warr_t3_prot_8p_bonus);
+    new spell_warrior();
 }

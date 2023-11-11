@@ -189,8 +189,8 @@ struct boss_magtheridon : public BossAI
 
             _interruptScheduler.Schedule(50ms, GROUP_INTERRUPT_CHECK, [this](TaskContext context)
             {
-                if (me->GetAuraCount(SPELL_SHADOW_GRASP_VISUAL) == 5)
-                {
+                if (me->GetAuraCount(SPELL_SHADOW_GRASP_VISUAL) >= 1)  // Changed from 5 to 1
+                    {
                     Talk(SAY_BANISH);
                     me->InterruptNonMeleeSpells(true);
                     scheduler.CancelGroup(GROUP_INTERRUPT_CHECK);

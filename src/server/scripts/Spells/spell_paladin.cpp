@@ -28,6 +28,7 @@
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "UnitAI.h"
+#include "Spell.h"
 
 //npcbot
 #include "Creature.h"
@@ -49,6 +50,7 @@ enum PaladinSpells
     SPELL_PALADIN_BLESSING_OF_LOWER_CITY_SHAMAN  = 37881,
 
     SPELL_PALADIN_DIVINE_STORM                   = 53385,
+    SPELL_PALADIN_DIVINE_STORM_SECOND            = 800026,
     SPELL_PALADIN_DIVINE_STORM_DUMMY             = 54171,
     SPELL_PALADIN_DIVINE_STORM_HEAL              = 54172,
 
@@ -91,13 +93,66 @@ enum PaladinSpells
     SPELL_BLOOD_CORRUPTION                       = 53742,
 
     SPELL_GENERIC_ARENA_DAMPENING                = 74410,
-    SPELL_GENERIC_BATTLEGROUND_DAMPENING         = 74411
+    SPELL_GENERIC_BATTLEGROUND_DAMPENING         = 74411,
+
+    // Crystalforge Raiment - Tier 5 Holy 2 Set
+    SPELL_IMPROVED_JUDGEMENT                     = 37188,
+    SPELL_IMPROVED_JUDGEMENT_ENERGIZE            = 43838
 };
 
 enum PaladinSpellIcons
 {
     PALADIN_ICON_ID_RETRIBUTION_AURA             = 555
 };
+
+class dual_crusader : public PlayerScript
+{
+public:
+    dual_crusader() : PlayerScript("dual_crusader") { }
+
+    uint32 CRUSADER_STRIKE_SPELL_ID = 35395;
+    uint32 DIVINE_STORM_SPELL_ID = 53385;
+    uint32 CRUSADER_STRIKE_ADDITIONAL_SPELL_ID = 8000025;
+    uint32 DIVINE_STORM_ADDITIONAL_SPELL_ID = 800026;
+
+    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
+    {
+        if (player->getClass() != CLASS_PALADIN)
+        {
+            return;
+        }
+
+        uint32 spellId = spell->GetSpellInfo()->Id;
+        if (spellId != CRUSADER_STRIKE_SPELL_ID && spellId != DIVINE_STORM_SPELL_ID)
+        {
+            return;
+        }
+
+        // Check if the player has both mainhand and offhand weapons equipped
+        Item* mainhandItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
+        Item* offhandItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
+
+        if (mainhandItem && mainhandItem->GetTemplate()->Class == ITEM_CLASS_WEAPON &&
+            offhandItem && offhandItem->GetTemplate()->Class == ITEM_CLASS_WEAPON)
+        {
+            // Get the player's target
+            if (Unit* target = player->GetSelectedUnit())
+            {
+                // Determine the additional spell to cast based on the main spell cast
+                uint32 additionalSpellId = (spellId == CRUSADER_STRIKE_SPELL_ID) ? CRUSADER_STRIKE_ADDITIONAL_SPELL_ID : DIVINE_STORM_ADDITIONAL_SPELL_ID;
+
+                // Cast the additional spell on the target as a triggered (free and instant) cast
+                player->CastSpell(target, additionalSpellId, true);
+            }
+        }
+    }
+};
+
+void AddSC_dual_crusader()
+{
+    new dual_crusader();
+}
+
 
 class spell_pal_seal_of_command_aura : public AuraScript
 {
@@ -603,6 +658,7 @@ class spell_pal_divine_sacrifice : public AuraScript
 };
 
 // 53385 - Divine Storm
+
 class spell_pal_divine_storm : public SpellScript
 {
     PrepareSpellScript(spell_pal_divine_storm);
@@ -617,7 +673,9 @@ class spell_pal_divine_storm : public SpellScript
     bool Load() override
     {
         healPct = GetSpellInfo()->Effects[EFFECT_1].CalcValue(GetCaster());
-        return true;
+
+        // Ensure the script applies to both Divine Storm spell IDs
+        return GetSpellInfo()->Id == SPELL_PALADIN_DIVINE_STORM || GetSpellInfo()->Id == SPELL_PALADIN_DIVINE_STORM_SECOND;
     }
 
     void TriggerHeal()
@@ -632,6 +690,7 @@ class spell_pal_divine_storm : public SpellScript
         AfterHit += SpellHitFn(spell_pal_divine_storm::TriggerHeal);
     }
 };
+
 
 // 54171 - Divine Storm (Dummy)
 class spell_pal_divine_storm_dummy : public SpellScript
@@ -938,6 +997,12 @@ public:
         GetCaster()->CastSpell(GetHitUnit(), _spellId, true);
         GetCaster()->CastSpell(GetHitUnit(), spellId2, true);
 
+        // Tier 5 Holy - 2 Set
+        if (GetCaster()->HasAura(SPELL_IMPROVED_JUDGEMENT))
+        {
+            GetCaster()->CastSpell(GetCaster(), SPELL_IMPROVED_JUDGEMENT_ENERGIZE, true);
+        }
+
         // Judgement of the Just
         if (GetCaster()->GetAuraEffect(SPELL_AURA_ADD_FLAT_MODIFIER, SPELLFAMILY_PALADIN, 3015, 0))
         {
@@ -1186,4 +1251,5 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_lay_on_hands);
     RegisterSpellScript(spell_pal_righteous_defense);
     RegisterSpellScript(spell_pal_seal_of_righteousness);
+    new dual_crusader();
 }

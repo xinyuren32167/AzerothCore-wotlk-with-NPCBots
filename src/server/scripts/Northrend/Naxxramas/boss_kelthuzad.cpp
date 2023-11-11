@@ -412,7 +412,11 @@ public:
                 case EVENT_SHADOW_FISSURE:
                     if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
                     {
-                        me->CastSpell(target, SPELL_SHADOW_FISURE, false);
+                        // Check if the target has Frost Blast active on them
+                        if (!target->HasAura(SPELL_FROST_BLAST))
+                        {
+                            me->CastSpell(target, SPELL_SHADOW_FISURE, false);
+                        }
                     }
                     events.Repeat(25s);
                     break;

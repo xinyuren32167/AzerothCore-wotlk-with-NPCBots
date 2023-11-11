@@ -33,11 +33,13 @@
 #include "GridNotifiers.h"
 #include "Group.h"
 #include "Pet.h"
+#include "Player.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
 #include "SkillDiscovery.h"
 #include "SpellAuraEffects.h"
 #include "SpellScript.h"
+#include "SpellInfo.h"
 #include "Unit.h"
 #include "Vehicle.h"
 #include <array>
@@ -271,13 +273,7 @@ class spell_gen_reduced_above_60 : public SpellScript
 
     void RecalculateDamage()
     {
-        if (Unit* target = GetHitUnit())
-            if (target->GetLevel() > 60)
-            {
-                int32 damage = GetHitDamage();
-                AddPct(damage, -4 * int8(std::min(target->GetLevel(), uint8(85)) - 60)); // prevents reduce by more than 100%
-                SetHitDamage(damage);
-            }
+        // No level-based adjustments since we don't want changes for levels above 60
     }
 
     void Register() override
@@ -286,15 +282,14 @@ class spell_gen_reduced_above_60 : public SpellScript
     }
 };
 
+
 class spell_gen_reduced_above_60_aura : public AuraScript
 {
     PrepareAuraScript(spell_gen_reduced_above_60_aura);
 
-    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool&   /*canBeRecalculated*/)
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& /*amount*/, bool& /*canBeRecalculated*/)
     {
-        if (Unit* owner = GetUnitOwner())
-            if (owner->GetLevel() > 60)
-                AddPct(amount, -4 * int8(std::min(owner->GetLevel(), uint8(85)) - 60)); // prevents reduce by more than 100%
+        // No level-based adjustments since we don't want changes for levels above 60
     }
 
     void Register() override
@@ -303,6 +298,7 @@ class spell_gen_reduced_above_60_aura : public AuraScript
             DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_gen_reduced_above_60_aura::CalculateAmount, EFFECT_ALL, SPELL_AURA_ANY);
     }
 };
+
 
 /* 69664 - Aquanos Laundry                      (spell_q20438_q24556_aquantos_laundry)
    38724 - Magic Sucker Device (Success Visual) (spell_q10838_demoniac_scryer_visual) */
@@ -415,10 +411,7 @@ public:
 
     SpellCastResult CheckRequirement()
     {
-        if (Unit* target = GetExplTargetUnit())
-            if (target->GetLevel() >= _level)
-                return SPELL_FAILED_DONT_REPORT;
-
+        // Always allow the cast, regardless of the target's level
         return SPELL_CAST_OK;
     }
 
@@ -430,6 +423,7 @@ public:
 private:
     uint8 _level;
 };
+
 
 /* 61013 - Warlock Pet Scaling 05
    61017 - Hunter Pet Scaling 04 */
@@ -583,13 +577,9 @@ class spell_gen_disabled_above_63 : public AuraScript
 {
     PrepareAuraScript(spell_gen_disabled_above_63);
 
-    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool&   /*canBeRecalculated*/)
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& /*amount*/, bool& /*canBeRecalculated*/)
     {
-        Unit* target = GetUnitOwner();
-        if (target->GetLevel() <= 63)
-            amount = amount * target->GetLevel() / 60;
-        else
-            SetDuration(1);
+        // No level-based adjustments since we don't want changes for levels above 63
     }
 
     void Register() override
@@ -597,6 +587,7 @@ class spell_gen_disabled_above_63 : public AuraScript
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_gen_disabled_above_63::CalculateAmount, EFFECT_ALL, SPELL_AURA_ANY);
     }
 };
+
 
 // 59630 - Black Magic
 class spell_gen_black_magic_enchant : public AuraScript
@@ -690,10 +681,9 @@ class spell_gen_use_spell_base_level_check : public SpellScript
 {
     PrepareSpellScript(spell_gen_use_spell_base_level_check)
 
-    SpellCastResult CheckRequirement()
+        SpellCastResult CheckRequirement()
     {
-        if (GetCaster()->GetLevel() < GetSpellInfo()->BaseLevel)
-            return SPELL_FAILED_LEVEL_REQUIREMENT;
+        // Always allow the cast, regardless of the caster's level compared to the spell's base level
         return SPELL_CAST_OK;
     }
 
@@ -702,6 +692,7 @@ class spell_gen_use_spell_base_level_check : public SpellScript
         OnCheckCast += SpellCheckCastFn(spell_gen_use_spell_base_level_check::CheckRequirement);
     }
 };
+
 
 /* -49004 - Scent of Blood
    -12317 - Enrage */
@@ -948,13 +939,9 @@ class spell_gen_proc_reduced_above_60 : public AuraScript
 {
     PrepareAuraScript(spell_gen_proc_reduced_above_60);
 
-    bool CheckProc(ProcEventInfo& eventInfo)
+    bool CheckProc(ProcEventInfo& /*eventInfo*/)
     {
-        // Xinef: mostly its 33.(3)% reduce by 70 and 66.(6)% by 80
-        if (eventInfo.GetActor() && eventInfo.GetActor()->GetLevel() > 60)
-            if (roll_chance_f((eventInfo.GetActor()->GetLevel() - 60) * 3.33f))
-                return false;
-
+        // Always allow the proc, regardless of the actor's level
         return true;
     }
 
@@ -963,6 +950,7 @@ class spell_gen_proc_reduced_above_60 : public AuraScript
         DoCheckProc += AuraCheckProcFn(spell_gen_proc_reduced_above_60::CheckProc);
     }
 };
+
 
 /* 21708 - Summon Noxxion's Spawns
    30205 - Shadow Cage
@@ -5123,6 +5111,40 @@ class spell_gen_yehkinya_bramble : public SpellScript
     }
 };
 
+// 35244 - Choking Vines
+enum ChokingVines
+{
+    SPELL_CHOKING_VINES = 35244,
+    SPELL_CHOKING_WOUND = 35247
+};
+
+class spell_gen_choking_vines : public AuraScript
+{
+    PrepareAuraScript(spell_gen_choking_vines);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_CHOKING_VINES, SPELL_CHOKING_WOUND });
+    }
+
+    void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* target = GetTarget())
+        {
+            if (GetStackAmount() == GetSpellInfo()->StackAmount) // 5 stacks
+            {
+                target->RemoveAurasDueToSpell(SPELL_CHOKING_VINES);
+                target->CastSpell(target, SPELL_CHOKING_WOUND, true); // Unknown if it's a self cast or casted by the source on 5th
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_gen_choking_vines::OnApply, EFFECT_0, SPELL_AURA_MOD_DECREASE_SPEED, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+    }
+};
+
 void AddSC_generic_spell_scripts()
 {
     RegisterSpellScript(spell_silithyst);
@@ -5275,4 +5297,5 @@ void AddSC_generic_spell_scripts()
     RegisterSpellScript(spell_gen_planting_scourge_banner);
     RegisterSpellScript(spell_gen_jubling_cooldown);
     RegisterSpellScript(spell_gen_yehkinya_bramble);
+    RegisterSpellScript(spell_gen_choking_vines);
 }

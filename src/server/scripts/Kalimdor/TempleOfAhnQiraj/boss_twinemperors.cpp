@@ -25,67 +25,67 @@
 enum Spells
 {
     // Both
-    SPELL_TWIN_EMPATHY            = 1177,
-    SPELL_TWIN_TELEPORT_1         = 800,
-    SPELL_TWIN_TELEPORT_VISUAL    = 26638,
-    SPELL_HEAL_BROTHER            = 7393,
+    SPELL_TWIN_EMPATHY = 1177,
+    SPELL_TWIN_TELEPORT_1 = 800,
+    SPELL_TWIN_TELEPORT_VISUAL = 26638,
+    SPELL_HEAL_BROTHER = 7393,
     // Vek'lor
-    SPELL_SHADOW_BOLT             = 26006,
-    SPELL_BLIZZARD                = 26607,
-    SPELL_FRENZY                  = 27897,
-    SPELL_ARCANE_BURST            = 568,
-    SPELL_EXPLODE_BUG             = 804,
-    SPELL_TWIN_TELEPORT_0         = 799,
+    SPELL_SHADOW_BOLT = 26006,
+    SPELL_BLIZZARD = 26607,
+    SPELL_FRENZY = 27897,
+    SPELL_ARCANE_BURST = 568,
+    SPELL_EXPLODE_BUG = 804,
+    SPELL_TWIN_TELEPORT_0 = 799,
     // Vek'nilash
-    SPELL_UPPERCUT                = 26007,
-    SPELL_UNBALANCING_STRIKE      = 26613,
-    SPELL_BERSERK                 = 27680,
-    SPELL_MUTATE_BUG              = 802,
+    SPELL_UPPERCUT = 26007,
+    SPELL_UNBALANCING_STRIKE = 26613,
+    SPELL_BERSERK = 27680,
+    SPELL_MUTATE_BUG = 802,
     // Bugs
-    SPELL_VIRULENT_POISON_PROC    = 22413
+    SPELL_VIRULENT_POISON_PROC = 22413
 };
 
 enum Actions
 {
-    ACTION_START_INTRO            = 0,
-    ACTION_CANCEL_INTRO           = 1,
-    ACTION_AFTER_TELEPORT         = 2
+    ACTION_START_INTRO = 0,
+    ACTION_CANCEL_INTRO = 1,
+    ACTION_AFTER_TELEPORT = 2
 };
 
 enum Say
 {
-    SAY_INTRO_0                   = 0,
-    SAY_INTRO_1                   = 1,
-    SAY_INTRO_2                   = 2,
-    SAY_KILL                      = 3,
-    SAY_DEATH                     = 4,
-    EMOTE_ENRAGE                  = 5,
+    SAY_INTRO_0 = 0,
+    SAY_INTRO_1 = 1,
+    SAY_INTRO_2 = 2,
+    SAY_KILL = 3,
+    SAY_DEATH = 4,
+    EMOTE_ENRAGE = 5,
 
-    EMOTE_MASTERS_EYE_AT          = 0,
+    EMOTE_MASTERS_EYE_AT = 0,
 };
 
 enum Sounds
 {
-    SOUND_VK_AGGRO                = 8657,
-    SOUND_VN_AGGRO                = 8661
+    SOUND_VK_AGGRO = 8657,
+    SOUND_VN_AGGRO = 8661
 };
 
 enum Misc
 {
-    GROUP_INTRO                   = 0,
+    GROUP_INTRO = 0,
 
-    NPC_QIRAJI_SCARAB             = 15316,
-    NPC_QIRAJI_SCORPION           = 15317,
+    NPC_QIRAJI_SCARAB = 15316,
+    NPC_QIRAJI_SCORPION = 15317,
 
-    FACTION_HOSTILE               = 16
+    FACTION_HOSTILE = 16
 };
 
-constexpr float veklorOrientationIntro    = 2.241519f;
+constexpr float veklorOrientationIntro = 2.241519f;
 constexpr float veknilashOrientationIntro = 1.144451f;
 
 struct boss_twinemperorsAI : public BossAI
 {
-    boss_twinemperorsAI(Creature* creature): BossAI(creature, DATA_TWIN_EMPERORS), _introDone(false)
+    boss_twinemperorsAI(Creature* creature) : BossAI(creature, DATA_TWIN_EMPERORS), _introDone(false)
     {
         me->SetStandState(UNIT_STAND_STATE_KNEEL);
 
@@ -138,6 +138,19 @@ struct boss_twinemperorsAI : public BossAI
 
     void JustDied(Unit* killer) override
     {
+        if (Creature* summonedCreature = me->FindNearestCreature(815727, 300.0f)) // Check if the creature is already alive within 300.0f range
+        {
+            if (summonedCreature->IsAlive())
+                return; // If the creature is already alive, do not summon it again
+        }
+
+        Position pos = { -8954.5459f, 1234.8217f, -112.62f, 1.7f };
+        Map* map = me->GetMap();
+        if (map)
+        {
+            map->SummonCreature(815727, pos);
+        }
+
         if (Creature* twin = GetTwin())
             if (twin->IsAlive())
                 Unit::Kill(me, twin);
@@ -165,12 +178,12 @@ struct boss_twinemperorsAI : public BossAI
             _scheduler.Schedule(2s, [this](TaskContext /*context*/)
                 {
                     me->SetReactState(REACT_AGGRESSIVE);
-                    me->SetControlled(false, UNIT_STATE_ROOT);
-                    if (Unit* victim = me->SelectNearestTarget())
-                    {
-                        me->AddThreat(victim, 2000.f);
-                        AttackStart(victim);
-                    }
+            me->SetControlled(false, UNIT_STATE_ROOT);
+            if (Unit* victim = me->SelectNearestTarget())
+            {
+                me->AddThreat(victim, 2000.f);
+                AttackStart(victim);
+            }
                 });
         }
 
@@ -180,60 +193,60 @@ struct boss_twinemperorsAI : public BossAI
         _scheduler.Schedule(5s, [this](TaskContext /*context*/)
             {
                 me->SetStandState(UNIT_STAND_STATE_STAND);
-                me->LoadEquipment(1, true);
+        me->LoadEquipment(1, true);
             });
 
         if (IAmVeklor())
         {
             _scheduler
                 .Schedule(12s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    Talk(SAY_INTRO_0);
-                })
+                    {
+                        Talk(SAY_INTRO_0);
+                    })
                 .Schedule(20s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    Talk(SAY_INTRO_1);
-                })
-                .Schedule(28s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    me->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
-                })
-                .Schedule(30s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    me->SetFacingTo(veklorOrientationIntro);
-                    Talk(SAY_INTRO_2);
-                })
-                .Schedule(33s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    me->HandleEmoteCommand(EMOTE_ONESHOT_POINT);
-                    _introDone = true;
-                });
+                    {
+                        Talk(SAY_INTRO_1);
+                    })
+                        .Schedule(28s, GROUP_INTRO, [this](TaskContext /*context*/)
+                            {
+                                me->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
+                            })
+                        .Schedule(30s, GROUP_INTRO, [this](TaskContext /*context*/)
+                            {
+                                me->SetFacingTo(veklorOrientationIntro);
+                            Talk(SAY_INTRO_2);
+                            })
+                                .Schedule(33s, GROUP_INTRO, [this](TaskContext /*context*/)
+                                    {
+                                        me->HandleEmoteCommand(EMOTE_ONESHOT_POINT);
+                            _introDone = true;
+                                    });
         }
         else
         {
             _scheduler
                 .Schedule(17s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    Talk(SAY_INTRO_0);
-                })
+                    {
+                        Talk(SAY_INTRO_0);
+                    })
                 .Schedule(23s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    Talk(SAY_INTRO_1);
-                })
-                .Schedule(28s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    me->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
-                })
-                .Schedule(32s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    me->SetFacingTo(veknilashOrientationIntro);
-                    Talk(SAY_INTRO_2);
-                })
-                .Schedule(33s, GROUP_INTRO, [this](TaskContext /*context*/)
-                {
-                    me->HandleEmoteCommand(EMOTE_ONESHOT_POINT);
-                    _introDone = true;
-                });
+                    {
+                        Talk(SAY_INTRO_1);
+                    })
+                        .Schedule(28s, GROUP_INTRO, [this](TaskContext /*context*/)
+                            {
+                                me->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
+                            })
+                        .Schedule(32s, GROUP_INTRO, [this](TaskContext /*context*/)
+                            {
+                                me->SetFacingTo(veknilashOrientationIntro);
+                            Talk(SAY_INTRO_2);
+                            })
+                                .Schedule(33s, GROUP_INTRO, [this](TaskContext /*context*/)
+                                    {
+                                        me->HandleEmoteCommand(EMOTE_ONESHOT_POINT);
+                            _introDone = true;
+                                    });
         }
     }
 
@@ -254,25 +267,25 @@ struct boss_twinemperorsAI : public BossAI
 
         _scheduler
             .Schedule(15min, [this](TaskContext /*context*/)
-            {
-                if (IAmVeklor())
                 {
-                    DoCastSelf(SPELL_FRENZY, true);
-                    Talk(EMOTE_ENRAGE);
-                }
-                else
-                    DoCastSelf(SPELL_BERSERK, true);
-            })
-            .Schedule(3600ms, [this](TaskContext context) // according to sniffs it should be casted by both emperors.
-            {
-                if (Creature* twin = GetTwin())
+                    if (IAmVeklor())
+                    {
+                        DoCastSelf(SPELL_FRENZY, true);
+                        Talk(EMOTE_ENRAGE);
+                    }
+                    else
+                        DoCastSelf(SPELL_BERSERK, true);
+                })
+            .Schedule(10000ms, [this](TaskContext context) // according to sniffs it should be casted by both emperors.
                 {
-                    if (me->IsWithinDist(twin, 60.f))
-                        DoCast(twin, SPELL_HEAL_BROTHER, true);
-                }
+                    if (Creature* twin = GetTwin())
+                    {
+                        if (me->IsWithinDist(twin, 40.f))
+                            DoCast(twin, SPELL_HEAL_BROTHER, true);
+                    }
 
                 context.Repeat();
-            });
+                });
     }
 
     void UpdateAI(uint32 diff) override
@@ -283,7 +296,7 @@ struct boss_twinemperorsAI : public BossAI
         _scheduler.Update(diff, [this]
             {
                 if (!IAmVeklor())
-                    DoMeleeAttackIfReady();
+                DoMeleeAttackIfReady();
             });
     }
 
@@ -308,20 +321,20 @@ struct boss_veknilash : public boss_twinemperorsAI
 
         _scheduler
             .Schedule(14s, [this](TaskContext context)
-            {
-                DoCastRandomTarget(SPELL_UPPERCUT, 0, me->GetMeleeReach(), true);
-                context.Repeat(4s, 15s);
-            })
+                {
+                    DoCastRandomTarget(SPELL_UPPERCUT, 0, me->GetMeleeReach(), true);
+        context.Repeat(4s, 15s);
+                })
             .Schedule(12s, [this](TaskContext context)
-            {
-                DoCastVictim(SPELL_UNBALANCING_STRIKE);
+                {
+                    DoCastVictim(SPELL_UNBALANCING_STRIKE);
                 context.Repeat(8s, 20s);
-            })
-            .Schedule(16s, [this](TaskContext context)
-            {
-                DoCastAOE(SPELL_MUTATE_BUG);
+                })
+                    .Schedule(16s, [this](TaskContext context)
+                        {
+                            DoCastAOE(SPELL_MUTATE_BUG);
                 context.Repeat(10s, 20s);
-            });
+                        });
     }
 };
 
@@ -339,44 +352,44 @@ struct boss_veklor : public boss_twinemperorsAI
 
         _scheduler
             .Schedule(4s, [this](TaskContext context)
-            {
-                if (me->GetVictim())
                 {
-                    if (!me->IsWithinDist(me->GetVictim(), 45.0f))
+                    if (me->GetVictim())
                     {
-                        me->GetMotionMaster()->MoveChase(me->GetVictim(), 45.0f, 0);
+                        if (!me->IsWithinDist(me->GetVictim(), 45.0f))
+                        {
+                            me->GetMotionMaster()->MoveChase(me->GetVictim(), 45.0f, 0);
+                        }
+                        else
+                        {
+                            me->StopMoving();
+                            me->GetMotionMaster()->Clear();
+                        }
                     }
-                    else
-                    {
-                        me->StopMoving();
-                        me->GetMotionMaster()->Clear();
-                    }
-                }
 
-                DoCastVictim(SPELL_SHADOW_BOLT);
-                context.Repeat(2500ms);
-            })
+        DoCastVictim(SPELL_SHADOW_BOLT);
+        context.Repeat(2500ms);
+                })
             .Schedule(10s, 15s, [this](TaskContext context)
-            {
-                DoCastRandomTarget(SPELL_BLIZZARD, 0, 45.f);
+                {
+                    DoCastRandomTarget(SPELL_BLIZZARD, 0, 45.f);
                 context.Repeat(10s, 24s);
-            })
-            .Schedule(1s, [this](TaskContext context)
-            {
-                if (me->SelectNearestPlayer(NOMINAL_MELEE_RANGE))
-                    DoCastAOE(SPELL_ARCANE_BURST);
+                })
+                    .Schedule(1s, [this](TaskContext context)
+                        {
+                            if (me->SelectNearestPlayer(NOMINAL_MELEE_RANGE))
+                            DoCastAOE(SPELL_ARCANE_BURST);
                 context.Repeat(7s, 12s);
-            })
-            .Schedule(30s, [this](TaskContext context)
-            {
-                DoCastSelf(SPELL_TWIN_TELEPORT_0);
-                context.Repeat(30s, 40s);
-            })
-            .Schedule(5s, [this](TaskContext context)
-            {
-                DoCastAOE(SPELL_EXPLODE_BUG);
-                context.Repeat(4500ms, 10s);
-            });
+                        })
+                    .Schedule(30s, [this](TaskContext context)
+                        {
+                            DoCastSelf(SPELL_TWIN_TELEPORT_0);
+                        context.Repeat(30s, 40s);
+                        })
+                            .Schedule(5s, [this](TaskContext context)
+                                {
+                                    DoCastAOE(SPELL_EXPLODE_BUG);
+                        context.Repeat(4500ms, 10s);
+                                });
     }
 
     void SpellHit(Unit* /*caster*/, SpellInfo const* spellInfo) override
@@ -457,12 +470,12 @@ class spell_mutate_explode_bug : public SpellScript
         targets.remove_if([&](WorldObject const* target) -> bool
             {
                 if (target->GetEntry() != NPC_QIRAJI_SCARAB && target->GetEntry() != NPC_QIRAJI_SCORPION)
-                    return true;
-                if (Creature const* creature = target->ToCreature())
-                    if (creature->HasAura(SPELL_EXPLODE_BUG) || creature->HasAura(SPELL_MUTATE_BUG))
-                        return true;
+                return true;
+        if (Creature const* creature = target->ToCreature())
+            if (creature->HasAura(SPELL_EXPLODE_BUG) || creature->HasAura(SPELL_MUTATE_BUG))
+                return true;
 
-                return false;
+        return false;
             });
 
         Acore::Containers::RandomResize(targets, 1);

@@ -138,6 +138,8 @@ class AC_GAME_API BotMgr
         static float GetBotWandererDamageMod();
         static float GetBotWandererHealingMod();
         static float GetBotWandererHPMod();
+        static float GetBotHPRaidMod();
+        static float GetBotManaMod();
         static float GetBotWandererSpeedMod();
         static BotBrackets GetBotWandererLevelBrackets();
         static float GetBotDamageModByClass(uint8 botclass);
@@ -229,7 +231,7 @@ class AC_GAME_API BotMgr
         void RemoveBot(ObjectGuid guid, uint8 removetype = BOT_REMOVE_LOGOUT);
         void UnbindBot(ObjectGuid guid);
         [[nodiscard]] BotAddResult RebindBot(Creature* bot);
-        [[nodiscard]] BotAddResult AddBot(Creature* bot);
+        [[nodiscard]] BotAddResult AddBot(Creature* bot, bool costMoney);
         bool AddBotToGroup(Creature* bot);
         void RemoveBotFromBGQueue(Creature const* bot);
         bool RemoveBotFromGroup(Creature* bot);
@@ -281,6 +283,9 @@ class AC_GAME_API BotMgr
         //TELEPORT BETWEEN MAPS
         //CONFIRMEND UNSAFE (charmer,owner)
         static void TeleportBot(Creature* bot, Map* newMap, Position const* pos, bool quick = false, bool reset = false);
+        static void SetRandomBotTalentsForGroup(Creature const* bot, uint32 botrole);
+
+        static uint32 GetBotTeam(Creature const* bot);
 
         AoeSpotsVec const& GetAoeSpots() const { return _aoespots; }
         AoeSpotsVec& GetAoeSpots() { return _aoespots; }

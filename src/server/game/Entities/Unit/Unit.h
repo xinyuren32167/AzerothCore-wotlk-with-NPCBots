@@ -2144,7 +2144,8 @@ public:
 
     // Event handler
     EventProcessor m_Events;
-
+    
+    
     // stat system
     bool HandleStatModifier(UnitMods unitMod, UnitModifierType modifierType, float amount, bool apply);
     void SetModifierValue(UnitMods unitMod, UnitModifierType modifierType, float value) { m_auraModifiersGroup[unitMod][modifierType] = value; }
@@ -2636,7 +2637,7 @@ private:
     uint32 m_state;                                     // Even derived shouldn't modify
     uint32 m_CombatTimer;
     uint32 m_lastManaUse;                               // msecs
-    //TimeTrackerSmall m_movesplineTimer;
+    TimeTrackerSmall m_splineSyncTimer;
 
     Diminishing m_Diminishing;
     // Manage all Units that are threatened by us

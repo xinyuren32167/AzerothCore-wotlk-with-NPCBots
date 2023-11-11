@@ -434,7 +434,7 @@ bool bot_ai::SetBotOwner(Player* newowner)
         return false;
     }
 
-    if (newowner->GetBotMgr()->AddBot(me) & BOT_ADD_FATAL)
+    if (newowner->GetBotMgr()->AddBot(me, true) & BOT_ADD_FATAL)
     {
         checkMasterTimer += 30000;
         return false;
@@ -988,14 +988,17 @@ void bot_ai::_calculatePos(Unit const* followUnit, Position& pos, float* speed/*
     uint8 followdist = !player ? BotMgr::GetBotFollowDistDefault() / 2 : player->GetBotMgr()->GetBotFollowDist();
     float mydist, angle;
 
-    if (HasRole(BOT_ROLE_TANK) && !IsTank(followUnit))
+    if (HasRole(BOT_ROLE_TANK))
     {
         uint8 tanks = player != master ? 10 : std::max<uint8>(1, player->GetBotMgr()->GetNpcBotsCountByRole(BOT_ROLE_TANK));
         uint8 slot = player != master ? urand(0, 9) : player->GetBotMgr()->GetNpcBotSlotByRole(BOT_ROLE_TANK, me);
         angle = float(M_PI) / 6.0f; //max bias (left of right) //total arc is angle * 2
         angle = (angle / tanks) * (slot - (slot % 2)); //bias
         if (slot % 2) angle *= -1.f; //bias interchange
-        mydist = 3.5f;
+        if (master->GetMap()->IsDungeon() || master->GetMap()->IsRaid())
+            mydist = 10.5f;
+        else
+            mydist = 3.5f;
     }
     else if (HasRole(BOT_ROLE_RANGED))
     {
@@ -5592,10 +5595,27 @@ uint32 bot_ai::_selectMountSpell() const
 
     if (!myMountSpellId)
     {
+
         using MountArray = std::array<uint32, NUM_MOUNTS_PER_SPEED>;
 
         bool can_fly = !IAmFree() ? master->CanFly() : false; //(!instt && me->GetMap()->GetEntry()->addon > 0);
-        bool useSlowMount = can_fly ? (me->GetLevel() < 70 || maxMountSpeed < 220) : (me->GetLevel() < 40 || maxMountSpeed < 80);
+        bool useSlowMount;
+        if (me->GetLevel() < 40) {
+            return 0;  // No mount if below level 40
+        }
+        else if (me->GetLevel() >= 40 && me->GetLevel() <= 59) {
+            maxMountSpeed = 60;  // Set max speed to 100 for level 40-59
+            useSlowMount = true;
+        }
+        else if (me->GetLevel() >= 60) {
+            if (can_fly) {
+                useSlowMount = (maxMountSpeed < 210);
+            }
+            else {
+                maxMountSpeed = 110;  // Set max speed to 110 for level 60+ ground mounts
+                useSlowMount = (maxMountSpeed < 110);
+            }
+        }
 
         if (!can_fly)
         {
@@ -5720,7 +5740,7 @@ void bot_ai::_updateMountedState()
 
     if (IAmFree())
     {
-        if (!IsWanderer() || me->GetLevel() < 20 || me->HasAuraType(SPELL_AURA_PERIODIC_DAMAGE) ||
+        if (!IsWanderer() || me->GetLevel() < 40 || me->HasAuraType(SPELL_AURA_PERIODIC_DAMAGE) ||
             Feasting() || GetHealthPCT(me) < 80 || (CanDrink() && me->GetMaxPower(POWER_MANA) > 1 && GetManaPCT(me) < 70))
             return;
     }
@@ -5969,6 +5989,9 @@ uint32 bot_ai::GetRation(bool drink) const
 void bot_ai::DrinkPotion(bool mana)
 {
     if (IsCasting())
+        return;
+
+    if (urand(1, 1000) >= 50)
         return;
 
     me->CastSpell(me, GetPotion(mana));
@@ -6838,8 +6861,23 @@ void bot_ai::_OnHealthUpdate() const
     hp_add += _getTotalBotStat(BOT_STAT_MOD_HEALTH);
     //TC_LOG_ERROR("entities.player", "health to add after stam mod: %i", hp_add);
     uint32 m_totalhp = m_basehp + int32(hp_add * (BotMgr::IsWanderingWorldBot(me) ? BotMgr::GetBotWandererHPMod() : BotMgr::GetBotHPMod()));
+    if (me->GetMap()->IsRaid())
+        m_totalhp *= BotMgr::GetBotHPRaidMod();
     //TC_LOG_ERROR("entities.player", "total base health: %u", m_totalhp);
 
+        //Tank Bonus
+    if (IsTank() || IsOffTank())
+        m_totalhp *= 1.1;
+
+    //IndividualProgression
+    if (!me->GetMap()->IsBattlegroundOrArena())
+    {
+        MapEntry const* mapEntry = sMapStore.LookupEntry(me->GetMapId());
+        if (me->GetLevel() < 61 && mapEntry->Expansion() == CONTENT_1_60)
+            m_totalhp *= 0.7;
+        else if (me->GetLevel() < 71 && mapEntry->Expansion() == CONTENT_61_70)
+            m_totalhp *= 0.75;
+    }
     //hp bonuses
     uint8 bonuspct = 0;
     //Endurance Training
@@ -6912,6 +6950,9 @@ void bot_ai::_OnManaUpdate() const
     //m_basemana += IAmFree() ? mylevel * 50.f : 0; //+4000/+0 mana at 80
     m_basemana += _getTotalBotStat(BOT_STAT_MOD_MANA);
 
+    //Add Mana Multiplier
+    m_basemana *= BotMgr::GetBotManaMod();
+    
     //mana bonuses
     uint8 bonuspct = 0;
     //Fel Vitality
@@ -7014,7 +7055,18 @@ void bot_ai::_OnManaRegenUpdate() const
     if ((_botclass == BOT_CLASS_SHAMAN && GetSpec() == BOT_SPEC_SHAMAN_ELEMENTAL) ||
         (_botclass == BOT_CLASS_DRUID && GetSpec() == BOT_SPEC_DRUID_BALANCE))
         power_regen_mp5 += 0.024f * _getTotalBotStat(BOT_STAT_MOD_INTELLECT);
+    //Mana regen Cheat
+    if (me->GetMap()->IsRaid())
+        power_regen_mp5 *= 2;
 
+    if (me->GetMap()->IsDungeon())
+        power_regen_mp5 *= 2;
+
+    if (me->GetMap()->IsHeroic())
+        power_regen_mp5 *= 2;
+
+    if ((me->GetMap()->IsRaid() || me->GetMap()->IsDungeon()) && me->GetBotClass() == BOT_CLASS_PRIEST || me->GetBotClass() == BOT_CLASS_PALADIN)
+        power_regen_mp5 *= 1.5;
     me->SetStatFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER, power_regen_mp5 + CalculatePct(value, modManaRegenInterrupt));
     me->SetStatFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER, power_regen_mp5 + value);
 }
@@ -11027,7 +11079,7 @@ void bot_ai::FillKillReward(GameObject* go) const
 
     loot.gold = uint32(lvl * std::min<float>(std::max<float>(gold + _killsCount * gold * 0.04f - _deathsCount * gold * 0.4f, gold), gold * 10.0f));
 
-    //items
+    /* items
     uint32 loot_items_count = 0;
     for (Item const* item : _equips)
     {
@@ -11045,7 +11097,7 @@ void bot_ai::FillKillReward(GameObject* go) const
                 }
             }
         }
-    }
+    }*/
 }
 uint32 bot_ai::_getLootQualityMask() const
 {

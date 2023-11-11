@@ -40,14 +40,15 @@ enum Spells
 
 enum Events
 {
-    EVENT_CLEAVE            = 1,
-    EVENT_BLASTWAVE         = 2,
-    EVENT_MORTALSTRIKE      = 3,
-    EVENT_KNOCKBACK         = 4,
-    EVENT_CHECK             = 5,
+    EVENT_CLEAVE = 1,
+    EVENT_BLASTWAVE = 2,
+    EVENT_MORTALSTRIKE = 3,
+    EVENT_KNOCKBACK = 4,
+    EVENT_CHECK = 5,
+    EVENT_SPAWN_ADDS = 6, // New event for spawning adds
     // Suppression Device Events
-    EVENT_SUPPRESSION_CAST  = 6,
-    EVENT_SUPPRESSION_RESET = 7
+    EVENT_SUPPRESSION_CAST = 7,
+    EVENT_SUPPRESSION_RESET = 8
 };
 
 enum Actions
@@ -70,22 +71,31 @@ public:
             BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
 
-            events.ScheduleEvent(EVENT_CLEAVE, 8s);
-            events.ScheduleEvent(EVENT_BLASTWAVE, 12s);
-            events.ScheduleEvent(EVENT_MORTALSTRIKE, 20s);
-            events.ScheduleEvent(EVENT_KNOCKBACK, 30s);
-            events.ScheduleEvent(EVENT_CHECK, 1s);
+            events.ScheduleEvent(EVENT_CLEAVE, randtime(6s, 8s));
+            events.ScheduleEvent(EVENT_BLASTWAVE, randtime(21s, 35s));
+            events.ScheduleEvent(EVENT_MORTALSTRIKE, randtime(20s, 30s));
+            events.ScheduleEvent(EVENT_KNOCKBACK, randtime(17s, 30s));
+            events.ScheduleEvent(EVENT_SPAWN_ADDS, 55s);
         }
 
         void JustDied(Unit* /*killer*/) override
         {
             _JustDied();
+            me->Yell("At last, the long nightmare is over...", LANG_UNIVERSAL);
 
             std::list<GameObject*> _goList;
             GetGameObjectListWithEntryInGrid(_goList, me, GO_SUPPRESSION_DEVICE, 200.0f);
             for (std::list<GameObject*>::const_iterator itr = _goList.begin(); itr != _goList.end(); itr++)
             {
                 ((*itr)->AI()->DoAction(ACTION_DEACTIVATE));
+            }
+        }
+
+        void KilledUnit(Unit* victim) override
+        {
+            if (victim->GetTypeId() == TYPEID_PLAYER)
+            {
+                me->Yell("The strands of fate are severed!", LANG_UNIVERSAL);
             }
         }
 
@@ -100,36 +110,53 @@ public:
             {
                 switch (eventId)
                 {
-                    case EVENT_CLEAVE:
-                        DoCastVictim(SPELL_CLEAVE);
-                        events.ScheduleEvent(EVENT_CLEAVE, 7s);
-                        break;
-                    case EVENT_BLASTWAVE:
-                        DoCastVictim(SPELL_BLASTWAVE);
-                        events.ScheduleEvent(EVENT_BLASTWAVE, 20s, 35s);
-                        break;
-                    case EVENT_MORTALSTRIKE:
-                        DoCastVictim(SPELL_MORTALSTRIKE);
-                        events.ScheduleEvent(EVENT_MORTALSTRIKE, 25s, 35s);
-                        break;
-                    case EVENT_KNOCKBACK:
-                        DoCastVictim(SPELL_KNOCKBACK);
-                        if (DoGetThreat(me->GetVictim()))
-                            DoModifyThreatByPercent(me->GetVictim(), -50);
-                        events.ScheduleEvent(EVENT_KNOCKBACK, 15s, 30s);
-                        break;
-                    case EVENT_CHECK:
-                        if (me->GetDistance(me->GetHomePosition()) > 150.0f)
-                        {
-                            Talk(SAY_LEASH);
-                            EnterEvadeMode();
-                        }
-                        events.ScheduleEvent(EVENT_CHECK, 1s);
-                        break;
+                case EVENT_CLEAVE:
+                    DoCastVictim(SPELL_CLEAVE);
+                    events.ScheduleEvent(EVENT_CLEAVE, 7s);
+                    break;
+                case EVENT_BLASTWAVE:
+                    DoCastVictim(SPELL_BLASTWAVE);
+                    events.ScheduleEvent(EVENT_BLASTWAVE, randtime(21s, 35s));
+                    break;
+                case EVENT_MORTALSTRIKE:
+                    DoCastVictim(SPELL_MORTALSTRIKE);
+                    events.ScheduleEvent(EVENT_MORTALSTRIKE, randtime(20s, 30s));
+                    break;
+                case EVENT_KNOCKBACK:
+                    DoCastVictim(SPELL_KNOCKBACK);
+                    if (DoGetThreat(me->GetVictim()))
+                        DoModifyThreatByPercent(me->GetVictim(), -50);
+                    events.ScheduleEvent(EVENT_KNOCKBACK, randtime(17s, 30s));
+                    break;
+                case EVENT_SPAWN_ADDS:
+                    SpawnAdds();
+                    events.ScheduleEvent(EVENT_SPAWN_ADDS, 55s);
+                    break;
                 }
             }
 
             DoMeleeAttackIfReady();
+        }
+
+        void SpawnAdds()
+        {
+            float x, y, z, o;
+            me->GetPosition(x, y, z, o);
+            float add_x, add_y, add_z;
+            do
+            {
+                add_x = x + frand(-10, 10);
+                add_y = y + frand(-10, 10);
+                add_z = z;
+            } while (!me->IsWithinLOS(add_x, add_y, add_z));
+
+            if (Creature* add = me->SummonCreature(12463, add_x, add_y, add_z, o, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 180000))
+            {
+                if (Player* nearestPlayer = add->SelectNearestPlayer(100))
+                {
+                    add->AI()->AttackStart(nearestPlayer);
+                }
+            }
         }
     };
 

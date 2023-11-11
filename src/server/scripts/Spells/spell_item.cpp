@@ -297,17 +297,7 @@ class spell_item_magic_dust : public SpellScript
 
     void HandlePreventAura(SpellEffIndex /*effIndex*/)
     {
-        if (Unit* target = GetHitUnit())
-        {
-            if (target->GetLevel() >= 30)
-            {
-                uint8 chance = 100 - std::min<uint8>(100, target->GetLevel() - 30 * urand(3, 10));
-                if (!roll_chance_i(chance))
-                {
-                    PreventHitAura();
-                }
-            }
-        }
+        // No need for level-based checks since diminished returns are not wanted above level 30
     }
 
     void Register() override
@@ -315,6 +305,7 @@ class spell_item_magic_dust : public SpellScript
         OnEffectHitTarget += SpellEffectFn(spell_item_magic_dust::HandlePreventAura, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
     }
 };
+
 
 class spell_item_toy_train_set : public SpellScript
 {
@@ -1392,9 +1383,7 @@ class spell_item_arcane_shroud : public AuraScript
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
-        int32 diff = GetUnitOwner()->GetLevel() - 60;
-        if (diff > 0)
-            amount += 2 * diff;
+        // No need for level-based adjustments since we don't want changes for levels above 60
     }
 
     void Register() override
@@ -1402,6 +1391,7 @@ class spell_item_arcane_shroud : public AuraScript
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_item_arcane_shroud::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_THREAT);
     }
 };
+
 
 // 64415 - Val'anyr Hammer of Ancient Kings - Equip Effect
 class spell_item_valanyr_hammer_of_ancient_kings : public AuraScript
@@ -1536,7 +1526,8 @@ private:
 
 enum DesperateDefense
 {
-    SPELL_DESPERATE_RAGE    = 33898
+    SPELL_DESPERATE_RAGE = 33898,
+    SPELL_SERVERSIDE_DESPERAT_DEFENSE = 33897 // Root and Pacify
 };
 
 // 33896 - Desperate Defense
@@ -1555,9 +1546,15 @@ class spell_item_desperate_defense : public AuraScript
         GetTarget()->CastSpell(GetTarget(), SPELL_DESPERATE_RAGE, true, nullptr, aurEff);
     }
 
+    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        GetTarget()->RemoveAurasDueToSpell(SPELL_SERVERSIDE_DESPERAT_DEFENSE);
+    }
+
     void Register() override
     {
         OnEffectProc += AuraEffectProcFn(spell_item_desperate_defense::HandleProc, EFFECT_2, SPELL_AURA_PROC_TRIGGER_SPELL);
+        OnEffectRemove += AuraEffectRemoveFn(spell_item_desperate_defense::OnRemove, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -2538,9 +2535,7 @@ class spell_item_the_eye_of_diminution : public AuraScript
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
-        int32 diff = GetUnitOwner()->GetLevel() - 60;
-        if (diff > 0)
-            amount += diff;
+        // No need for level-based adjustments since we don't want changes for levels above 60
     }
 
     void Register() override
@@ -2548,6 +2543,7 @@ class spell_item_the_eye_of_diminution : public AuraScript
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_item_the_eye_of_diminution::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_THREAT);
     }
 };
+
 
 // http://www.wowhead.com/item=44012 Underbelly Elixir
 // 59640 Underbelly Elixir
@@ -3809,12 +3805,9 @@ class spell_item_green_whelp_armor : public AuraScript
 {
     PrepareAuraScript(spell_item_green_whelp_armor);
 
-    bool CheckProc(ProcEventInfo& eventInfo)
+    bool CheckProc(ProcEventInfo& /*eventInfo*/)
     {
-        if (eventInfo.GetActor() && eventInfo.GetActor()->GetLevel() <= 50)
-            return true;
-
-        return false;
+        return true;  // Always allow the proc, regardless of level
     }
 
     void Register() override
@@ -3822,6 +3815,7 @@ class spell_item_green_whelp_armor : public AuraScript
         DoCheckProc += AuraCheckProcFn(spell_item_green_whelp_armor::CheckProc);
     }
 };
+
 
 // 37678 - elixir of shadows
 /// @todo Temporary fix until pet restrictions vs player restrictions are investigated

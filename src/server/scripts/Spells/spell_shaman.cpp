@@ -474,12 +474,19 @@ class spell_sha_chain_heal : public SpellScript
             // Check if the target has Riptide
             if (AuraEffect* aurEff = GetHitUnit()->GetAuraEffect(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_SHAMAN, 0, 0, 0x10, GetCaster()->GetGUID()))
             {
-                riptide = true;
-                // Consume it
-                GetHitUnit()->RemoveAura(aurEff->GetBase());
+                riptide = true; // Set riptide to true for increased healing
+
+                // Check if the caster does NOT have the aura 888888
+                if (!GetCaster()->HasAura(888888))
+                {
+                    // Consume Riptide
+                    GetHitUnit()->RemoveAura(aurEff->GetBase());
+                }
+                // If the caster has the aura 888888, Riptide will not be consumed due to the above check
             }
             firstHeal = false;
         }
+
         // Riptide increases the Chain Heal effect by 25%
         if (riptide)
             SetHitHeal(GetHitHeal() * 1.25f);

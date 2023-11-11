@@ -24,10 +24,12 @@
 #include "GridNotifiers.h"
 #include "Player.h"
 #include "ScriptMgr.h"
+#include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "TemporarySummon.h"
+
 
 enum PriestSpells
 {
@@ -73,6 +75,26 @@ enum Mics
     PRIEST_LIGHTWELL_NPC_5                          = 31893,
     PRIEST_LIGHTWELL_NPC_6                          = 31883
 };
+
+
+//class SurgeOfLight : public PlayerScript
+//{
+//public:
+//    SurgeOfLight() : PlayerScript("SurgeOfLight") { }
+
+//    void OnSpellCast(Player* player, Spell* spell, bool /*skipCheck*/) override
+//    {
+//        if (spell->GetSpellInfo()->Id == 33151) // SURGE_OF_LIGHT_1
+//        {
+//            player->CastSpell(player, 100205, true); // CUSTOM
+//       }
+//    }
+//};
+
+//void AddSC_SurgeOfLight()
+//{
+//    new SurgeOfLight();
+//}
 
 class spell_pri_shadowfiend_scaling : public AuraScript
 {
@@ -980,5 +1002,6 @@ void AddSC_priest_spell_scripts()
     RegisterSpellScript(spell_pri_shadow_word_death);
     RegisterSpellScript(spell_pri_vampiric_touch);
     RegisterSpellScript(spell_pri_mind_control);
+//    new SurgeOfLight();
     RegisterSpellScript(spell_pri_t4_4p_bonus);
 }

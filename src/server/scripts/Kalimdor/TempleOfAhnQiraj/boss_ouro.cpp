@@ -226,7 +226,7 @@ struct boss_ouro : public BossAI
 
                     context.Repeat();
                 })
-            .Schedule(22s, GROUP_EMERGED, [this](TaskContext context)
+            .Schedule(21s, GROUP_EMERGED, [this](TaskContext context)
                 {
                     DoCastVictim(SPELL_SWEEP);
                     context.Repeat();
@@ -341,13 +341,13 @@ struct npc_dirt_mound : ScriptedAI
         _scheduler.Schedule(30s, [this](TaskContext /*context*/)
             {
                 DoCastSelf(SPELL_SUMMON_SCARABS, true);
-                me->DespawnOrUnsummon(1000);
+        me->DespawnOrUnsummon(1000);
             })
             .Schedule(100ms, [this](TaskContext context)
-            {
-                ChaseNewTarget();
-                context.Repeat(5s, 10s);
-            });
+                {
+                    ChaseNewTarget();
+            context.Repeat(5s, 10s);
+                });
     }
 
     void ChaseNewTarget()
@@ -372,7 +372,11 @@ struct npc_dirt_mound : ScriptedAI
     {
         DoCastSelf(SPELL_DIRTMOUND_PASSIVE, true);
         DoCastSelf(SPELL_DREAM_FOG, true);
-        DoCastSelf(SPELL_QUAKE, true);
+        // Schedule the casting of SPELL_QUAKE after 4 seconds
+        _scheduler.Schedule(4s, [this](TaskContext /*context*/)
+            {
+                DoCastSelf(SPELL_QUAKE, true);
+            });
     }
 
     void EnterEvadeMode(EvadeReason /*why*/) override

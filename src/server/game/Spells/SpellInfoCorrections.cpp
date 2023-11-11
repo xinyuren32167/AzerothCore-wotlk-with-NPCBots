@@ -4604,6 +4604,12 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->MaxAffectedTargets = 1;
     });
 
+    // Chains of Naberius
+    ApplySpellFix({ 36146 }, [](SpellInfo* spellInfo)
+        {
+            spellInfo->MaxAffectedTargets = 1;
+        });
+    
     // Acid Spit
     ApplySpellFix({ 34290 }, [](SpellInfo* spellInfo)
     {
@@ -4628,6 +4634,29 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->ProcChance = 3;
     });
 
+    // Mount Speed
+    // Mithril Spurs
+    ApplySpellFix({ 48776, 7215 }, [](SpellInfo* spellInfo)
+        {
+            spellInfo->Effects[EFFECT_1].ApplyAuraName = SPELL_AURA_MOD_FLIGHT_SPEED_NOT_STACK;
+        });
+
+    // Mount Speed
+    ApplySpellFix({ 48777 }, [](SpellInfo* spellInfo)
+        {
+            spellInfo->Effects[EFFECT_1].Effect = SPELL_EFFECT_APPLY_AURA;
+            spellInfo->Effects[EFFECT_1].ApplyAuraName = SPELL_AURA_MOD_FLIGHT_SPEED_NOT_STACK;
+        });
+
+
+    // Wrath of the Titans Stacker
+    ApplySpellFix({ 30610 }, [](SpellInfo* spellInfo)
+        {
+            spellInfo->Effects[EFFECT_0].Effect = SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE;
+            spellInfo->Effects[EFFECT_0].TriggerSpell = 30554;
+            spellInfo->Effects[EFFECT_0].TargetA = TARGET_UNIT_CASTER;
+        });
+    
     // Summon Water Elementals
     ApplySpellFix({ 29962, 37051, 37052, 37053 }, [](SpellInfo* spellInfo)
     {
@@ -4645,6 +4674,30 @@ void SpellMgr::LoadSpellInfoCorrections()
     {
         spellInfo->AuraInterruptFlags |= ( AURA_INTERRUPT_FLAG_MOUNT | AURA_INTERRUPT_FLAG_CAST );
     });
+
+    // Improved Mind Flay and Smite
+    ApplySpellFix({ 37571 }, [](SpellInfo* spellInfo)
+        {
+            spellInfo->Effects[EFFECT_0].SpellClassMask[0] = 8388736;
+        });
+
+    // Improved Corruption and Immolate (Updated)
+    ApplySpellFix({ 61992 }, [](SpellInfo* spellInfo)
+        {
+            spellInfo->Effects[EFFECT_1].Effect = SPELL_EFFECT_APPLY_AURA;
+            spellInfo->Effects[EFFECT_1].ApplyAuraName = SPELL_AURA_ADD_PCT_MODIFIER;
+            spellInfo->Effects[EFFECT_1].TargetA = SpellImplicitTargetInfo(TARGET_UNIT_CASTER);
+            spellInfo->Effects[EFFECT_1].BasePoints = 4;
+            spellInfo->Effects[EFFECT_1].DieSides = 1;
+            spellInfo->Effects[EFFECT_1].MiscValue = 22;
+            spellInfo->Effects[EFFECT_1].SpellClassMask[0] = 6;
+        });
+
+    // Improved Mind Flay and Smite
+    ApplySpellFix({ 37571 }, [](SpellInfo* spellInfo)
+        {
+            spellInfo->Effects[EFFECT_0].SpellClassMask[0] = 8388736;
+        });
 
     for (uint32 i = 0; i < GetSpellInfoStoreSize(); ++i)
     {

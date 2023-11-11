@@ -26,6 +26,9 @@
 #include "SpellScript.h"
 #include "TemporarySummon.h"
 #include "blackwing_lair.h"
+#include "CreatureAI.h"
+
+
 
 #include <array>
 
@@ -425,6 +428,7 @@ public:
                         {
                             nefarius->SetPhaseMask(1, true);
                             nefarius->setActive(true);
+                            nefarius->SetFarVisible(true);
                             nefarius->Respawn();
                             nefarius->GetMotionMaster()->MoveTargetedHome();
                         }
@@ -493,10 +497,19 @@ public:
 
         void HandleEffectScriptEffect(SpellEffIndex /*effIndex*/)
         {
-            // If the victim of the spell does not have "Onyxia Scale Cloak" - add the Shadow Flame DoT (22682)
+            // If the victim of the spell is an NPC bot, act as if they have "Onyxia Scale Cloak" and don't apply the Shadow Flame DoT (22682)
             if (Unit* victim = GetHitUnit())
+            {
+                if (victim->IsNPCBotOrPet())
+                {
+                    return; // Do nothing, NPC bots are treated as having Onyxia Scale Cloak
+                }
+
                 if (!victim->HasAura(SPELL_ONYXIA_SCALE_CLOAK))
+                {
                     victim->AddAura(SPELL_SHADOW_FLAME_DOT, victim);
+                }
+            }
         }
 
         void Register() override

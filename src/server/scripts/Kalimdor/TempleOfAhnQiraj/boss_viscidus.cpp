@@ -71,13 +71,13 @@ enum Emotes
 
 enum HitCounter
 {
-    HITCOUNTER_SLOW             = 100,
-    HITCOUNTER_SLOW_MORE        = 150,
-    HITCOUNTER_FREEZE           = 200,
+    HITCOUNTER_SLOW             = 50,
+    HITCOUNTER_SLOW_MORE        = 75,
+    HITCOUNTER_FREEZE           = 100,
 
-    HITCOUNTER_CRACK            = 50,
-    HITCOUNTER_SHATTER          = 100,
-    HITCOUNTER_EXPLODE          = 150,
+    HITCOUNTER_CRACK            = 25,
+    HITCOUNTER_SHATTER          = 50,
+    HITCOUNTER_EXPLODE          = 75,
 };
 
 enum MovePoints
@@ -272,7 +272,7 @@ struct boss_viscidus : public BossAI
                 me->RemoveAurasDueToSpell(SPELL_INVIS_SELF);
             }
 
-            int32 heal = me->GetMaxHealth() * 0.05f;
+            int32 heal = me->GetMaxHealth() * 0.06f;
             me->CastCustomSpell(me, SPELL_VISCIDUS_GROWS, &heal, nullptr, nullptr, true);
         }
 

@@ -25,6 +25,7 @@
 #include "CellImpl.h"
 #include "GridNotifiers.h"
 #include "Pet.h"
+#include "Player.h"
 #include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
@@ -72,6 +73,42 @@ enum HunterSpells
     SPELL_LOCK_AND_LOAD_MARKER                      = 67544,
     SPELL_HUNTER_PET_LEGGINGS_OF_BEAST_MASTERY      = 38297, // Leggings of Beast Mastery
 };
+
+
+class HunterTalents : public PlayerScript
+{
+public:
+    HunterTalents() : PlayerScript("HunterTalents") {}
+
+    enum SpellIds
+    {
+        LONE_WOLF = 80028,
+        CALL_PET = 883,
+        REVIVE_PET = 982
+    };
+
+    void OnLogin(Player* player) override
+    {
+        if (player->getClass() == CLASS_HUNTER && !player->IsNPCBot())
+        {
+            player->RemoveAura(LONE_WOLF);
+        }
+    }
+
+    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
+    {
+        if (player->getClass() == CLASS_HUNTER && !player->IsNPCBot() &&
+            (spell->GetSpellInfo()->Id == CALL_PET || spell->GetSpellInfo()->Id == REVIVE_PET))
+        {
+            player->RemoveAura(LONE_WOLF);
+        }
+    }
+};
+
+void AddSC_HunterTalents()
+{
+    new HunterTalents();
+}
 
 class spell_hun_check_pet_los : public SpellScript
 {
@@ -675,10 +712,10 @@ class spell_hun_readiness : public SpellScript
         {
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
             if (spellInfo
-            && spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER
-            && spellInfo->Id != SPELL_HUNTER_READINESS
-            && spellInfo->Id != SPELL_HUNTER_BESTIAL_WRATH
-            && spellInfo->Id != SPELL_DRAENEI_GIFT_OF_THE_NAARU)
+                && spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER
+                && spellInfo->Id != SPELL_HUNTER_READINESS
+                && spellInfo->Id != SPELL_HUNTER_BESTIAL_WRATH
+                && spellInfo->Id != SPELL_DRAENEI_GIFT_OF_THE_NAARU)
             {
                 if (spellInfo->RecoveryTime > 0)
                     spellsToRemove.insert(std::make_pair(spellInfo->Id, cooldown.needSendToClient));
@@ -946,10 +983,10 @@ class spell_hun_disengage : public SpellScript
     SpellCastResult CheckCast()
     {
         Unit* caster = GetCaster();
-        if (caster->GetTypeId() == TYPEID_PLAYER && !caster->IsInCombat())
-            return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+        if (caster->GetTypeId() == TYPEID_PLAYER)
+            return SPELL_CAST_OK;
 
-        return SPELL_CAST_OK;
+        return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
     }
 
     void Register() override
@@ -1345,15 +1382,23 @@ class spell_hun_target_self_and_pet : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->IsPet();
+        Pet* petCaster = GetCaster()->ToPet();
+        if (!petCaster)
+            return false;
+
+        Unit* petOwner = petCaster->GetOwner();
+        if (petOwner && petOwner->IsNPCBot())
+            return false;
+
+        return true;
     }
 
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         targets.remove_if([&](WorldObject const* target) -> bool
-        {
-            return target != GetCaster() && target != GetCaster()->ToPet()->GetOwner();
-        });
+            {
+                return target != GetCaster() && target != GetCaster()->ToPet()->GetOwner();
+            });
     }
 
     void Register() override
@@ -1392,5 +1437,6 @@ void AddSC_hunter_spell_scripts()
     RegisterSpellScript(spell_hun_lock_and_load);
     RegisterSpellScript(spell_hun_intimidation);
     RegisterSpellScript(spell_hun_bestial_wrath);
+    new HunterTalents();
     RegisterSpellScript(spell_hun_target_self_and_pet);
 }

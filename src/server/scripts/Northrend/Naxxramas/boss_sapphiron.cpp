@@ -46,7 +46,7 @@ enum Spells
     SPELL_ICEBOLT_CAST              = 28526,
     SPELL_ICEBOLT_TRIGGER           = 28522,
     SPELL_FROST_MISSILE             = 30101,
-    SPELL_FROST_EXPLOSION           = 28524,
+    SPELL_FROST_EXPLOSION           = 828524,
 
     // Visuals
     SPELL_SAPPHIRON_DIES            = 29357
@@ -436,7 +436,14 @@ public:
             {
                 if (CAST_AI(boss_sapphiron::boss_sapphironAI, caster->ToCreature()->AI())->IsValidExplosionTarget(target))
                 {
-                    tmplist.push_back(target);
+                    if (target->IsPlayer())
+                    {
+                        Player* playerTarget = target->ToPlayer();
+                        if (playerTarget && !playerTarget->IsNPCBot())
+                        {
+                            tmplist.push_back(target);
+                        }
+                    }
                 }
             }
             targets.clear();

@@ -3605,14 +3605,14 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     if (m_caster->GetTypeId() == TYPEID_PLAYER)
                         if (Item* item = m_caster->ToPlayer()->GetWeaponForAttack(m_attackType, true))
                             if (item->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_DAGGER)
-                                AddPct(totalDamagePercentMod, 50.0f);
+                                AddPct(totalDamagePercentMod, 65.0f);
 
                     //npcbot: handle bot weapons
                     // 50% more damage with daggers
                     if (m_caster->IsNPCBot())
                         if (Item const* weapon = m_caster->ToCreature()->GetBotEquips(m_attackType))
                             if (weapon->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_DAGGER)
-                                totalDamagePercentMod *= 1.5f;
+                                totalDamagePercentMod *= 1.65f;
                     //end npcbot
                 }
                 // Mutilate (for each hand)
@@ -4045,8 +4045,8 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                             if (!unitTarget || !unitTarget->IsAlive())
                                 return;
 
-                            // Onyxia Scale Cloak
-                            if (unitTarget->HasAura(22683))
+                            // Onyxia Scale Cloak or New AoE Version
+                            if (unitTarget->HasAura(22683) || unitTarget->HasAura(82683))
                                 return;
 
                             // Shadow Flame
@@ -4279,7 +4279,7 @@ void Spell::EffectSanctuary(SpellEffIndex /*effIndex*/)
     }
 
     UnitList targets;
-    Acore::AnyUnfriendlyUnitInObjectRangeCheck u_check(unitTarget, unitTarget, unitTarget->GetVisibilityRange()); // no VISIBILITY_COMPENSATION, distance is enough
+    Acore::AnyUnfriendlyUnitInObjectRangeCheck u_check(unitTarget, unitTarget, unitTarget->GetVisibilityRange());
     Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(unitTarget, targets, u_check);
     Cell::VisitAllObjects(unitTarget, searcher, unitTarget->GetVisibilityRange());
     for (UnitList::iterator iter = targets.begin(); iter != targets.end(); ++iter)
@@ -4588,22 +4588,22 @@ void Spell::EffectApplyGlyph(SpellEffIndex effIndex)
             minLevel = 15;
             break;
         case 2:
-            minLevel = 50;
+            minLevel = 35;
             break;
         case 3:
-            minLevel = 30;
+            minLevel = 20;
             break;
         case 4:
-            minLevel = 70;
+            minLevel = 45;
             break;
         case 5:
-            minLevel = 80;
+            minLevel = 60;
             break;
     }
     if (minLevel && m_caster->GetLevel() < minLevel)
     {
         SendCastResult(SPELL_FAILED_GLYPH_SOCKET_LOCKED);
-        return;
+       return;
     }
 
     // apply new one
@@ -5018,7 +5018,7 @@ void Spell::EffectForceDeselect(SpellEffIndex /*effIndex*/)
     WorldPacket data(SMSG_CLEAR_TARGET, 8);
     data << m_caster->GetGUID();
 
-    float dist = m_caster->GetVisibilityRange() + VISIBILITY_COMPENSATION;
+    float dist = m_caster->GetVisibilityRange();
     Acore::MessageDistDelivererToHostile notifier(m_caster, &data, dist);
     Cell::VisitWorldObjects(m_caster, notifier, dist);
 
@@ -5043,7 +5043,7 @@ void Spell::EffectForceDeselect(SpellEffIndex /*effIndex*/)
             return;
 
         UnitList targets;
-        Acore::AnyUnfriendlyUnitInObjectRangeCheck u_check(m_caster, m_caster, m_caster->GetVisibilityRange()); // no VISIBILITY_COMPENSATION, distance is enough
+        Acore::AnyUnfriendlyUnitInObjectRangeCheck u_check(m_caster, m_caster, m_caster->GetVisibilityRange());
         Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(m_caster, targets, u_check);
         Cell::VisitAllObjects(m_caster, searcher, m_caster->GetVisibilityRange());
         for (UnitList::iterator iter = targets.begin(); iter != targets.end(); ++iter)
@@ -6072,7 +6072,7 @@ void Spell::EffectActivateRune(SpellEffIndex effIndex)
 
         for (uint32 i = 0; i < MAX_RUNES; ++i)
         {
-            if (player->GetRuneCooldown(i) && (player->GetCurrentRune(i) == RUNE_FROST ||  player->GetCurrentRune(i) == RUNE_DEATH))
+            if (player->GetRuneCooldown(i) && (player->GetCurrentRune(i) == RUNE_FROST || player->GetCurrentRune(i) == RUNE_DEATH))
             {
                 player->SetRuneCooldown(i, 0);
                 player->SetGracePeriod(i, player->IsInCombat()); // xinef: reset grace period

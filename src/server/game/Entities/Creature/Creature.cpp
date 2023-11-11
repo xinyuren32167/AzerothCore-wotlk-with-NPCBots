@@ -312,9 +312,6 @@ void Creature::RemoveFromWorld()
         if (m_formation)
             sFormationMgr->RemoveCreatureFromGroup(m_formation, this);
 
-        if (Transport* transport = GetTransport())
-            transport->RemovePassenger(this, true);
-
         Unit::RemoveFromWorld();
 
         if (m_spawnId)
@@ -1944,7 +1941,25 @@ void Creature::DeleteFromDB()
         return;
     }
 
-    GetMap()->RemoveCreatureRespawnTime(m_spawnId);
+    CreatureData const* data = sObjectMgr->GetCreatureData(m_spawnId);
+    if (!data)
+        return;
+
+    CharacterDatabaseTransaction charTrans = CharacterDatabase.BeginTransaction();
+
+    sMapMgr->DoForAllMapsWithMapId(data->mapid,
+        [this, charTrans](Map* map) -> void
+        {
+            // despawn all active creatures, and remove their respawns
+            std::vector<Creature*> toUnload;
+            for (auto const& pair : Acore::Containers::MapEqualRange(map->GetCreatureBySpawnIdStore(), m_spawnId))
+                toUnload.push_back(pair.second);
+            for (Creature* creature : toUnload)
+                map->AddObjectToRemoveList(creature);
+            map->RemoveCreatureRespawnTime(m_spawnId);
+        }
+    );
+
     sObjectMgr->DeleteCreatureData(m_spawnId);
 
     WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction();
@@ -2213,7 +2228,7 @@ void Creature::Respawn(bool force)
         m_respawnedTime = GameTime::GetGameTime().count();
     }
     m_respawnedTime = GameTime::GetGameTime().count();
-    UpdateObjectVisibility();
+    UpdateObjectVisibility(false);
 }
 
 void Creature::ForcedDespawn(uint32 timeMSToDespawn, Seconds forceRespawnTimer)
@@ -3248,7 +3263,7 @@ void Creature::SetPosition(float x, float y, float z, float o)
         BotMgr::SetBotGroupUpdateFlag(ToCreature(), GROUP_UPDATE_FLAG_POSITION);
     //end npcbot
 
-    GetMap()->CreatureRelocation(this, x, y, z, o);
+    UpdatePosition(x, y, z, o, false);
 }
 
 bool Creature::IsDungeonBoss() const

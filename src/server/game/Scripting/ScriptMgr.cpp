@@ -33,9 +33,28 @@ namespace
     {
         for (auto const& [scriptID, script] : ScriptRegistry<T>::ScriptPointerList)
         {
-            delete script;
+            // Null Check
+            if (script == nullptr)
+            {
+                LOG_ERROR("scripts", "Warning: Null script detected for scriptID: %d", scriptID);
+                continue;
+            }
+
+            try
+            {
+                // Logging scriptID and pointer value
+                LOG_DEBUG("scripts", "Deleting script with scriptID: %d, Pointer: %p", scriptID, static_cast<void*>(script));
+
+                // Delete the script
+                delete script;
+            }
+            catch (const std::exception& e)
+            {
+                LOG_ERROR("scripts", "Exception caught during deletion of scriptID: %d, Exception: %s", scriptID, e.what());
+            }
         }
 
+        // Clear the ScriptPointerList
         ScriptRegistry<T>::ScriptPointerList.clear();
     }
 }
@@ -203,7 +222,7 @@ void ScriptMgr::CheckIfScriptsInDatabaseExist()
                 !ScriptRegistry<GroupScript>::GetScriptById(sid) &&
                 !ScriptRegistry<DatabaseScript>::GetScriptById(sid))
                 {
-                    LOG_ERROR("sql.sql", "Script named '{}' is assigned in the database, but has no code!", scriptName);
+                //    LOG_ERROR("sql.sql", "Script named '{}' is assigned in the database, but has no code!", scriptName);
                 }
         }
     }

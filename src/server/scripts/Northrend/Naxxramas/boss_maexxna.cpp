@@ -112,7 +112,7 @@ public:
         {
             BossAI::JustEngagedWith(who);
             me->SetInCombatWithZone();
-            events.ScheduleEvent(EVENT_WEB_WRAP, 20s);
+            events.ScheduleEvent(EVENT_WEB_WRAP, 25s);
             events.ScheduleEvent(EVENT_WEB_SPRAY, 40s);
             events.ScheduleEvent(EVENT_POISON_SHOCK, 10s);
             events.ScheduleEvent(EVENT_NECROTIC_POISON, 5s);
@@ -212,7 +212,7 @@ public:
                             }
                         }
                     }
-                    events.Repeat(40s);
+                    events.Repeat(50s);
                     break;
             }
             DoMeleeAttackIfReady();

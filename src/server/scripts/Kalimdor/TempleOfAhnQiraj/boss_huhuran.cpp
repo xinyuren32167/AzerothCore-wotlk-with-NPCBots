@@ -65,10 +65,10 @@ struct boss_huhuran : public BossAI
     {
         BossAI::JustEngagedWith(who);
         events.ScheduleEvent(EVENT_FRENZY, 12s, 21s);
-        events.ScheduleEvent(EVENT_WYVERN_STING, 25s, 43s);
-        events.ScheduleEvent(EVENT_ACID_SPIT, 1s, 20s);
-        events.ScheduleEvent(EVENT_NOXIOUS_POISON, 10s, 22s);
-        events.ScheduleEvent(EVENT_HARD_ENRAGE, 5min);
+        events.ScheduleEvent(EVENT_WYVERN_STING, 30s, 48s);
+        events.ScheduleEvent(EVENT_ACID_SPIT, 10s, 30s);
+        events.ScheduleEvent(EVENT_NOXIOUS_POISON, 14s, 30s);
+        events.ScheduleEvent(EVENT_HARD_ENRAGE, 6min);
     }
 
     void DamageTaken(Unit*, uint32& /*damage*/, DamageEffectType, SpellSchoolMask) override
@@ -99,15 +99,15 @@ struct boss_huhuran : public BossAI
                     break;
                 case EVENT_WYVERN_STING:
                     me->CastCustomSpell(SPELL_WYVERN_STING, SPELLVALUE_MAX_TARGETS, 10, me, true);
-                    events.Repeat(25s, 43s);
+                    events.Repeat(30s, 48s);
                     break;
                 case EVENT_ACID_SPIT:
                     DoCastVictim(SPELL_ACID_SPIT);
-                    events.Repeat(1s, 20s);
+                    events.Repeat(10s, 30s);
                     break;
                 case EVENT_NOXIOUS_POISON:
                     DoCastRandomTarget(SPELL_NOXIOUS_POISON, 0, 100.f, true);
-                    events.Repeat(10s, 22s);
+                    events.Repeat(14s, 30s);
                     break;
                 case EVENT_HARD_ENRAGE:
                     if (!_hardEnrage)

@@ -327,6 +327,7 @@ public:
                     if (Creature* nefarian = me->SummonCreature(NPC_NEFARIAN, NefarianSpawn))
                     {
                         nefarian->setActive(true);
+                        nefarian->SetFarVisible(true);
                         nefarian->SetCanFly(true);
                         nefarian->SetDisableGravity(true);
                         nefarian->GetMotionMaster()->MovePath(NEFARIAN_PATH, false);
@@ -746,7 +747,7 @@ struct boss_nefarian : public BossAI
                                 break;
                         }
                     }
-                    events.ScheduleEvent(EVENT_CLASSCALL, 30s, 35s);
+                    events.ScheduleEvent(EVENT_CLASSCALL, 60s, 65s);
                     break;
             }
 

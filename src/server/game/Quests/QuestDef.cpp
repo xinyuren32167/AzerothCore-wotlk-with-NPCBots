@@ -35,7 +35,7 @@ Quest::Quest(Field* questRecord)
     Level = questRecord[2].Get<int16>();
     MinLevel = questRecord[3].Get<uint8>();
     ZoneOrSort = questRecord[4].Get<int16>();
-    Type = questRecord[5].Get<uint16>();
+    Type = questRecord[5].Get<int32>();
     SuggestedPlayers = questRecord[6].Get<uint8>();
     TimeAllowed = questRecord[7].Get<uint32>();
     AllowableRaces = questRecord[8].Get<uint32>();
