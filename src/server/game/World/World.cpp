@@ -1422,7 +1422,7 @@ void World::LoadConfigSettings(bool reload)
 
     // Unload grids to save memory. Can be disabled if enough memory is available to speed up moving players to new grids.
     _bool_configs[CONFIG_GRID_UNLOAD] = sConfigMgr->GetOption<bool>("GridUnload", true);
-    
+
     // Preload all grids of all non-instanced maps
     _bool_configs[CONFIG_PRELOAD_ALL_NON_INSTANCED_MAP_GRIDS] = sConfigMgr->GetOption<bool>("PreloadAllNonInstancedMapGrids", false);
     if (_bool_configs[CONFIG_PRELOAD_ALL_NON_INSTANCED_MAP_GRIDS] && _bool_configs[CONFIG_GRID_UNLOAD])
@@ -2178,7 +2178,7 @@ void World::SetInitialWorldSettings()
                 {
                     LOG_INFO("server.loading", ">> Loading All Grids For Map {}", map->GetId());
                     map->LoadAllCells();
-                }            
+                }
             });
     }
 

@@ -1526,7 +1526,7 @@ private:
 
 enum DesperateDefense
 {
-    SPELL_DESPERATE_RAGE = 33898,
+    SPELL_DESPERATE_RAGE    = 33898,
     SPELL_SERVERSIDE_DESPERAT_DEFENSE = 33897 // Root and Pacify
 };
 
@@ -2801,7 +2801,7 @@ class spell_item_shimmering_vessel : public SpellScript
     void HandleDummy(SpellEffIndex /* effIndex */)
     {
         if (Creature* target = GetHitCreature())
-            target->setDeathState(JUST_RESPAWNED);
+            target->setDeathState(DeathState::JustRespawned);
     }
 
     void Register() override

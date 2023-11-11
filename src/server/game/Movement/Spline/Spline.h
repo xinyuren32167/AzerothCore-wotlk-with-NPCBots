@@ -43,12 +43,12 @@ namespace Movement
     protected:
         ControlArray points;
 
-        index_type index_lo{0};
-        index_type index_hi{0};
+        index_type index_lo{ 0 };
+        index_type index_hi{ 0 };
 
-        uint8 m_mode{UninitializedMode};
-        bool cyclic{false};
-        float initialOrientation{ 0.f };
+        uint8 m_mode{ UninitializedMode };
+        bool cyclic{ false };
+        float initialOrientation{ 0.f };  // No extra space around 0.f
 
         enum
         {

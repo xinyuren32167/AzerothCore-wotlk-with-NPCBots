@@ -4603,12 +4603,6 @@ void SpellMgr::LoadSpellInfoCorrections()
     {
         spellInfo->MaxAffectedTargets = 1;
     });
-
-    // Chains of Naberius
-    ApplySpellFix({ 36146 }, [](SpellInfo* spellInfo)
-        {
-            spellInfo->MaxAffectedTargets = 1;
-        });
     
     // Acid Spit
     ApplySpellFix({ 34290 }, [](SpellInfo* spellInfo)
@@ -4693,10 +4687,16 @@ void SpellMgr::LoadSpellInfoCorrections()
             spellInfo->Effects[EFFECT_1].SpellClassMask[0] = 6;
         });
 
-    // Improved Mind Flay and Smite
-    ApplySpellFix({ 37571 }, [](SpellInfo* spellInfo)
+    // 46747 Fling torch
+    ApplySpellFix({ 46747 }, [](SpellInfo* spellInfo)
         {
-            spellInfo->Effects[EFFECT_0].SpellClassMask[0] = 8388736;
+            spellInfo->Effects[EFFECT_0].TargetA = SpellImplicitTargetInfo(TARGET_DEST_CASTER);
+        });
+
+    // Chains of Naberius
+    ApplySpellFix({ 36146 }, [](SpellInfo* spellInfo)
+        {
+            spellInfo->MaxAffectedTargets = 1;
         });
 
     for (uint32 i = 0; i < GetSpellInfoStoreSize(); ++i)

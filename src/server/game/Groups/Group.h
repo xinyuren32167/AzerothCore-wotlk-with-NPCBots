@@ -330,7 +330,7 @@ public:
     void DoForAllMembers(std::function<void(Player*)> const& worker);
 
     DataMap CustomData;
-
+    
     //npcbots
     ObjectGuid const* GetTargetIcons() const { return m_targetIcons; }
     //end npcbots

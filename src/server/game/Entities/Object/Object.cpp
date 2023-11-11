@@ -1688,14 +1688,16 @@ float WorldObject::GetSightRange(WorldObject const* target) const
     {
         if (ToPlayer())
         {
-            if (target->IsVisibilityOverridden() && !target->ToPlayer())
+            // Merged logic: Including null check with visibility override and far visibility checks from upstream
+            if (target && target->IsVisibilityOverridden() && !target->ToPlayer())
                 return *target->m_visibilityDistanceOverride;
-            else if (target->IsFarVisible() && !target->ToPlayer())
+            else if (target && target->IsFarVisible() && !target->ToPlayer())
                 return MAX_VISIBILITY_DISTANCE;
             else if (ToPlayer()->GetCinematicMgr()->IsOnCinematic())
                 return DEFAULT_VISIBILITY_INSTANCE;
             else
-                return GetMap()->GetVisibilityRange();
+                // Merged logic: Including condition for Wintergrasp from upstream
+                return IsInWintergrasp() ? VISIBILITY_DISTANCE_LARGE : GetMap()->GetVisibilityRange();
         }
         else if (ToCreature())
             return ToCreature()->m_SightDistance;

@@ -1119,7 +1119,7 @@ void BotMgr::_reviveBot(Creature* bot, WorldLocation* dest)
     bot->ResetPlayerDamageReq();
     bot->SetPvP(bot->GetBotOwner()->IsPvP());
     bot->Motion_Initialize();
-    bot->setDeathState(ALIVE);
+    bot->setDeathState(DeathState::Alive);
     //bot->GetBotAI()->Reset();
     bot->GetBotAI()->SetShouldUpdateStats();
 
@@ -1944,7 +1944,7 @@ void BotMgr::KillBot(Creature* bot)
 
     if (bot->IsInWorld() && bot->IsAlive())
     {
-        bot->setDeathState(JUST_DIED);
+        bot->setDeathState(DeathState::JustDied);
         bot->GetBotAI()->JustDied(bot);
         //bot->Kill(bot);
     }
