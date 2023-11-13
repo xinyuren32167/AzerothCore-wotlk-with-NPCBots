@@ -312,6 +312,9 @@ void Creature::RemoveFromWorld()
         if (m_formation)
             sFormationMgr->RemoveCreatureFromGroup(m_formation, this);
 
+        if (Transport* transport = GetTransport())
+            transport->RemovePassenger(this, true);
+
         Unit::RemoveFromWorld();
 
         if (m_spawnId)
@@ -379,15 +382,17 @@ void Creature::RemoveCorpse(bool setSpawnTime, bool skipVisibility)
         //SaveRespawnTime();
     }
 
+    float x, y, z, o;
+    GetRespawnPosition(x, y, z, &o);
+    SetHomePosition(x, y, z, o);
+    SetPosition(x, y, z, o);
+
+    // xinef: relocate notifier
+    m_last_notify_position.Relocate(-5000.0f, -5000.0f, -5000.0f, 0.0f);
+
     // pussywizard: if corpse was removed during falling then the falling will continue after respawn, so stop falling is such case
     if (IsFalling())
         StopMoving();
-
-    float x, y, z, o;
-    GetRespawnPosition(x, y, z, &o);
-    UpdateAllowedPositionZ(x, y, z);
-    SetHomePosition(x, y, z, o);
-    GetMap()->CreatureRelocation(this, x, y, z, o);
 }
 
 /**
@@ -1942,25 +1947,7 @@ void Creature::DeleteFromDB()
         return;
     }
 
-    CreatureData const* data = sObjectMgr->GetCreatureData(m_spawnId);
-    if (!data)
-        return;
-
-    CharacterDatabaseTransaction charTrans = CharacterDatabase.BeginTransaction();
-
-    sMapMgr->DoForAllMapsWithMapId(data->mapid,
-        [this, charTrans](Map* map) -> void
-        {
-            // despawn all active creatures, and remove their respawns
-            std::vector<Creature*> toUnload;
-            for (auto const& pair : Acore::Containers::MapEqualRange(map->GetCreatureBySpawnIdStore(), m_spawnId))
-                toUnload.push_back(pair.second);
-            for (Creature* creature : toUnload)
-                map->AddObjectToRemoveList(creature);
-            map->RemoveCreatureRespawnTime(m_spawnId);
-        }
-    );
-
+    GetMap()->RemoveCreatureRespawnTime(m_spawnId);
     sObjectMgr->DeleteCreatureData(m_spawnId);
 
     WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction();
@@ -2229,6 +2216,11 @@ void Creature::Respawn(bool force)
         m_respawnedTime = GameTime::GetGameTime().count();
     }
     m_respawnedTime = GameTime::GetGameTime().count();
+<<<<<<< HEAD
+=======
+    // xinef: relocate notifier, fixes npc appearing in corpse position after forced respawn (instead of spawn)
+    m_last_notify_position.Relocate(-5000.0f, -5000.0f, -5000.0f, 0.0f);
+>>>>>>> 4fabaee5975257f81dd77a728e42af60e3ad04d9
     UpdateObjectVisibility(false);
 }
 
@@ -3259,12 +3251,16 @@ void Creature::SetPosition(float x, float y, float z, float o)
     if (!Acore::IsValidMapCoord(x, y, z, o))
         return;
 
+<<<<<<< HEAD
     //npcbot: send bot group update
     if (IsNPCBot())
         BotMgr::SetBotGroupUpdateFlag(ToCreature(), GROUP_UPDATE_FLAG_POSITION);
     //end npcbot
 
     UpdatePosition(x, y, z, o, false);
+=======
+    GetMap()->CreatureRelocation(this, x, y, z, o);
+>>>>>>> 4fabaee5975257f81dd77a728e42af60e3ad04d9
 }
 
 bool Creature::IsDungeonBoss() const

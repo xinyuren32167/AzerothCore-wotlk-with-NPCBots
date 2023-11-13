@@ -537,7 +537,11 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
 
                                 std::shared_ptr<Player> newChar(new Player(this), [](Player* ptr)
                                     {
-                                        ptr->CleanupsBeforeDelete();
+                                        // Only when player is created correctly do clean
+                                        if (ptr->HasAtLoginFlag(AT_LOGIN_FIRST))
+                                        {
+                                            ptr->CleanupsBeforeDelete();
+                                        }
                                         delete ptr;
                                     });
 
@@ -546,9 +550,6 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
                                 {
                                     // Player not create (race/class/etc problem?)
                                     SendCharCreate(CHAR_CREATE_ERROR);
-
-                                    // Set a some variables to be used by clean
-                                    newChar->SetMap(sMapMgr->CreateMap(0, newChar.get()));
                                     return;
                                 }
 

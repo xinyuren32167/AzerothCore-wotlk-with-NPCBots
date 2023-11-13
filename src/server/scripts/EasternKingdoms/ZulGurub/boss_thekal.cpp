@@ -23,11 +23,11 @@
 
 enum Says
 {
-    BOSS_SAY_AGGRO = 0,
-    BOSS_SAY_DEATH = 1,
-    BOSS_EMOTE_DIES = 2,
+    SAY_AGGRO = 0,
+    SAY_DEATH = 1,
+    EMOTE_DIES = 2,
 
-    ZEALOT_EMOTE_DIES = 0
+    EMOTE_ZEALOT_DIES = 0
 };
 
 enum Spells
@@ -64,51 +64,47 @@ enum Actions
     ACTION_RESSURRECT = 1
 };
 
-class boss_thekal : public CreatureScript
+struct boss_thekal : public BossAI
 {
-public:
-    boss_thekal() : CreatureScript("boss_thekal") { }
-
-    struct boss_thekalAI : public BossAI
+    boss_thekal(Creature* creature) : BossAI(creature, DATA_THEKAL)
     {
-        boss_thekalAI(Creature* creature) : BossAI(creature, DATA_THEKAL)
+        Initialize();
+    }
+
+    void Initialize()
+    {
+        _enraged = false;
+        _wasDead = false;
+        _lorkhanDied = false;
+        _zathDied = false;
+    }
+
+    void Reset() override
+    {
+        _Reset();
+        Initialize();
+
+        scheduler.CancelAll();
+
+        me->SetStandState(UNIT_STAND_STATE_STAND);
+        me->SetReactState(REACT_AGGRESSIVE);
+        me->RemoveAurasDueToSpell(SPELL_FRENZY);
+        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+        me->LoadEquipment(1, true);
+
+        if (Creature* zealot = instance->GetCreature(DATA_LORKHAN))
         {
-            Initialize();
+            zealot->AI()->Reset();
         }
 
-        void Initialize()
+        if (Creature* zealot = instance->GetCreature(DATA_ZATH))
         {
-            Enraged = false;
-            WasDead = false;
-            _lorkhanDied = false;
-            _zathDied = false;
+            zealot->AI()->Reset();
         }
 
-        void Reset() override
-        {
-            _Reset();
-            Initialize();
-
-            _scheduler.CancelAll();
-
-            me->SetStandState(UNIT_STAND_STATE_STAND);
-            me->SetReactState(REACT_AGGRESSIVE);
-            me->RemoveAurasDueToSpell(SPELL_FRENZY);
-            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-            me->LoadEquipment(1, true);
-
-            if (Creature* zealot = instance->GetCreature(DATA_LORKHAN))
+        // emote idle loop
+        scheduler.Schedule(5s, 25s, [this](TaskContext context)
             {
-                zealot->AI()->Reset();
-            }
-
-            if (Creature* zealot = instance->GetCreature(DATA_ZATH))
-            {
-                zealot->AI()->Reset();
-            }
-
-            // emote idle loop
-            _scheduler.Schedule(5s, 25s, [this](TaskContext context) {
                 // pick a random emote from the list of available emotes
                 me->HandleEmoteCommand(
                     RAND(
@@ -118,230 +114,232 @@ public:
                     )
                 );
                 context.Repeat(5s, 25s);
-                });
+            });
 
-            _scheduler.SetValidator([this]
-                {
-                    return !me->HasUnitState(UNIT_STATE_CASTING);
-                });
+        scheduler.SetValidator([this]
+            {
+                return !me->HasUnitState(UNIT_STATE_CASTING);
+            });
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        _JustDied();
+        Talk(SAY_DEATH);
+
+        if (Creature* zealot = instance->GetCreature(DATA_LORKHAN))
+        {
+            zealot->Kill(zealot, zealot);
         }
 
-        void JustDied(Unit* /*killer*/) override
+        if (Creature* zealot = instance->GetCreature(DATA_ZATH))
         {
-            _JustDied();
-            Talk(BOSS_SAY_DEATH);
-
-            if (Creature* zealot = instance->GetCreature(DATA_LORKHAN))
-            {
-                zealot->Kill(zealot, zealot);
-            }
-
-            if (Creature* zealot = instance->GetCreature(DATA_ZATH))
-            {
-                zealot->Kill(zealot, zealot);
-            }
+            zealot->Kill(zealot, zealot);
         }
+    }
 
-        void JustEngagedWith(Unit* /*who*/) override
-        {
-            _JustEngagedWith();
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _JustEngagedWith();
 
-            _scheduler.CancelAll();
-            _scheduler.Schedule(4s, [this](TaskContext context) {
+        scheduler.CancelAll();
+        scheduler.Schedule(4s, [this](TaskContext context)
+            {
                 DoCastVictim(SPELL_MORTALCLEAVE);
                 context.Repeat(15s, 20s);
-                }).Schedule(9s, [this](TaskContext context) {
+            }).Schedule(9s, [this](TaskContext context)
+                {
                     DoCastVictim(SPELL_SILENCE);
                     context.Repeat(20s, 25s);
-                    }).Schedule(16s, [this](TaskContext context) {
+                }).Schedule(16s, [this](TaskContext context)
+                    {
                         DoCastSelf(SPELL_BLOODLUST);
                         context.Repeat(20s, 28s);
-                        });
-        }
+                    });
+    }
 
-        void SetData(uint32 /*type*/, uint32 data) override
-        {
-            UpdateZealotStatus(data, true);
-            CheckPhaseTransition();
+    void SetData(uint32 /*type*/, uint32 data) override
+    {
+        UpdateZealotStatus(data, true);
+        CheckPhaseTransition();
 
-            _scheduler.Schedule(10s, [this, data](TaskContext /*context*/) {
-                if (!_lorkhanDied || !_zathDied || !WasDead)
+        scheduler.Schedule(10s, [this, data](TaskContext /*context*/)
+            {
+                if (!_lorkhanDied || !_zathDied || !_wasDead)
                 {
                     ReviveZealot(data);
                 }
-                });
+            });
+    }
+
+    void DamageTaken(Unit* attacker, uint32& damage, DamageEffectType damageEffectType, SpellSchoolMask spellSchoolMask) override
+    {
+        if (!me->HasAura(SPELL_TIGER_FORM) && damage >= me->GetHealth())
+        {
+            damage = me->GetHealth() - 1;
+
+            if (!_wasDead)
+            {
+                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                me->SetReactState(REACT_PASSIVE);
+                me->SetStandState(UNIT_STAND_STATE_DEAD);
+                me->AttackStop();
+                DoResetThreatList();
+                _wasDead = true;
+                CheckPhaseTransition();
+                Talk(EMOTE_DIES);
+            }
         }
 
-        void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType, SpellSchoolMask) override
-        {
-            if (!me->HasAura(SPELL_TIGER_FORM) && damage >= me->GetHealth())
-            {
-                damage = me->GetHealth() - 1;
+        BossAI::DamageTaken(attacker, damage, damageEffectType, spellSchoolMask);
+    }
 
-                if (!WasDead)
+    void DoAction(int32 action) override
+    {
+        if (action == ACTION_RESSURRECT)
+        {
+            me->SetUInt32Value(UNIT_FIELD_BYTES_1, 0);
+            me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+            me->RestoreFaction();
+            me->SetReactState(REACT_AGGRESSIVE);
+            me->SetFullHealth();
+            _wasDead = false;
+        }
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (me->IsInCombat() && !UpdateVictim())
+        {
+            return;
+        }
+        else if (me->IsInCombat())
+        {
+            scheduler.Update(diff,
+                std::bind(&BossAI::DoMeleeAttackIfReady, this));
+        }
+        else
+        {
+            scheduler.Update(diff);
+        }
+    }
+
+    void ReviveZealot(uint32 zealotData)
+    {
+        if (Creature* zealot = instance->GetCreature(zealotData))
+        {
+            zealot->Respawn(true);
+            zealot->SetInCombatWithZone();
+            UpdateZealotStatus(zealotData, false);
+        }
+    }
+
+    void UpdateZealotStatus(uint32 data, bool dead)
+    {
+        if (data == DATA_LORKHAN)
+        {
+            _lorkhanDied = dead;
+        }
+        else if (data == DATA_ZATH)
+        {
+            _zathDied = dead;
+        }
+    }
+
+    void CheckPhaseTransition()
+    {
+        if (_wasDead && _lorkhanDied && _zathDied)
+        {
+            scheduler.Schedule(3s, [this](TaskContext /*context*/)
                 {
-                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-                    me->SetReactState(REACT_PASSIVE);
-                    me->SetStandState(UNIT_STAND_STATE_DEAD);
-                    me->AttackStop();
-                    DoResetThreatList();
-                    WasDead = true;
-                    CheckPhaseTransition();
-                    Talk(BOSS_EMOTE_DIES);
-                }
-            }
-
-            if (!Enraged && me->HealthBelowPctDamaged(20, damage) && me->HasAura(SPELL_TIGER_FORM))
-            {
-                DoCastSelf(SPELL_ENRAGE);
-                Enraged = true;
-            }
-        }
-
-        void DoAction(int32 action) override
-        {
-            if (action == ACTION_RESSURRECT)
-            {
-                me->SetUInt32Value(UNIT_FIELD_BYTES_1, 0);
-                me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
-                me->RestoreFaction();
-                me->SetReactState(REACT_AGGRESSIVE);
-                me->SetFullHealth();
-                WasDead = false;
-            }
-        }
-
-        void UpdateAI(uint32 diff) override
-        {
-            if (me->IsInCombat() && !UpdateVictim())
-            {
-                return;
-            }
-            else if (me->IsInCombat())
-            {
-                _scheduler.Update(diff,
-                    std::bind(&BossAI::DoMeleeAttackIfReady, this));
-            }
-            else
-            {
-                _scheduler.Update(diff);
-            }
-        }
-
-        void ReviveZealot(uint32 zealotData)
-        {
-            if (Creature* zealot = instance->GetCreature(zealotData))
-            {
-                zealot->Respawn(true);
-                zealot->SetInCombatWithZone();
-                UpdateZealotStatus(zealotData, false);
-            }
-        }
-
-        void UpdateZealotStatus(uint32 data, bool dead)
-        {
-            if (data == DATA_LORKHAN)
-            {
-                _lorkhanDied = dead;
-            }
-            else if (data == DATA_ZATH)
-            {
-                _zathDied = dead;
-            }
-        }
-
-        void CheckPhaseTransition()
-        {
-            if (WasDead && _lorkhanDied && _zathDied)
-            {
-                _scheduler.Schedule(3s, [this](TaskContext /*context*/) {
                     me->SetStandState(UNIT_STAND_STATE_STAND);
                     DoCastSelf(SPELL_RESURRECTION_IMPACT_VISUAL, true);
 
-                    _scheduler.Schedule(50ms, [this](TaskContext /*context*/) {
-                        Talk(BOSS_SAY_AGGRO);
+                    scheduler.Schedule(50ms, [this](TaskContext /*context*/)
+                        {
+                            Talk(SAY_AGGRO);
                         });
 
-                    _scheduler.Schedule(6s, [this](TaskContext /*context*/) {
-                        DoCastSelf(SPELL_TIGER_FORM);
-                        me->LoadEquipment(0, true);
-                        me->SetFullHealth();
-                        me->SetReactState(REACT_AGGRESSIVE);
-                        me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                    scheduler.Schedule(6s, [this](TaskContext /*context*/)
+                        {
+                            DoCastSelf(SPELL_TIGER_FORM);
+                            me->LoadEquipment(0, true);
+                            me->SetFullHealth();
+                            me->SetReactState(REACT_AGGRESSIVE);
+                            me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
 
-                        _scheduler.Schedule(30s, [this](TaskContext context) {
-                            DoCastSelf(SPELL_FRENZY);
-                            context.Repeat();
-                            }).Schedule(4s, [this](TaskContext context) {
-                                DoCastVictim(SPELL_FORCEPUNCH);
-                                context.Repeat(16s, 21s);
-                                }).Schedule(12s, [this](TaskContext context) {
-                                    // charge a random target that is at least 8 yards away (min range of charge is 8 yards)
-                                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, -8.0f))
+                            scheduler.Schedule(30s, [this](TaskContext context)
+                                {
+                                    DoCastSelf(SPELL_FRENZY);
+                                    context.Repeat();
+                                }).Schedule(4s, [this](TaskContext context)
                                     {
-                                        DoCast(target, SPELL_CHARGE);
-                                        DoResetThreatList();
-                                        AttackStart(target);
-                                    }
-                                    context.Repeat(15s, 22s);
-                                    }).Schedule(25s, [this](TaskContext context) {
-                                        DoCastVictim(SPELL_SUMMONTIGERS, true);
-                                        context.Repeat(10s, 14s);
-                                        });
+                                        DoCastVictim(SPELL_FORCEPUNCH);
+                                        context.Repeat(16s, 21s);
+                                    }).Schedule(12s, [this](TaskContext context)
+                                        {
+                                            // charge a random target that is at least 8 yards away (min range of charge is 8 yards)
+                                            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, -8.0f))
+                                            {
+                                                DoCast(target, SPELL_CHARGE);
+                                                DoResetThreatList();
+                                                AttackStart(target);
+                                            }
+                                            context.Repeat(15s, 22s);
+                                        }).Schedule(25s, [this](TaskContext context)
+                                            {
+                                                DoCastVictim(SPELL_SUMMONTIGERS, true);
+                                                context.Repeat(10s, 14s);
+                                            });
+
+                                        // schedule Enrage at 20% health
+                                        ScheduleHealthCheckEvent(20, [this]
+                                            {
+                                                DoCastSelf(SPELL_ENRAGE);
+                                            });
                         });
-                    });
-            }
-            else
-            {
-                _scheduler.Schedule(10s, [this](TaskContext /*context*/) {
-                    if (!(WasDead && _lorkhanDied && _zathDied))
+                });
+        }
+        else
+        {
+            scheduler.Schedule(10s, [this](TaskContext /*context*/)
+                {
+                    if (!(_wasDead && _lorkhanDied && _zathDied))
                     {
                         DoAction(ACTION_RESSURRECT);
                     }
-                    });
-            }
+                });
         }
-
-    private:
-        TaskScheduler _scheduler;
-        GuidVector _catGuids;
-        bool _lorkhanDied;
-        bool _zathDied;
-        bool Enraged;
-        bool WasDead;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetZulGurubAI<boss_thekalAI>(creature);
     }
+
+private:
+    bool _lorkhanDied;
+    bool _zathDied;
+    bool _enraged;
+    bool _wasDead;
 };
 
-class npc_zealot_lorkhan : public CreatureScript
+struct npc_zealot_lorkhan : public ScriptedAI
 {
-public:
-    npc_zealot_lorkhan() : CreatureScript("npc_zealot_lorkhan") { }
-
-    struct npc_zealot_lorkhanAI : public ScriptedAI
+    npc_zealot_lorkhan(Creature* creature) : ScriptedAI(creature)
     {
-        npc_zealot_lorkhanAI(Creature* creature) : ScriptedAI(creature)
-        {
-            instance = creature->GetInstanceScript();
-        }
+        instance = creature->GetInstanceScript();
+    }
 
-        InstanceScript* instance;
+    InstanceScript* instance;
 
-        void Reset() override
-        {
-            _scheduler.CancelAll();
+    void Reset() override
+    {
+        _scheduler.CancelAll();
 
-            _scheduler.SetValidator([this]
-                {
-                    return !me->HasUnitState(UNIT_STATE_CASTING);
-                });
+        _scheduler.SetValidator([this]
+            {
+                return !me->HasUnitState(UNIT_STATE_CASTING);
+            });
 
-            // emote idle loop
-            _scheduler.Schedule(5s, 25s, [this](TaskContext context) {
+        // emote idle loop
+        _scheduler.Schedule(5s, 25s, [this](TaskContext context)
+            {
                 // pick a random emote from the list of available emotes
                 me->HandleEmoteCommand(
                     RAND(
@@ -351,17 +349,19 @@ public:
                     )
                 );
                 context.Repeat(5s, 25s);
-                });
-        }
+            });
+    }
 
-        void JustEngagedWith(Unit* /*who*/) override
-        {
-            _scheduler.CancelAll();
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _scheduler.CancelAll();
 
-            _scheduler.Schedule(1s, [this](TaskContext context) {
+        _scheduler.Schedule(1s, [this](TaskContext context)
+            {
                 DoCastSelf(SPELL_SHIELD);
                 context.Repeat(1min);
-                }).Schedule(32s, [this](TaskContext context) {
+            }).Schedule(32s, [this](TaskContext context)
+                {
                     Unit* thekal = instance->GetCreature(DATA_THEKAL);
                     Unit* zath = instance->GetCreature(DATA_ZATH);
 
@@ -382,74 +382,65 @@ public:
                     }
 
                     context.Repeat(15s, 20s);
-                    }).Schedule(6s, [this](TaskContext context) {
+                }).Schedule(6s, [this](TaskContext context)
+                    {
                         DoCastVictim(SPELL_DISARM);
                         context.Repeat(15s, 25s);
-                        });
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            Talk(ZEALOT_EMOTE_DIES);
-
-            if (Creature* thekal = instance->GetCreature(DATA_THEKAL))
-            {
-                thekal->AI()->SetData(ACTION_RESSURRECT, DATA_LORKHAN);
-            }
-        }
-
-        void UpdateAI(uint32 diff) override
-        {
-            if (me->IsInCombat() && !UpdateVictim())
-            {
-                return;
-            }
-            else if (me->IsInCombat())
-            {
-                _scheduler.Update(diff,
-                    std::bind(&BossAI::DoMeleeAttackIfReady, this));
-            }
-            else
-            {
-                _scheduler.Update(diff);
-            }
-        }
-
-    private:
-        TaskScheduler _scheduler;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetZulGurubAI<npc_zealot_lorkhanAI>(creature);
+                    });
     }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        Talk(EMOTE_ZEALOT_DIES);
+
+        if (Creature* thekal = instance->GetCreature(DATA_THEKAL))
+        {
+            thekal->AI()->SetData(ACTION_RESSURRECT, DATA_LORKHAN);
+        }
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (me->IsInCombat() && !UpdateVictim())
+        {
+            return;
+        }
+        else if (me->IsInCombat())
+        {
+            _scheduler.Update(diff,
+                std::bind(&BossAI::DoMeleeAttackIfReady, this));
+        }
+        else
+        {
+            _scheduler.Update(diff);
+        }
+    }
+
+private:
+    TaskScheduler _scheduler;
 };
 
-class npc_zealot_zath : public CreatureScript
+struct npc_zealot_zath : public ScriptedAI
 {
-public:
-    npc_zealot_zath() : CreatureScript("npc_zealot_zath") { }
-
-    struct npc_zealot_zathAI : public ScriptedAI
+    npc_zealot_zath(Creature* creature) : ScriptedAI(creature)
     {
-        npc_zealot_zathAI(Creature* creature) : ScriptedAI(creature)
-        {
-            instance = creature->GetInstanceScript();
-        }
+        instance = creature->GetInstanceScript();
+    }
 
-        InstanceScript* instance;
+    InstanceScript* instance;
 
-        void Reset() override
-        {
-            _scheduler.CancelAll();
+    void Reset() override
+    {
+        _scheduler.CancelAll();
 
-            _scheduler.SetValidator([this]
-                {
-                    return !me->HasUnitState(UNIT_STATE_CASTING);
-                });
+        _scheduler.SetValidator([this]
+            {
+                return !me->HasUnitState(UNIT_STATE_CASTING);
+            });
 
-            // emote idle loop
-            _scheduler.Schedule(5s, 25s, [this](TaskContext context) {
+        // emote idle loop
+        _scheduler.Schedule(5s, 25s, [this](TaskContext context)
+            {
                 // pick a random emote from the list of available emotes
                 me->HandleEmoteCommand(
                     RAND(
@@ -459,23 +450,27 @@ public:
                     )
                 );
                 context.Repeat(5s, 25s);
-                });
-        }
+            });
+    }
 
-        void JustEngagedWith(Unit* /*who*/) override
-        {
-            _scheduler.CancelAll();
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _scheduler.CancelAll();
 
-            _scheduler.Schedule(13s, [this](TaskContext context) {
+        _scheduler.Schedule(13s, [this](TaskContext context)
+            {
                 DoCastSelf(SPELL_SWEEPINGSTRIKES);
                 context.Repeat(1min);
-                }).Schedule(16s, [this](TaskContext context) {
+            }).Schedule(16s, [this](TaskContext context)
+                {
                     DoCastSelf(SPELL_BLOODLUST);
                     context.Repeat(22s, 26s);
-                    }).Schedule(8s, [this](TaskContext context) {
+                }).Schedule(8s, [this](TaskContext context)
+                    {
                         DoCastVictim(SPELL_SINISTERSTRIKE);
                         context.Repeat(8s, 16s);
-                        }).Schedule(25s, [this](TaskContext context) {
+                    }).Schedule(25s, [this](TaskContext context)
+                        {
                             DoCastVictim(SPELL_GOUGE);
 
                             if (DoGetThreat(me->GetVictim()))
@@ -484,55 +479,51 @@ public:
                             }
 
                             context.Repeat(17s, 27s);
-                            }).Schedule(18s, [this](TaskContext context) {
+                        }).Schedule(18s, [this](TaskContext context)
+                            {
                                 DoCastVictim(SPELL_KICK);
                                 context.Repeat(15s, 25s);
-                                }).Schedule(5s, [this](TaskContext context) {
+                            }).Schedule(5s, [this](TaskContext context)
+                                {
                                     DoCastVictim(SPELL_BLIND);
                                     context.Repeat(10s, 20s);
-                                    });
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            Talk(ZEALOT_EMOTE_DIES);
-
-            if (Creature* thekal = instance->GetCreature(DATA_THEKAL))
-            {
-                thekal->AI()->SetData(ACTION_RESSURRECT, DATA_ZATH);
-            }
-        }
-
-        void UpdateAI(uint32 diff) override
-        {
-            if (me->IsInCombat() && !UpdateVictim())
-            {
-                return;
-            }
-            else if (me->IsInCombat())
-            {
-                _scheduler.Update(diff,
-                    std::bind(&BossAI::DoMeleeAttackIfReady, this));
-            }
-            else
-            {
-                _scheduler.Update(diff);
-            }
-        }
-
-    private:
-        TaskScheduler _scheduler;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetZulGurubAI<npc_zealot_zathAI>(creature);
+                                });
     }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        Talk(EMOTE_ZEALOT_DIES);
+
+        if (Creature* thekal = instance->GetCreature(DATA_THEKAL))
+        {
+            thekal->AI()->SetData(ACTION_RESSURRECT, DATA_ZATH);
+        }
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (me->IsInCombat() && !UpdateVictim())
+        {
+            return;
+        }
+        else if (me->IsInCombat())
+        {
+            _scheduler.Update(diff,
+                std::bind(&BossAI::DoMeleeAttackIfReady, this));
+        }
+        else
+        {
+            _scheduler.Update(diff);
+        }
+    }
+
+private:
+    TaskScheduler _scheduler;
 };
 
 void AddSC_boss_thekal()
 {
-    new boss_thekal();
-    new npc_zealot_lorkhan();
-    new npc_zealot_zath();
+    RegisterCreatureAI(boss_thekal);
+    RegisterCreatureAI(npc_zealot_lorkhan);
+    RegisterCreatureAI(npc_zealot_zath);
 }
