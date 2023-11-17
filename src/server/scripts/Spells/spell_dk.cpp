@@ -112,77 +112,68 @@ enum Spells
     SPELL_WAVE_OF_ENERGY = 940737
 };
 
-class spell_death_knight_soul_of_ebon_blade : public SpellScriptLoader
+class spell_death_knight_soul_of_ebon_blade : public AuraScript
 {
-public:
-    spell_death_knight_soul_of_ebon_blade() : SpellScriptLoader("spell_death_knight_soul_of_ebon_blade") { }
+    PrepareAuraScript(spell_death_knight_soul_of_ebon_blade);
 
-    class spell_death_knight_soul_of_ebon_blade_AuraScript : public AuraScript
+    void HandleStackApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        PrepareAuraScript(spell_death_knight_soul_of_ebon_blade_AuraScript);
+        Unit* caster = GetCaster();
+        if (!caster || caster->IsNPCBot())  // Exclude NPC bots
+            return;
 
-        void HandleStackApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        // Check if 8 stacks are reached
+        if (GetStackAmount() >= 8)
         {
-            Unit* caster = GetCaster();
-            if (!caster)
-                return;
+            // Cast the wave of energy spell
+            caster->CastSpell(caster, SPELL_WAVE_OF_ENERGY, true);
 
-            // Check if 8 stacks are reached
-            if (GetStackAmount() >= 8)
-            {
-                // Cast the wave of energy spell
-                caster->CastSpell(caster, SPELL_WAVE_OF_ENERGY, true);
-
-                // Remove the stacks
-                Remove(AURA_REMOVE_BY_DEFAULT);
-            }
+            // Remove the stacks
+            Remove(AURA_REMOVE_BY_DEFAULT);
         }
+    }
 
-        void Register() override
-        {
-            AfterEffectApply += AuraEffectApplyFn(spell_death_knight_soul_of_ebon_blade_AuraScript::HandleStackApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
-        }
-    };
-
-    AuraScript* GetAuraScript() const override
+    void Register() override
     {
-        return new spell_death_knight_soul_of_ebon_blade_AuraScript();
+        AfterEffectApply += AuraEffectApplyFn(spell_death_knight_soul_of_ebon_blade::HandleStackApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
     }
 };
 
 void AddSC_death_knight_soul_of_ebon_blade()
 {
-    new spell_death_knight_soul_of_ebon_blade();
+    RegisterSpellScript(spell_death_knight_soul_of_ebon_blade);
 }
 
-class dk_tier_two_setbonus : public PlayerScript
+class spell_dk_tier_two_setbonus : public SpellScript
 {
-public:
-    dk_tier_two_setbonus() : PlayerScript("dk_tier_two_setbonus") { }
+    PrepareSpellScript(spell_dk_tier_two_setbonus);
 
-    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
+    static constexpr uint32 kRequiredAura = 80043;
+    static constexpr uint32 kAdditionalSpellId = 80042;
+
+    void HandleOnCast()
     {
-        uint32 spellId = spell->GetSpellInfo()->Id;
+        Unit* caster = GetCaster();
+        if (!caster || !caster->IsPlayer())
+            return;
 
-        // Check conditions related to SPELL_DK_SPELL_1
-        if (spellId == SPELL_DK_SPELL_1)
+        // Check if the player has the required aura
+        if (caster->HasAura(kRequiredAura))
         {
-            if (player->HasAura(SPELL_DK_AURA_1))
-                player->CastSpell(player, SPELL_DK_BONUS_SPELL_1, true);
-
-            if (player->HasAura(SPELL_DK_HAS_AURA))
-                player->CastSpell(player, SPELL_DK_EXTRA_SPELL, true);
+            // Cast the additional spell
+            caster->CastSpell(caster, kAdditionalSpellId, true);
         }
+    }
 
-        // If player has aura 80044 and casts 48707, also cast 80046
-        if (spellId == SPELL_DK_SPELL_2 && player->HasAura(SPELL_DK_AURA_2))
-            player->CastSpell(player, SPELL_DK_BONUS_SPELL_2, true);
+    void Register() override
+    {
+        OnCast += SpellCastFn(spell_dk_tier_two_setbonus::HandleOnCast);
     }
 };
 
-void AddSC_dk_tier_two_setbonus()
+void AddSC_spell_dk_tier_two_setbonus()
 {
-    new dk_tier_two_setbonus();
+    RegisterSpellScript(spell_dk_tier_two_setbonus);
 }
 
 class spell_death_knight_dnd : public SpellScript
@@ -224,55 +215,35 @@ void AddSC_DeathKnightDnD()
     RegisterSpellScript(spell_death_knight_dnd);
 }
 
-
-class StrengthOfWillSpell : public SpellScriptLoader
+class spell_strength_of_will : public SpellScript
 {
-public:
-    StrengthOfWillSpell() : SpellScriptLoader("spell_strength_of_will") { }
+    PrepareSpellScript(spell_strength_of_will);
 
-    class StrengthOfWillSpellScript : public SpellScript
+    static constexpr float kHealthThreshold = 70.0f;
+
+    SpellCastResult CheckHealth()
     {
-    public:
-        PrepareSpellScript(StrengthOfWillSpellScript);
-
-        static constexpr float kHealthThreshold = 70.0f;
-        static constexpr uint32 kSpellId = 80013;
-
-        SpellCastResult CheckHealth()
-        {
-            Unit* caster = GetCaster();
-            if (caster == nullptr)
-                return SPELL_CAST_OK;
-
-            Player* player = caster->ToPlayer();
-            if (player == nullptr)
-                return SPELL_CAST_OK;
-
-            // Directly check health percent and remove aura if needed
-            if (player->GetHealthPct() < kHealthThreshold)
-            {
-                player->RemoveAura(kSpellId);
-                return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
-            }
-
+        Unit* caster = GetCaster();
+        if (!caster || caster->IsNPCBot()) // Exclude NPC bots
             return SPELL_CAST_OK;
-        }
 
-        void Register() override
+        if (caster->GetHealthPct() < kHealthThreshold)
         {
-            OnCheckCast += SpellCheckCastFn(StrengthOfWillSpellScript::CheckHealth);
+            return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
         }
-    };
 
-    SpellScript* GetSpellScript() const override
+        return SPELL_CAST_OK;
+    }
+
+    void Register() override
     {
-        return new StrengthOfWillSpellScript();
+        OnCheckCast += SpellCheckCastFn(spell_strength_of_will::CheckHealth);
     }
 };
 
-void AddSC_StrengthOfWillSpell()
+void AddSC_spell_strength_of_will()
 {
-    new StrengthOfWillSpell();
+    RegisterSpellScript(spell_strength_of_will);
 }
 
 
@@ -1158,10 +1129,16 @@ class spell_dk_anti_magic_shell_self : public AuraScript
         GetTarget()->CastCustomSpell(SPELL_DK_RUNIC_POWER_ENERGIZE, SPELLVALUE_BASE_POINT0, bp, GetTarget(), true, nullptr, aurEff);
     }
 
-    void HandleEffectApply(AuraEffect const*  /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    void HandleEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         Unit* target = GetTarget();
         target->ApplySpellImmune(GetId(), IMMUNITY_ID, 33786, true); // cyclone
+
+        // Check for the specific aura and cast the additional spell
+        if (target->HasAura(80044))
+        {
+            target->CastSpell(target, 80046, true);
+        }
     }
 
     void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -2468,8 +2445,8 @@ class spell_dk_will_of_the_necropolis : public AuraScript
 
 void AddSC_deathknight_spell_scripts()
 {
-    new spell_death_knight_soul_of_ebon_blade();
-    new dk_tier_two_setbonus();
+    RegisterSpellScript(spell_death_knight_soul_of_ebon_blade);
+    RegisterSpellScript(spell_dk_tier_two_setbonus);
     RegisterSpellScript(spell_dk_wandering_plague);
     RegisterSpellScript(spell_dk_raise_ally);
     RegisterSpellScript(spell_dk_raise_ally_trigger);
@@ -2515,6 +2492,6 @@ void AddSC_deathknight_spell_scripts()
     RegisterSpellScript(spell_dk_vampiric_blood);
     RegisterSpellScript(spell_dk_will_of_the_necropolis);
     RegisterSpellScript(spell_dk_ghoul_thrash);    
-    AddSC_DeathKnightDnD();
-    AddSC_StrengthOfWillSpell();
+    RegisterSpellScript(spell_death_knight_dnd);
+    RegisterSpellScript(spell_strength_of_will);
 }

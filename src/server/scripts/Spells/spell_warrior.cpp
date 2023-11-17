@@ -77,72 +77,35 @@ enum MiscSpells
     SPELL_GEN_DAMAGE_REDUCTION_AURA                 = 68066,
 };
 
-class spell_warrior : public PlayerScript
+class spell_warrior_vanguard_legendary : public SpellScript
 {
-public:
-    spell_warrior() : PlayerScript("spell_warrior")
+    PrepareSpellScript(spell_warrior_vanguard_legendary);
+
+    static constexpr uint32 REQUIRED_AURA_ID = 100249;
+    static constexpr uint32 ADDITIONAL_SPELL_ID = 100250;
+
+    void HandleOnCast()
     {
-        execute_spell_set.insert(EXECUTE_SPELL_IDS.begin(), EXECUTE_SPELL_IDS.end());
-        devastate_spell_set.insert(DEVASTATE_SPELL_IDS.begin(), DEVASTATE_SPELL_IDS.end());
+        Unit* caster = GetCaster();
+        if (!caster || caster->IsNPCBot()) // Exclude NPC bots
+            return;
+
+        if (caster->HasAura(REQUIRED_AURA_ID))
+        {
+            caster->CastSpell(caster, ADDITIONAL_SPELL_ID, true);
+        }
     }
 
-    std::vector<uint32> REQUIRED_ITEM_IDS = { 60102, 800030 };
-    uint32 JUGGERNAUT_SPELL_ID = 100248;
-    std::vector<uint32> EXECUTE_SPELL_IDS = { 47471, 47470, 25236, 25234, 20662, 20661, 20660, 20658, 5308 };
-    uint32 VANGUARD_DEFENSE_SPELL_ID = 100250;
-    std::vector<uint32> DEVASTATE_SPELL_IDS = { 47498, 20243, 30016, 30022, 47497 };
-    std::unordered_set<uint32> execute_spell_set;
-    std::unordered_set<uint32> devastate_spell_set;
-
-    bool hasRequiredItemEquipped(Player* player)
+    void Register() override
     {
-        for (uint32 itemId : REQUIRED_ITEM_IDS)
-        {
-            if (Item* item = player->GetItemByEntry(itemId))
-            {
-                if (item->IsEquipped())
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
-    {
-        if (!hasRequiredItemEquipped(player))
-        {
-            return;
-        }
-
-        uint32 spellId = spell->GetSpellInfo()->Id;
-        auto execute_found = execute_spell_set.find(spellId);
-        auto devastate_found = devastate_spell_set.find(spellId);
-
-        // If the spell is not an Execute or Devastate spell, return early
-        if (execute_found == execute_spell_set.end() && devastate_found == devastate_spell_set.end())
-        {
-            return;
-        }
-
-        // Now cast the corresponding spell
-        if (execute_found != execute_spell_set.end())
-        {
-            player->CastSpell(player, JUGGERNAUT_SPELL_ID, true);
-        }
-        else
-        {
-            player->CastSpell(player, VANGUARD_DEFENSE_SPELL_ID, true);
-        }
+        OnCast += SpellCastFn(spell_warrior_vanguard_legendary::HandleOnCast);
     }
 };
 
-void AddSC_spell_warrior()
+void AddSC_spell_warrior_vanguard_legendary()
 {
-    new spell_warrior();
+    RegisterSpellScript(spell_warrior_vanguard_legendary);
 }
-
 
 class spell_warr_mocking_blow : public SpellScript
 {
@@ -447,6 +410,9 @@ class spell_warr_execute : public SpellScript
 {
     PrepareSpellScript(spell_warr_execute);
 
+    static constexpr uint32 REQUIRED_AURA_ID = 100249;
+    static constexpr uint32 ADDITIONAL_SPELL_ID = 100248;
+
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_WARRIOR_EXECUTE, SPELL_WARRIOR_GLYPH_OF_EXECUTION });
@@ -489,8 +455,14 @@ class spell_warr_execute : public SpellScript
 
             int32 bp = GetEffectValue() + int32(rageUsed * spellInfo->Effects[effIndex].DamageMultiplier + caster->GetTotalAttackPowerValue(BASE_ATTACK) * 0.2f);
             caster->CastCustomSpell(target, SPELL_WARRIOR_EXECUTE, &bp, nullptr, nullptr, true, nullptr, nullptr, GetOriginalCaster()->GetGUID());
+            //  logic from spell_warrior_juggernaut_legendary
+            if (caster && !caster->IsNPCBot() && caster->HasAura(REQUIRED_AURA_ID))
+            {
+                caster->CastSpell(caster, ADDITIONAL_SPELL_ID, true);
+            }
         }
     }
+
 
     void Register() override
     {
@@ -996,5 +968,5 @@ void AddSC_warrior_spell_scripts()
     RegisterSpellScript(spell_warr_vigilance);
     RegisterSpellScript(spell_warr_vigilance_trigger);
     RegisterSpellScript(spell_warr_t3_prot_8p_bonus);
-    new spell_warrior();
+    RegisterSpellScript(spell_warrior_vanguard_legendary);
 }

@@ -51,72 +51,71 @@ enum RogueSpells
     SPELL_ROGUE_TRICKS_OF_THE_TRADE_PROC        = 59628,
 };
 
-class Shadowdance_Plus : public PlayerScript
+class spell_rogue_shadowdance_plus : public SpellScript
 {
-public:
-    Shadowdance_Plus() : PlayerScript("Shadowdance_Plus") {}
+    PrepareSpellScript(spell_rogue_shadowdance_plus);
 
-    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
+    void HandleAfterCast()
     {
-        if (player->getClass() != CLASS_ROGUE)
-            return; // Check if the player is a rogue
+        Unit* caster = GetCaster();
 
-        uint32 spellId = spell->GetSpellInfo()->Id;
+        // Check if the caster is an NPC bot and exclude them
+        if (caster->IsNPCBot())
+            return;
 
-        if (spellId == 51713) // Check if the cast spell is 51713
-        {
-            player->CastSpell(player, 920540, true); // Cast spell 920540
-        }
+        caster->CastSpell(caster, 920540, true); // Cast spell 920540
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_rogue_shadowdance_plus::HandleAfterCast);
     }
 };
 
-void AddSC_Shadowdance_Plus()
+void AddSC_spell_rogue_shadowdance_plus()
 {
-    new Shadowdance_Plus();
+    RegisterSpellScript(spell_rogue_shadowdance_plus);
 }
 
-class player_rogue_swiftness_strikes : public PlayerScript
+class spell_rogue_swiftness_strikes : public SpellScript
 {
-public:
-    player_rogue_swiftness_strikes() : PlayerScript("player_rogue_swiftness_strikes") {}
+    PrepareSpellScript(spell_rogue_swiftness_strikes);
 
-    static const std::set<uint32> ITEM_IDS;
-    static const std::set<uint32> SPELL_SINISTER_STRIKE_IDS;
+    static const uint32 REQUIRED_AURA_ID = 920019;
     static const uint32 AURA_ID = 920020;
     static const uint32 STACK_LIMIT = 12;
     static const uint32 SPELL_ON_LIMIT = 920021;
 
-    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
+    void HandleOnCast()
     {
-        uint32 spellId = spell->GetSpellInfo()->Id;
-        if (SPELL_SINISTER_STRIKE_IDS.find(spellId) == SPELL_SINISTER_STRIKE_IDS.end())
+        Unit* caster = GetCaster();
+        if (!caster || caster->IsNPCBot()) // Exclude NPC bots
             return;
 
-        bool hasItemEquipped = std::any_of(ITEM_IDS.begin(), ITEM_IDS.end(), [&player](uint32 itemId) {
-            return player->HasItemOrGemWithIdEquipped(itemId, 1);
-            });
+        if (!caster->HasAura(REQUIRED_AURA_ID))
+            return;
 
-        if (hasItemEquipped)
+        if (urand(1, 100) <= 40)
         {
-            if (urand(1, 100) <= 40)
+            caster->CastSpell(caster, AURA_ID, true);
+            Aura* aura = caster->GetAura(AURA_ID);
+            if (aura && aura->GetStackAmount() >= STACK_LIMIT)
             {
-                Aura* aura = player->AddAura(AURA_ID, player);
-                if (aura && aura->GetStackAmount() >= STACK_LIMIT)
-                {
-                    player->CastSpell(player, SPELL_ON_LIMIT, true);
-                    aura->SetStackAmount(0);
-                }
+                caster->CastSpell(caster, SPELL_ON_LIMIT, true);
+                aura->Remove();
             }
         }
     }
+
+    void Register() override
+    {
+        OnCast += SpellCastFn(spell_rogue_swiftness_strikes::HandleOnCast);
+    }
 };
 
-const std::set<uint32> player_rogue_swiftness_strikes::ITEM_IDS = { 60095, 800032 };
-const std::set<uint32> player_rogue_swiftness_strikes::SPELL_SINISTER_STRIKE_IDS = { 1752, 1757, 1758, 1759, 1760, 8621, 11294, 11294, 26861, 26862, 48637, 48638, 48660, 26864, 26864, 17347, 16511, 48666, 34411, 34412, 34413, 48663, 48666 };
-
-void AddSC_player_rogue_swiftness_strikes()
+void AddSC_spell_rogue_swiftness_strikes()
 {
-    new player_rogue_swiftness_strikes();
+    RegisterSpellScript(spell_rogue_swiftness_strikes);
 }
 
 class spell_rog_savage_combat : public AuraScript
@@ -870,7 +869,7 @@ void AddSC_rogue_spell_scripts()
     RegisterSpellScript(spell_rog_tricks_of_the_trade);
     RegisterSpellScript(spell_rog_tricks_of_the_trade_proc);
     RegisterSpellScript(spell_rog_pickpocket);
-    new player_rogue_swiftness_strikes();
-    new Shadowdance_Plus();
+    RegisterSpellScript(spell_rogue_swiftness_strikes);
+    RegisterSpellScript(spell_rogue_shadowdance_plus);
     new spell_rogue_add_combo_points();
 }

@@ -44,7 +44,10 @@ void AddSC_spell_dk_frost_latch_taunt();
 void AddSC_spell_dk_bone_shield_duskhaven();
 void AddSC_spell_dk_scripts();
 void AddSC_npc_straight_line_walker();
+void AddSC_spell_dk_blood_drinker();
+//void AddSC_PlayerTeleportRevive();
 
+//void AddSC_transform_race_command();
 
 //void AddSC_boss_the_hidden_watcher();
 //void AddSC_SymbiosisScript();
@@ -80,6 +83,10 @@ void AddCustomScripts()
     AddSC_spell_dk_bone_shield_duskhaven();
     AddSC_spell_dk_scripts();
     AddSC_npc_straight_line_walker();
+    AddSC_spell_dk_blood_drinker();
+   // AddSC_PlayerTeleportRevive();
+
+  //  AddSC_transform_race_command();
 
     // AddSC_boss_the_hidden_watcher();
     // AddSC_SymbiosisScript();

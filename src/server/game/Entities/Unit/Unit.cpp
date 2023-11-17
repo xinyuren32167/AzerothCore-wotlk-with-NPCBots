@@ -10741,6 +10741,12 @@ ReputationRank Unit::GetReactionTo(Unit const* target, bool checkOriginalFaction
         factionTemplateEntry = GetFactionTemplateEntry();
     }
 
+    if (!factionTemplateEntry)
+    {
+        LOG_ERROR("entities.player", "Null FactionTemplateEntry in Unit::GetReactionTo for unit %u", GetGUID().GetCounter());
+        return REP_NEUTRAL; // Or another default reaction
+    }
+
     // do checks dependant only on our faction
     return GetFactionReactionTo(factionTemplateEntry, target);
 }
@@ -15086,6 +15092,10 @@ int32 Unit::ModifyPowerPct(Powers power, float pct, bool apply)
 
 bool Unit::IsAlwaysVisibleFor(WorldObject const* seer) const
 {
+        // Hackfix: Directly return true for NPC bots created by the seer
+    if (IsNPCBot() && GetCreator() && seer->GetGUID() == GetCreator()->GetGUID())
+            return true;
+
     if (WorldObject::IsAlwaysVisibleFor(seer))
         return true;
 
@@ -15095,7 +15105,7 @@ bool Unit::IsAlwaysVisibleFor(WorldObject const* seer) const
             return true;
 
     if (Player const* seerPlayer = seer->ToPlayer())
-        if (Unit* owner =  GetOwner())
+        if (Unit* owner = GetOwner())
             if (Player* ownerPlayer = owner->ToPlayer())
                 if (ownerPlayer->IsGroupVisibleFor(seerPlayer))
                     return true;

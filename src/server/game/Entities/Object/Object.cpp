@@ -1688,32 +1688,39 @@ float WorldObject::GetVisibilityRange() const
 
 float WorldObject::GetSightRange(WorldObject const* target) const
 {
-    // Hackfix 1: Early null check for target
-    if (target == nullptr)
-        return SIGHT_RANGE_UNIT;  // Or some default value other than 0.0f
-
     if (ToUnit())
     {
         if (ToPlayer())
         {
-            // Merged logic: Including null check with visibility override and far visibility checks from upstream
-            if (target->IsVisibilityOverridden() && !target->ToPlayer())
-                return *target->m_visibilityDistanceOverride;
-            else if (target->IsFarVisible() && !target->ToPlayer())
-                return MAX_VISIBILITY_DISTANCE;
-            else if (target->GetTypeId() == TYPEID_GAMEOBJECT)
+            if (target)
             {
-                if (IsInWintergrasp() && target->IsInWintergrasp())
-                    return VISIBILITY_DIST_WINTERGRASP + VISIBILITY_INC_FOR_GOBJECTS;
-                else if (target->IsVisibilityOverridden())
+                if (target->IsVisibilityOverridden() && target->GetTypeId() == TYPEID_UNIT)
+                {
                     return *target->m_visibilityDistanceOverride;
-                else
-                    return GetMap()->GetVisibilityRange() + VISIBILITY_INC_FOR_GOBJECTS;
+                }
+                else if (target->GetTypeId() == TYPEID_GAMEOBJECT)
+                {
+                    if (IsInWintergrasp() && target->IsInWintergrasp())
+                    {
+                        return VISIBILITY_DIST_WINTERGRASP + VISIBILITY_INC_FOR_GOBJECTS;
+                    }
+                    else if (target->IsVisibilityOverridden())
+                    {
+                        return *target->m_visibilityDistanceOverride;
+                    }
+                    else if (ToPlayer()->GetCinematicMgr()->IsOnCinematic())
+                    {
+                        return DEFAULT_VISIBILITY_INSTANCE;
+                    }
+                    else
+                    {
+                        return GetMap()->GetVisibilityRange() + VISIBILITY_INC_FOR_GOBJECTS;
+                    }
+                }
+
+                return IsInWintergrasp() && target->IsInWintergrasp() ? VISIBILITY_DIST_WINTERGRASP : GetMap()->GetVisibilityRange();
             }
-            else if (ToPlayer()->GetCinematicMgr()->IsOnCinematic())
-                return DEFAULT_VISIBILITY_INSTANCE;
-            else
-                return IsInWintergrasp() ? VISIBILITY_DISTANCE_LARGE : GetMap()->GetVisibilityRange();
+            return IsInWintergrasp() ? VISIBILITY_DIST_WINTERGRASP : GetMap()->GetVisibilityRange();
         }
         else if (ToCreature())
         {
@@ -1730,11 +1737,10 @@ float WorldObject::GetSightRange(WorldObject const* target) const
         return GetMap()->GetVisibilityRange();
     }
 
-    // Hackfix 2: Return a default sight range instead of 0.0f
-    return SIGHT_RANGE_UNIT; // Or some other default value
+    return 0.0f;
 }
 
-bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool implicitDetect, bool distanceCheck, bool checkAlert) const
+bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool ignoreStealth, bool distanceCheck, bool checkAlert) const
 {
     if (this == obj)
         return true;
@@ -1745,14 +1751,58 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool implicitDetect, bo
     if (obj->IsAlwaysVisibleFor(this) || CanAlwaysSee(obj))
         return true;
 
+    // Creature scripts
+    if (Creature const* cObj = obj->ToCreature())
+    {
+        if (Player const* player = ToPlayer())
+        {
+            if (cObj->IsAIEnabled && !cObj->AI()->CanBeSeen(player))
+            {
+                return false;
+            }
+
+            ConditionList conditions = sConditionMgr->GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_CREATURE_VISIBILITY, cObj->GetEntry());
+            if (!sConditionMgr->IsObjectMeetToConditions((WorldObject*)this, (WorldObject*)obj, conditions))
+            {
+                return false;
+            }
+        }
+    }
+
+    // Gameobject scripts
+    if (GameObject const* goObj = obj->ToGameObject())
+    {
+        if (ToPlayer() && !goObj->AI()->CanBeSeen(ToPlayer()))
+        {
+            return false;
+        }
+    }
+
+    // pussywizard: arena spectator
+    if (obj->GetTypeId() == TYPEID_PLAYER)
+        if (((Player const*)obj)->IsSpectator() && ((Player const*)obj)->FindMap()->IsBattleArena())
+            return false;
+
     bool corpseVisibility = false;
     if (distanceCheck)
     {
         bool corpseCheck = false;
+        WorldObject const* viewpoint = this;
         if (Player const* thisPlayer = ToPlayer())
         {
+            if (Creature const* creature = obj->ToCreature())
+            {
+                if (TempSummon const* tempSummon = creature->ToTempSummon())
+                {
+                    if (tempSummon->IsVisibleBySummonerOnly() && GetGUID() != tempSummon->GetSummonerGUID())
+                    {
+                        return false;
+                    }
+                }
+            }
+
             if (thisPlayer->isDead() && thisPlayer->GetHealth() > 0 && // Cheap way to check for ghost state
-                !(obj->m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GHOST) & m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GHOST) & GHOST_VISIBILITY_GHOST))
+                    !(obj->m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GHOST) & m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GHOST) & GHOST_VISIBILITY_GHOST))
             {
                 if (Corpse* corpse = thisPlayer->GetCorpse())
                 {
@@ -1763,30 +1813,33 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool implicitDetect, bo
                 }
             }
 
+            // our additional checks
             if (Unit const* target = obj->ToUnit())
             {
-                // Don't allow to detect vehicle accessories if you can't see vehicle
+                // xinef: don't allow to detect vehicle accessory if you can't see vehicle base!
                 if (Unit const* vehicle = target->GetVehicleBase())
                     if (!thisPlayer->HaveAtClient(vehicle))
                         return false;
+
+                // pussywizard: during arena preparation, don't allow to detect pets if can't see its owner (spoils enemy arena frames)
+                if (target->IsPet() && target->GetOwnerGUID() && target->FindMap()->IsBattleArena() && GetGUID() != target->GetOwnerGUID())
+                    if (BattlegroundMap* bgmap = target->FindMap()->ToBattlegroundMap())
+                        if (Battleground* bg = bgmap->GetBG())
+                            if (bg->GetStatus() < STATUS_IN_PROGRESS && !thisPlayer->HaveAtClient(target->GetOwnerGUID()))
+                                return false;
+            }
+
+            if (thisPlayer->GetViewpoint())
+                viewpoint = thisPlayer->GetViewpoint();
+
+            if (thisPlayer->GetFarSightDistance() && !thisPlayer->isInFront(obj))
+            {
+                return false;
             }
         }
 
-        WorldObject const* viewpoint = this;
-        if (Player const* player = ToPlayer())
-        {
-            viewpoint = player->GetViewpoint();
-
-            if (Creature const* creature = obj->ToCreature())
-                if (TempSummon const* tempSummon = creature->ToTempSummon())
-                    if (tempSummon->IsVisibleBySummonerOnly() && GetGUID() != tempSummon->GetSummonerGUID())
-                        return false;
-        }
-
-        if (!viewpoint)
-            viewpoint = this;
-
-        if (!corpseCheck && !viewpoint->IsWithinDist(obj, GetSightRange(obj), false))
+        // Xinef: check reversely obj vs viewpoint, object could be a gameObject which overrides _IsWithinDist function to include gameobject size
+        if (!corpseCheck && !viewpoint->IsWithinDist(obj, GetSightRange(obj), true))
             return false;
     }
 
@@ -1821,11 +1874,19 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool implicitDetect, bo
     if (obj->IsInvisibleDueToDespawn())
         return false;
 
-    if (!CanDetect(obj, implicitDetect, checkAlert))
+    // pussywizard: arena spectator
+    if (this->GetTypeId() == TYPEID_PLAYER)
+        if (((Player const*)this)->IsSpectator() && ((Player const*)this)->FindMap()->IsBattleArena() && (obj->m_invisibility.GetFlags() || obj->m_stealth.GetFlags()))
+            return false;
+
+    if (!CanDetect(obj, ignoreStealth, !distanceCheck, checkAlert))
+    {
         return false;
+    }
 
     return true;
 }
+
 
 bool WorldObject::CanNeverSee(WorldObject const* obj) const
 {

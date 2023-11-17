@@ -421,7 +421,6 @@ void Player::Update(uint32 p_time)
     _botMgr->Update(p_time);
     //end Npcbot
 
-    // New changes from the pulled commit
     if (!IsBeingTeleported() && bRequestForcedVisibilityUpdate)
     {
         bRequestForcedVisibilityUpdate = false;
@@ -429,7 +428,6 @@ void Player::Update(uint32 p_time)
         m_delayed_unit_relocation_timer = 0;
         RemoveFromNotify(NOTIFY_VISIBILITY_CHANGED);
     }
-    In this integrated version, the NPC
 }
 
 void Player::UpdateMirrorTimers()

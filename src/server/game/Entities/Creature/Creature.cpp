@@ -2137,12 +2137,10 @@ void Creature::setDeathState(DeathState s, bool despawn)
 
 void Creature::Respawn(bool force)
 {
-    //DestroyForNearbyPlayers(); // pussywizard: not needed
-
-    //npcbot
+    // npcbot
     if (IsNPCBotOrPet())
         return;
-    //end npcbot
+    // end npcbot
 
     if (force)
     {
@@ -2160,14 +2158,15 @@ void Creature::Respawn(bool force)
         {
             GetMap()->RemoveCreatureRespawnTime(m_spawnId);
             CreatureData const* data = sObjectMgr->GetCreatureData(m_spawnId);
+
             // Respawn check if spawn has 2 entries
-            if (data->id2)
+            if (data && data->id2)
             {
                 uint32 entry = GetRandomId(data->id1, data->id2, data->id3);
-                UpdateEntry(entry, data, true);  // Select Random Entry
-                m_defaultMovementType = MovementGeneratorType(data->movementType);                    // Reload Movement Type
-                LoadEquipment(data->equipmentId);                                                     // Reload Equipment
-                AIM_Initialize();                                                                     // Reload AI
+                UpdateEntry(entry, data, true); // Select Random Entry
+                m_defaultMovementType = MovementGeneratorType(data->movementType); // Reload Movement Type
+                LoadEquipment(data->equipmentId); // Reload Equipment
+                AIM_Initialize(); // Reload AI
             }
             else
             {
@@ -2184,12 +2183,11 @@ void Creature::Respawn(bool force)
 
         setDeathState(DeathState::JustRespawned);
 
-        // MDic - Acidmanifesto
         // Do not override transform auras
         if (GetAuraEffectsByType(SPELL_AURA_TRANSFORM).empty())
         {
             uint32 displayID = GetNativeDisplayId();
-            if (sObjectMgr->GetCreatureModelRandomGender(&displayID))                                             // Cancel load if no model defined
+            if (sObjectMgr->GetCreatureModelRandomGender(&displayID)) // Cancel load if no model defined
             {
                 SetDisplayId(displayID);
                 SetNativeDisplayId(displayID);
@@ -2198,30 +2196,32 @@ void Creature::Respawn(bool force)
 
         GetMotionMaster()->InitDefault();
 
-        //Call AI respawn virtual function
+        // Call AI respawn virtual function
         if (IsAIEnabled)
         {
-            //reset the AI to be sure no dirty or uninitialized values will be used till next tick
+            // reset the AI to be sure no dirty or uninitialized values will be used till next tick
             AI()->Reset();
-            TriggerJustRespawned = true;//delay event to next tick so all creatures are created on the map before processing
+            TriggerJustRespawned = true; // delay event to next tick so all creatures are created on the map before processing
         }
 
         uint32 poolid = m_spawnId ? sPoolMgr->IsPartOfAPool<Creature>(m_spawnId) : 0;
         if (poolid)
             sPoolMgr->UpdatePool<Creature>(poolid, m_spawnId);
 
-        //Re-initialize reactstate that could be altered by movementgenerators
+        // Re-initialize reactstate that could be altered by movementgenerators
         InitializeReactState();
 
         m_respawnedTime = GameTime::GetGameTime().count();
+
+        // Relocate notifier, fixes npc appearing in corpse position after forced respawn (instead of spawn)
+        m_last_notify_position.Relocate(-5000.0f, -5000.0f, -5000.0f, 0.0f);
+
+        UpdateObjectVisibility(false);
     }
-    m_respawnedTime = GameTime::GetGameTime().count();
-<<<<<<< HEAD
-=======
-    // xinef: relocate notifier, fixes npc appearing in corpse position after forced respawn (instead of spawn)
-    m_last_notify_position.Relocate(-5000.0f, -5000.0f, -5000.0f, 0.0f);
->>>>>>> 4fabaee5975257f81dd77a728e42af60e3ad04d9
-    UpdateObjectVisibility(false);
+    else
+    {
+        m_respawnedTime = GameTime::GetGameTime().count();
+    }
 }
 
 void Creature::ForcedDespawn(uint32 timeMSToDespawn, Seconds forceRespawnTimer)
@@ -3251,16 +3251,13 @@ void Creature::SetPosition(float x, float y, float z, float o)
     if (!Acore::IsValidMapCoord(x, y, z, o))
         return;
 
-<<<<<<< HEAD
-    //npcbot: send bot group update
+    // npcbot: send bot group update
     if (IsNPCBot())
         BotMgr::SetBotGroupUpdateFlag(ToCreature(), GROUP_UPDATE_FLAG_POSITION);
-    //end npcbot
+    // end npcbot
 
-    UpdatePosition(x, y, z, o, false);
-=======
+    // Ensure that the creature is correctly relocated on the map
     GetMap()->CreatureRelocation(this, x, y, z, o);
->>>>>>> 4fabaee5975257f81dd77a728e42af60e3ad04d9
 }
 
 bool Creature::IsDungeonBoss() const
