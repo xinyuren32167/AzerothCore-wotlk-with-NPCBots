@@ -447,7 +447,7 @@ void BotMgr::LoadConfig(bool reload)
     RoundToInterval(_mult_dmg_spell, 0.1f, 10.f);
     RoundToInterval(_mult_healing, 0.1f, 10.f);
     RoundToInterval(_mult_hp, 0.1f, 10.f);
-    RoundToInterval(_mult_hp_raid, 0.1f, 10.f);
+    RoundToInterval(_mult_hp_raid, 0.1f, 255.f);
     RoundToInterval(_mult_mana, 0.1f, 10.f);
     RoundToInterval(_mult_dmg_wanderer, 0.1f, 10.f);
     RoundToInterval(_mult_healing_wanderer, 0.1f, 10.f);

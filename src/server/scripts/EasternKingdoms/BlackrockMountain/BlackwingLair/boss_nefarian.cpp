@@ -658,11 +658,11 @@ public:
             {
             case EVENT_SHADOWFLAME:
                 DoCastVictim(SPELL_SHADOWFLAME);
-                events.ScheduleEvent(EVENT_SHADOWFLAME, 12s);
+                events.ScheduleEvent(EVENT_SHADOWFLAME, 18s);
                 break;
             case EVENT_FEAR:
                 DoCastVictim(SPELL_BELLOWINGROAR);
-                events.ScheduleEvent(EVENT_FEAR, 25s, 35s);
+                events.ScheduleEvent(EVENT_FEAR, 30s, 40s);
                 break;
             case EVENT_VEILOFSHADOW:
                 DoCastVictim(SPELL_VEILOFSHADOW);
@@ -678,7 +678,7 @@ public:
                 break;
             case EVENT_CLASSCALL:
                 CallNextClass();
-                events.ScheduleEvent(EVENT_CLASSCALL, 35s, 65s);
+                events.ScheduleEvent(EVENT_CLASSCALL, 45s, 55s);
                 break;
             }
 

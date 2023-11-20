@@ -19,6 +19,7 @@
 #include "CharacterCache.h"
 #include "CharacterDatabase.h"
 #include "Chat.h"
+#include "Config.h"
 #include "DatabaseEnv.h"
 #include "DBCStores.h"
 #include "GameEventMgr.h"
@@ -6873,31 +6874,37 @@ void bot_ai::_OnHealthUpdate() const
     uint8 mylevel = master->GetLevel();
     if (myclass == BOT_CLASS_DRUID && GetBotStance() != BOT_STANCE_NONE)
         myclass = GetBotStance();
-    //TC_LOG_ERROR("entities.player", "_OnHealthUpdate(): updating bot %s", me->GetName().c_str());
+
     bool fullhp = me->GetHealth() == me->GetMaxHealth();
-    float pct = fullhp ? 100.f : me->GetHealthPct(); // needs for regeneration
+    float pct = fullhp ? 100.f : me->GetHealthPct();
     uint32 m_basehp = uint32(_classinfo->basehealth * (BotMgr::IsWanderingWorldBot(me) ? BotMgr::GetBotWandererHPMod() : BotMgr::GetBotHPMod()));
-    //TC_LOG_ERROR("entities.player", "class base health: %u", m_basehp);
     me->SetCreateHealth(m_basehp);
 
     float stamValue = _getTotalBotStat(BOT_STAT_MOD_STAMINA);
-
-    stamValue -= std::min<float>(me->GetCreateStat(STAT_STAMINA), 20.f); //not a mistake
+    stamValue -= std::min<float>(me->GetCreateStat(STAT_STAMINA), 20.f);
     stamValue = std::max<float>(stamValue, 0.f);
 
-    //TC_LOG_ERROR("entities.player", "bot's stats to health add: Stamina (%f), value: %f", stamValue, stamValue * 10.f);
-    float hp_add = stamValue * 10.f + 20; //20 is not a mistake;
-    //hp_add += IAmFree() ? mylevel * 375.f : 0; //+30000/+0 hp at 80
+    float hp_add = stamValue * 10.f + 20;
     hp_add += _getTotalBotStat(BOT_STAT_MOD_HEALTH);
-    //TC_LOG_ERROR("entities.player", "health to add after stam mod: %i", hp_add);
     uint32 m_totalhp = m_basehp + int32(hp_add * (BotMgr::IsWanderingWorldBot(me) ? BotMgr::GetBotWandererHPMod() : BotMgr::GetBotHPMod()));
     if (me->GetMap()->IsRaid())
         m_totalhp *= BotMgr::GetBotHPRaidMod();
-    //TC_LOG_ERROR("entities.player", "total base health: %u", m_totalhp);
 
-        //Tank Bonus
+    // Load the tank HP modifier from the config, defaulting to 1 if not set
+    float tankHPModifier = sConfigMgr->GetFloatDefault("NpcBot.TankHPModifier", 1.0f);
+
+    // Tank Bonus
     if (IsTank() || IsOffTank())
-        m_totalhp *= 1.12;
+        m_totalhp *= tankHPModifier;
+
+    if (!me->GetMap()->IsBattlegroundOrArena())
+    {
+        MapEntry const* mapEntry = sMapStore.LookupEntry(me->GetMapId());
+        if (me->GetLevel() < 61 && mapEntry->Expansion() == CONTENT_1_60)
+            m_totalhp *= 0.8;
+        else if (me->GetLevel() < 71 && mapEntry->Expansion() == CONTENT_61_70)
+            m_totalhp *= 0.85;
+    }
 
     //IndividualProgression
     if (!me->GetMap()->IsBattlegroundOrArena())
