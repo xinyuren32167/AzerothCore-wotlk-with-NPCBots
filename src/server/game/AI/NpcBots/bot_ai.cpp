@@ -5870,14 +5870,14 @@ void bot_ai::_updateRations()
 
     //drink
     if (!feast_mana && me->GetMaxPower(POWER_MANA) > 1 && !me->HasAuraType(SPELL_AURA_MOUNTED) && !me->isMoving() && CanDrink() &&
-        !me->IsInCombat() && !me->GetVehicle() && !IsCasting() && GetManaPCT(me) < 75 && urand(0, 100) < 20)
+        !me->IsInCombat() && !me->GetVehicle() && !IsCasting() && GetManaPCT(me) < 90 && urand(0, 100) < 20)
     {
         me->CastSpell(me, GetRation(true), true);
     }
 
     //eat
     if (!feast_health && !me->HasAuraType(SPELL_AURA_MOUNTED) && !me->isMoving() && CanEat() &&
-        !me->IsInCombat() && !me->GetVehicle() && !IsCasting() && GetHealthPCT(me) < 80 && urand(0, 100) < 20)
+        !me->IsInCombat() && !me->GetVehicle() && !IsCasting() && GetHealthPCT(me) < 90 && urand(0, 100) < 20)
     {
         me->CastSpell(me, GetRation(false), true);
     }
@@ -6897,16 +6897,16 @@ void bot_ai::_OnHealthUpdate() const
 
         //Tank Bonus
     if (IsTank() || IsOffTank())
-        m_totalhp *= 1.1;
+        m_totalhp *= 1.12;
 
     //IndividualProgression
     if (!me->GetMap()->IsBattlegroundOrArena())
     {
         MapEntry const* mapEntry = sMapStore.LookupEntry(me->GetMapId());
         if (me->GetLevel() < 61 && mapEntry->Expansion() == CONTENT_1_60)
-            m_totalhp *= 0.7;
+            m_totalhp *= 0.8;
         else if (me->GetLevel() < 71 && mapEntry->Expansion() == CONTENT_61_70)
-            m_totalhp *= 0.75;
+            m_totalhp *= 0.85;
     }
     //hp bonuses
     uint8 bonuspct = 0;
@@ -7096,7 +7096,7 @@ void bot_ai::_OnManaRegenUpdate() const
         power_regen_mp5 *= 2;
 
     if ((me->GetMap()->IsRaid() || me->GetMap()->IsDungeon()) && me->GetBotClass() == BOT_CLASS_PRIEST || me->GetBotClass() == BOT_CLASS_PALADIN)
-        power_regen_mp5 *= 1.5;
+        power_regen_mp5 *= 2;
     me->SetStatFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER, power_regen_mp5 + CalculatePct(value, modManaRegenInterrupt));
     me->SetStatFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER, power_regen_mp5 + value);
 }

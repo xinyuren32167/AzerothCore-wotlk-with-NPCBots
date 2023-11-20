@@ -519,7 +519,8 @@ public:
 
 struct boss_nefarian : public BossAI
 {
-    boss_nefarian(Creature* creature) : BossAI(creature, DATA_NEFARIAN), _introDone(false)
+public:
+    boss_nefarian(Creature* creature) : BossAI(creature, DATA_NEFARIAN), _introDone(false), _classCallIndex(0)
     {
         Initialize();
     }
@@ -549,7 +550,7 @@ struct boss_nefarian : public BossAI
             me->DespawnOrUnsummon();
         }
 
-        classesPresent.clear();
+        _classCallIndex = 0; // Reset class call index on reset
     }
 
     void JustEngagedWith(Unit* /*who*/) override {}
@@ -655,99 +656,30 @@ struct boss_nefarian : public BossAI
         {
             switch (eventId)
             {
-                case EVENT_SHADOWFLAME:
-                    DoCastVictim(SPELL_SHADOWFLAME);
-                    events.ScheduleEvent(EVENT_SHADOWFLAME, 12s);
-                    break;
-                case EVENT_FEAR:
-                    DoCastVictim(SPELL_BELLOWINGROAR);
-                    events.ScheduleEvent(EVENT_FEAR, 25s, 35s);
-                    break;
-                case EVENT_VEILOFSHADOW:
-                    DoCastVictim(SPELL_VEILOFSHADOW);
-                    events.ScheduleEvent(EVENT_VEILOFSHADOW, 25s, 35s);
-                    break;
-                case EVENT_CLEAVE:
-                    DoCastVictim(SPELL_CLEAVE);
-                    events.ScheduleEvent(EVENT_CLEAVE, 7s);
-                    break;
-                case EVENT_TAILLASH:
-                    // Cast NYI since we need a better check for behind target
-                    DoCastAOE(SPELL_TAILLASH);
-                    events.ScheduleEvent(EVENT_TAILLASH, 10s);
-                    break;
-                case EVENT_CLASSCALL:
-                    if (classesPresent.empty())
-                    {
-                        for (auto& ref : me->GetThreatMgr().GetThreatList())
-                        {
-                            if (ref->getTarget() && ref->getTarget()->GetTypeId() == TYPEID_PLAYER)
-                            {
-                                classesPresent.insert(ref->getTarget()->getClass());
-                            }
-                        }
-                    }
-
-                    uint8 targetClass = Acore::Containers::SelectRandomContainerElement(classesPresent);
-
-                    classesPresent.erase(targetClass);
-
-                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, ClassCallSelector(me, targetClass)))
-                    {
-                        switch (target->getClass())
-                        {
-                            case CLASS_MAGE:
-                                Talk(SAY_MAGE);
-                                DoCast(me, SPELL_MAGE);
-                                break;
-                            case CLASS_WARRIOR:
-                                Talk(SAY_WARRIOR);
-                                DoCast(me, SPELL_WARRIOR);
-                                break;
-                            case CLASS_DRUID:
-                                Talk(SAY_DRUID);
-                                DoCast(target, SPELL_DRUID);
-                                break;
-                            case CLASS_PRIEST:
-                                Talk(SAY_PRIEST);
-                                DoCast(me, SPELL_PRIEST);
-                                break;
-                            case CLASS_PALADIN:
-                                Talk(SAY_PALADIN);
-                                DoCast(me, SPELL_PALADIN);
-                                break;
-                            case CLASS_SHAMAN:
-                                Talk(SAY_SHAMAN);
-                                DoCast(me, SPELL_SHAMAN);
-                                break;
-                            case CLASS_WARLOCK:
-                                Talk(SAY_WARLOCK);
-                                DoCast(me, SPELL_WARLOCK);
-                                break;
-                            case CLASS_HUNTER:
-                                Talk(SAY_HUNTER);
-                                DoCast(me, SPELL_HUNTER);
-                                break;
-                            case CLASS_ROGUE:
-                                Talk(SAY_ROGUE);
-                                DoCast(me, SPELL_ROGUE);
-                                break;
-                            case CLASS_DEATH_KNIGHT:
-                                Talk(SAY_DEATH_KNIGHT);
-                                me->GetMap()->DoForAllPlayers([&](Player* p)
-                                {
-                                    if (!p->IsGameMaster())
-                                    {
-                                        me->CastSpell(p, SPELL_DEATH_KNIGHT, true);
-                                    }
-                                });
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    events.ScheduleEvent(EVENT_CLASSCALL, 60s, 65s);
-                    break;
+            case EVENT_SHADOWFLAME:
+                DoCastVictim(SPELL_SHADOWFLAME);
+                events.ScheduleEvent(EVENT_SHADOWFLAME, 12s);
+                break;
+            case EVENT_FEAR:
+                DoCastVictim(SPELL_BELLOWINGROAR);
+                events.ScheduleEvent(EVENT_FEAR, 25s, 35s);
+                break;
+            case EVENT_VEILOFSHADOW:
+                DoCastVictim(SPELL_VEILOFSHADOW);
+                events.ScheduleEvent(EVENT_VEILOFSHADOW, 25s, 35s);
+                break;
+            case EVENT_CLEAVE:
+                DoCastVictim(SPELL_CLEAVE);
+                events.ScheduleEvent(EVENT_CLEAVE, 7s);
+                break;
+            case EVENT_TAILLASH:
+                DoCastAOE(SPELL_TAILLASH);
+                events.ScheduleEvent(EVENT_TAILLASH, 10s);
+                break;
+            case EVENT_CLASSCALL:
+                CallNextClass();
+                events.ScheduleEvent(EVENT_CLASSCALL, 60s, 65s);
+                break;
             }
 
             if (me->HasUnitState(UNIT_STATE_CASTING))
@@ -762,7 +694,23 @@ struct boss_nefarian : public BossAI
 private:
     bool Phase3;
     bool _introDone;
-    std::set<uint8> classesPresent;
+    size_t _classCallIndex;
+    std::vector<uint32> _classCallOrder = {
+        SPELL_MAGE, SPELL_WARRIOR, SPELL_DRUID, SPELL_PRIEST, SPELL_PALADIN,
+        SPELL_SHAMAN, SPELL_WARLOCK, SPELL_HUNTER, SPELL_ROGUE
+    };
+
+    void CallNextClass()
+    {
+        if (_classCallIndex >= _classCallOrder.size())
+            _classCallIndex = 0;
+
+        uint32 spellId = _classCallOrder[_classCallIndex];
+        me->CastSpell(me, spellId, true);
+
+        // Increment for next call
+        ++_classCallIndex;
+    }
 };
 
 enum TotemSpells
