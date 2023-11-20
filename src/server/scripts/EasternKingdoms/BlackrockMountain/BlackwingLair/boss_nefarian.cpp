@@ -678,7 +678,7 @@ public:
                 break;
             case EVENT_CLASSCALL:
                 CallNextClass();
-                events.ScheduleEvent(EVENT_CLASSCALL, 60s, 65s);
+                events.ScheduleEvent(EVENT_CLASSCALL, 35s, 65s);
                 break;
             }
 
@@ -695,9 +695,10 @@ private:
     bool Phase3;
     bool _introDone;
     size_t _classCallIndex;
-    std::vector<uint32> _classCallOrder = {
-        SPELL_MAGE, SPELL_WARRIOR, SPELL_DRUID, SPELL_PRIEST, SPELL_PALADIN,
-        SPELL_SHAMAN, SPELL_WARLOCK, SPELL_HUNTER, SPELL_ROGUE
+    std::vector<std::pair<uint32, uint32>> _classCallOrder = {
+        {SPELL_MAGE, SAY_MAGE}, {SPELL_WARRIOR, SAY_WARRIOR}, {SPELL_DRUID, SAY_DRUID},
+        {SPELL_PRIEST, SAY_PRIEST}, {SPELL_PALADIN, SAY_PALADIN}, {SPELL_SHAMAN, SAY_SHAMAN},
+        {SPELL_WARLOCK, SAY_WARLOCK}, {SPELL_HUNTER, SAY_HUNTER}, {SPELL_ROGUE, SAY_ROGUE}
     };
 
     void CallNextClass()
@@ -705,8 +706,9 @@ private:
         if (_classCallIndex >= _classCallOrder.size())
             _classCallIndex = 0;
 
-        uint32 spellId = _classCallOrder[_classCallIndex];
-        me->CastSpell(me, spellId, true);
+        auto classCall = _classCallOrder[_classCallIndex];
+        me->CastSpell(me, classCall.first, true);
+        Talk(classCall.second);
 
         // Increment for next call
         ++_classCallIndex;
