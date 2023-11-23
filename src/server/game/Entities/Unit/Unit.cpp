@@ -10637,9 +10637,13 @@ ReputationRank Unit::GetReactionTo(Unit const* target, bool checkOriginalFaction
     }
     else if (targetPlayerOwner)
     {
-        if (FactionTemplateEntry const* selfFactionTemplateEntry = GetFactionTemplateEntry())
-            if (ReputationRank const* repRank = targetPlayerOwner->GetReputationMgr().GetForcedRankIfAny(selfFactionTemplateEntry))
+        FactionTemplateEntry const* selfFactionTemplateEntry = GetFactionTemplateEntry();
+        if (selfFactionTemplateEntry)
+        {
+            ReputationRank const* repRank = targetPlayerOwner->GetReputationMgr().GetForcedRankIfAny(selfFactionTemplateEntry);
+            if (repRank) // Ensure repRank is not null before dereferencing
                 return *repRank;
+        }
     }
 
     //npcbot
