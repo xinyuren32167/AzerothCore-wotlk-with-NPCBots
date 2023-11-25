@@ -45,6 +45,10 @@ void AddSC_spell_dk_bone_shield_duskhaven();
 void AddSC_spell_dk_scripts();
 void AddSC_npc_straight_line_walker();
 void AddSC_spell_dk_blood_drinker();
+void AddSC_spread_command();
+void AddSC_fan_command();
+void Addspell_bags_of_tricksScripts();
+
 //void AddSC_PlayerTeleportRevive();
 
 //void AddSC_transform_race_command();
@@ -84,6 +88,10 @@ void AddCustomScripts()
     AddSC_spell_dk_scripts();
     AddSC_npc_straight_line_walker();
     AddSC_spell_dk_blood_drinker();
+    AddSC_spread_command();
+    AddSC_fan_command();
+    Addspell_bags_of_tricksScripts();
+
    // AddSC_PlayerTeleportRevive();
 
   //  AddSC_transform_race_command();
