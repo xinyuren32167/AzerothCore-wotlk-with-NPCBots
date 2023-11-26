@@ -2522,6 +2522,12 @@ void GameObject::SetLootState(LootState state, Unit* unit)
 
 void GameObject::SetGoState(GOState state)
 {
+    // Null check for the game object
+    if (!this)
+    {
+        LOG_ERROR("entities.object", "GameObject::SetGoState: Attempted to set state on a null GameObject");
+        return;
+    }
     SetByteValue(GAMEOBJECT_BYTES_1, 0, state);
 
     sScriptMgr->OnGameObjectStateChanged(this, state);

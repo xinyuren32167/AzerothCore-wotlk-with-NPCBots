@@ -94,6 +94,23 @@ GraveyardStruct const* Graveyard::GetDefaultGraveyard(TeamId teamId)
     return sGraveyard->GetGraveyard(teamId == TEAM_HORDE ? HORDE_GRAVEYARD : ALLIANCE_GRAVEYARD);
 }
 
+GraveyardStruct const* Graveyard::CreateTemporaryGraveyard(Player* player, TeamId teamId)
+{
+    static GraveyardStruct tempGraveyard;
+
+    // Set the temporary graveyard location to the player's current position
+    tempGraveyard.Map = player->GetMapId();
+    tempGraveyard.x = player->GetPositionX();
+    tempGraveyard.y = player->GetPositionY();
+    tempGraveyard.z = player->GetPositionZ();
+   // tempGraveyard.o = player->GetOrientation();
+
+    // Log the creation of a temporary graveyard
+    LOG_DEBUG("server.loading", "Creating temporary graveyard at player's location: Map {} coords ({}, {}, {})", tempGraveyard.Map, tempGraveyard.x, tempGraveyard.y, tempGraveyard.z);
+
+    return &tempGraveyard;
+}
+
 GraveyardStruct const* Graveyard::GetClosestGraveyard(Player* player, TeamId teamId, bool nearCorpse)
 {
     uint32 graveyardOverride = 0;
@@ -158,10 +175,11 @@ GraveyardStruct const* Graveyard::GetClosestGraveyard(Player* player, TeamId tea
     MapEntry const* map = sMapStore.LookupEntry(mapId);
 
     // not need to check validity of map object; MapId _MUST_ be valid here
-    if (range.first == range.second && !map->IsBattlegroundOrArena())
     {
         LOG_ERROR("sql.sql", "Table `graveyard_zone` incomplete: Zone {} Team {} does not have a linked graveyard.", zoneId, teamId);
-        return GetDefaultGraveyard(teamId);
+
+        // Use the new function to create a temporary graveyard
+        return CreateTemporaryGraveyard(player, teamId);
     }
 
     // at corpse map
