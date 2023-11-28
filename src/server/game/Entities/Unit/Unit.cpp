@@ -12827,10 +12827,18 @@ float Unit::SpellTakenCritChance(Unit const* caster, SpellInfo const* spellProto
                                 break;
                             }
                             // Exorcism
-                            else if (spellProto->GetCategory() == 19)
+                            if (spellProto->GetCategory() == 19)
                             {
                                 if (GetCreatureTypeMask() & CREATURE_TYPEMASK_DEMON_OR_UNDEAD)
                                     return 100.0f;
+
+                                // Additional check for player racemasks
+                                if (GetTypeId() == TYPEID_PLAYER)
+                                {
+                                    const Player* player = ToPlayer();
+                                    if (player && (player->getRaceMask() == 65536 || player->getRaceMask() == 16))
+                                        return 100.0f;
+                                }
                                 break;
                             }
                             break;

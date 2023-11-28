@@ -924,6 +924,17 @@ class spell_pri_vampiric_touch : public AuraScript
 class spell_pri_mind_control : public AuraScript
 {
     PrepareAuraScript(spell_pri_mind_control);
+    // Dinkle - Do not mind control specified races, UD, Eredar, Worgen
+    bool CheckRaceMask(Unit* target)
+    {
+        uint32 racemask = 65536 | 16 | 32768; // Combine all the racemasks
+        if (Player* player = target->ToPlayer())
+        {
+            if ((1 << (player->getRace() - 1)) & racemask)
+                return false; // Target race is in the specified racemasks, do not apply effect
+        }
+        return true;
+    }
 
     void HandleApplyEffect(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
@@ -931,6 +942,9 @@ class spell_pri_mind_control : public AuraScript
         {
             if (Unit* target = GetTarget())
             {
+                if (!CheckRaceMask(target))
+                    return; // Do not apply effect if target is of specified race
+
                 uint32 duration = static_cast<uint32>(GetDuration());
                 caster->SetInCombatWith(target, duration);
                 target->SetInCombatWith(caster, duration);
@@ -944,6 +958,9 @@ class spell_pri_mind_control : public AuraScript
         {
             if (Unit* target = GetTarget())
             {
+                if (!CheckRaceMask(target))
+                    return; // Do not remove effect if target is of specified race
+
                 caster->SetCombatTimer(0);
                 target->SetCombatTimer(0);
             }

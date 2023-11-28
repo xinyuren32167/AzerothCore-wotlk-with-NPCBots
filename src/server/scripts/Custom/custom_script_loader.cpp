@@ -48,11 +48,9 @@ void AddSC_spell_dk_blood_drinker();
 void AddSC_spread_command();
 void AddSC_fan_command();
 void Addspell_bags_of_tricksScripts();
-
+void AddSC_spell_paladin_holy_wrath();
 //void AddSC_PlayerTeleportRevive();
-
 //void AddSC_transform_race_command();
-
 //void AddSC_boss_the_hidden_watcher();
 //void AddSC_SymbiosisScript();
 
@@ -91,11 +89,9 @@ void AddCustomScripts()
     AddSC_spread_command();
     AddSC_fan_command();
     Addspell_bags_of_tricksScripts();
-
-   // AddSC_PlayerTeleportRevive();
-
-  //  AddSC_transform_race_command();
-
-    // AddSC_boss_the_hidden_watcher();
-    // AddSC_SymbiosisScript();
+    AddSC_spell_paladin_holy_wrath();
+    //AddSC_PlayerTeleportRevive();
+    //AddSC_transform_race_command();
+    //AddSC_boss_the_hidden_watcher();
+    //AddSC_SymbiosisScript();
 }

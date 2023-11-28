@@ -27,6 +27,7 @@
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 
+
 //npcbot
 #include "botmgr.h"
 #include "botspell.h"
@@ -1919,7 +1920,18 @@ SpellCastResult SpellInfo::CheckTarget(Unit const* caster, WorldObject const* ta
     if (!CheckTargetCreatureType(unitTarget))
     {
         if (target->GetTypeId() == TYPEID_PLAYER)
-            return SPELL_FAILED_TARGET_IS_PLAYER;
+        {
+            const Player* playerTarget = target->ToPlayer();
+            if (!playerTarget)
+                return SPELL_FAILED_BAD_TARGETS;
+            //Dinkle: Allow certain spells on certain races
+            if ((Id == 2637 || Id == 18657 || Id == 18658 || Id == 1513 || Id == 14326 || Id == 14327) && playerTarget->GetRaceMask() == 32768)
+                return SPELL_CAST_OK;
+            else if ((Id == 9484 || Id == 9485 || Id == 10955) && playerTarget->GetRaceMask() == 16)
+                return SPELL_CAST_OK;
+            else
+                return SPELL_FAILED_TARGET_IS_PLAYER;
+        }
         else
             return SPELL_FAILED_BAD_TARGETS;
     }

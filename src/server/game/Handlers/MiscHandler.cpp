@@ -654,9 +654,9 @@ void WorldSession::HandleReclaimCorpseOpcode(WorldPacket& recv_data)
     if (time_t(corpse->GetGhostTime() + _player->GetCorpseReclaimDelay(corpse->GetType() == CORPSE_RESURRECTABLE_PVP)) > time_t(GameTime::GetGameTime().count()))
         return;
 
-    // Use CORPSE_RECLAIM_RADIUS for battlegrounds, otherwise use 100.0f
-    float resurrectionRadius = _player->InBattleground() ? CORPSE_RECLAIM_RADIUS : 100.0f;
-
+    // Use CORPSE_RECLAIM_RADIUS for battlegrounds, otherwise use 120 EDIT: Apparently there's a client limit
+    float resurrectionRadius = _player->InBattleground() ? CORPSE_RECLAIM_RADIUS : 120.0f;
+    
     // Check if the corpse is within the defined resurrection radius
     if (!corpse->IsWithinDistInMap(_player, resurrectionRadius, true))
         return;
