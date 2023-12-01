@@ -978,9 +978,9 @@ class spell_sha_lava_lash : public SpellScript
         {
             int32 damage = GetEffectValue();
             int32 hitDamage = GetHitDamage();
-            if (caster->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND))
+            if (caster->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND))
             {
-                // Damage is increased by 25% if your off-hand weapon is enchanted with Flametongue.
+                // Damage is increased by 25% if your DINKLE main-hand weapon is enchanted with Flametongue.
                 if (caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_SHAMAN, 0x200000, 0, 0))
                     AddPct(hitDamage, damage);
                 SetHitDamage(hitDamage);

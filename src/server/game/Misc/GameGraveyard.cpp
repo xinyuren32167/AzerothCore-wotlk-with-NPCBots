@@ -176,7 +176,7 @@ GraveyardStruct const* Graveyard::GetClosestGraveyard(Player* player, TeamId tea
 
     // not need to check validity of map object; MapId _MUST_ be valid here
     {
-        LOG_ERROR("sql.sql", "Table `graveyard_zone` incomplete: Zone {} Team {} does not have a linked graveyard.", zoneId, teamId);
+      //  LOG_ERROR("sql.sql", "Table `graveyard_zone` incomplete: Zone {} Team {} does not have a linked graveyard.", zoneId, teamId);
 
         // Use the new function to create a temporary graveyard
         return CreateTemporaryGraveyard(player, teamId);
