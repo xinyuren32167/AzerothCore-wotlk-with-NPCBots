@@ -18,8 +18,8 @@
 #ifndef AZEROTHCORE_GROUP_H
 #define AZEROTHCORE_GROUP_H
 
-#include "DataMap.h"
 #include "DBCEnums.h"
+#include "DataMap.h"
 #include "GroupRefMgr.h"
 #include "LootMgr.h"
 #include "QueryResult.h"
@@ -253,6 +253,7 @@ public:
     GroupReference* GetFirstMember() { return m_memberMgr.getFirst(); }
     GroupReference const* GetFirstMember() const { return m_memberMgr.getFirst(); }
     uint32 GetMembersCount() const { return m_memberSlots.size(); }
+    uint32 GetInviteeCount() const { return m_invitees.size(); }
 
     uint8 GetMemberGroup(ObjectGuid guid) const;
 

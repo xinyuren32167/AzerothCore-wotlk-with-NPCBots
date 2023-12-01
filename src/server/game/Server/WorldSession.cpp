@@ -179,6 +179,11 @@ WorldSession::~WorldSession()
     LoginDatabase.Execute("UPDATE account SET online = 0 WHERE id = {};", GetAccountId());     // One-time query
 }
 
+bool WorldSession::IsGMAccount() const
+{
+    return GetSecurity() >= SEC_GAMEMASTER;
+}
+
 std::string const& WorldSession::GetPlayerName() const
 {
     return _player ? _player->GetName() : DefaultPlayerName;
