@@ -349,7 +349,14 @@ void bot_ai::InitializeAI()
 {
     if (!me->GetSpawnId() && !IsTempBot())
         SetWanderer();
-
+    me->AddAura(22683, me);
+    
+    if (IAmFree())
+    {
+        // Apply the aura only to 'free' bots
+        me->AddAura(22683, me);
+    }
+    
     Reset();
 }
 
@@ -6870,6 +6877,7 @@ uint32 bot_ai::RaceSpellForClass(uint8 myrace, uint8 myclass)
 //Including health calcs, set
 void bot_ai::_OnHealthUpdate() const
 {
+    
     uint8 myclass = _botclass;
     uint8 mylevel = master->GetLevel();
     if (myclass == BOT_CLASS_DRUID && GetBotStance() != BOT_STANCE_NONE)
@@ -6935,6 +6943,11 @@ void bot_ai::_OnHealthUpdate() const
     //m_totalhp = float(uint32(m_totalhp) - (uint32(m_totalhp) % 10));
     me->SetModifierValue(UNIT_MOD_HEALTH, BASE_VALUE, float(m_totalhp)); //replaces base hp at max lvl
     me->UpdateMaxHealth(); //will use our values we just set (update base health and buffs)
+    // Add the aura here
+    if (!me->HasAura(22683))
+    {
+        me->AddAura(22683, me);
+    }
     //TC_LOG_ERROR("entities.player", "overall hp: %u", me->GetMaxHealth());
     me->SetHealth(fullhp ? me->GetMaxHealth() : uint32(0.5f + float(me->GetMaxHealth()) * pct / 100.f)); //restore pct
 }
@@ -11092,8 +11105,8 @@ void bot_ai::SpawnKillReward(Player* looter) const
         if (playerLevel == 60 || playerLevel == 70 || playerLevel == 80)
             return;
 
-        // Check if the level difference is within 3 levels
-        if (std::abs(int(playerLevel) - int(botLevel)) > 3)
+        // Check if the level difference is within 5 levels
+        if (std::abs(int(playerLevel) - int(botLevel)) > 5)
             return;
 
         uint32 nextLevel = playerLevel + 1;
@@ -14018,8 +14031,8 @@ bool bot_ai::IsTank(Unit const* unit) const
             Group::MemberSlotList const& slots = gr->GetMemberSlots();
             for (Group::member_citerator itr = slots.begin(); itr != slots.end(); ++itr)
                 if (itr->guid == unit->GetGUID())
-                    return itr->flags & (MEMBER_FLAG_MAINTANK | MEMBER_FLAG_MAINASSIST);
-            if (gr->isLFGGroup() && sLFGMgr->GetRoles(unit->GetGUID()) & lfg::PLAYER_ROLE_TANK)
+                    return itr->flags & (MEMBER_FLAG_MAINTANK | MEMBER_FLAG_MAINASSIST | CLASS_SHAMAN);
+            if (gr->isLFGGroup() && sLFGMgr->GetRoles(unit->GetGUID()) & lfg::PLAYER_ROLE_TANK | CLASS_SHAMAN)
                 return true;
         }
     }

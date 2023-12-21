@@ -28,6 +28,8 @@
 #include "SpellScript.h"
 #include "TemporarySummon.h"
 #include "Unit.h"
+#include "Player.h"
+
 
 enum ShamanSpells
 {
@@ -69,6 +71,89 @@ enum ShamanSpellIcons
     SHAMAN_ICON_ID_RESTORATIVE_TOTEMS           = 338,
     SHAMAN_ICON_ID_SHAMAN_LAVA_FLOW             = 3087
 };
+
+// Dinkle T2 Enhance
+class spell_sha_feral_spirit : public SpellScript
+{
+    PrepareSpellScript(spell_sha_feral_spirit);
+
+    void HandleOnHit()
+    {
+        if (Unit* caster = GetCaster())
+        {
+            if (caster->HasAura(870830))
+            {
+                caster->CastSpell(caster, 870831, true);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_sha_feral_spirit::HandleOnHit);
+    }
+};
+
+void AddSC_custom_spell_scripts()
+{
+    RegisterSpellScript(spell_sha_feral_spirit);
+}
+
+class spell_sha_stormstrike : public SpellScript
+{
+    PrepareSpellScript(spell_sha_stormstrike);
+
+    void HandleOnHit()
+    {
+        Unit* caster = GetCaster();
+        if (caster && caster->IsPlayer() && !caster->ToPlayer()->IsNPCBotOrPet() && caster->HasAura(838432))
+        {
+            // 50% chance to cast the spell
+            if (urand(0, 1)) 
+            {
+                caster->CastSpell(caster, 838430, true);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_sha_stormstrike::HandleOnHit);
+    }
+};
+
+void AddSC_custom_spell_stormstrike()
+{
+    RegisterSpellScript(spell_sha_stormstrike);
+}
+
+class spell_sham_earth_shock : public SpellScript
+{
+    PrepareSpellScript(spell_sham_earth_shock);
+
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        // Check if the caster is a player and not an NPC bot
+        if (caster && caster->IsPlayer() && !caster->ToPlayer()->IsNPCBotOrPet() && caster->HasAura(890013))
+        {
+            if (Unit* target = GetExplTargetUnit())
+            {
+                caster->CastSpell(target, 37548, true);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_sham_earth_shock::HandleAfterCast);
+    }
+};
+
+void AddSC_custom_spell_earth_shock()
+{
+    RegisterSpellScript(spell_sham_earth_shock);
+}
 
 class spell_sha_totem_of_wrath : public SpellScript
 {
@@ -1194,4 +1279,7 @@ void AddSC_shaman_spell_scripts()
     RegisterSpellScript(spell_sha_thunderstorm);
     RegisterSpellScript(spell_sha_flurry_proc);
     RegisterSpellScript(spell_sha_t8_electrified);
+    RegisterSpellScript(spell_sham_earth_shock);
+    RegisterSpellScript(spell_sha_stormstrike);
+    RegisterSpellScript(spell_sha_feral_spirit);
 }

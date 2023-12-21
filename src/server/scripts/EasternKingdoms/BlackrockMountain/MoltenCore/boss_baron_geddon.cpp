@@ -58,6 +58,14 @@ public:
         {
             _Reset();
             armageddonCasted = false;
+
+            std::list<Creature*> firewalkerList;
+            me->GetCreatureListWithEntryInGrid(firewalkerList, 11666, 180.0f); // Dinkle: Despawn Flamewalkers
+            for (Creature* firewalker : firewalkerList)
+            {
+                if (firewalker && !firewalker->IsInCombat())
+                    firewalker->DespawnOrUnsummon();
+            }
         }
 
         void JustEngagedWith(Unit* /*attacker*/) override
@@ -90,7 +98,7 @@ public:
                 case EVENT_INFERNO:
                 {
                     DoCastAOE(SPELL_INFERNO);
-                    events.RepeatEvent(urand(21000, 26000));
+                    events.RepeatEvent(urand(40000, 55000));
                     break;
                 }
                 case EVENT_IGNITE_MANA:
@@ -105,12 +113,23 @@ public:
                 }
                 case EVENT_LIVING_BOMB:
                 {
-                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 0.0f, true))
+                    std::list<Player*> players;
+                    Acore::AnyPlayerInObjectRangeCheck checker(me, 200.0f, true);
+                    Acore::PlayerListSearcher<Acore::AnyPlayerInObjectRangeCheck> searcher(me, players, checker);
+                    Cell::VisitWorldObjects(me, searcher, 200.0f);
+
+                    // Filter out NPC bots or pets
+                    players.remove_if([](Player* player) { return player->IsNPCBotOrPet(); });
+
+                    if (!players.empty())
                     {
-                        DoCast(target, SPELL_LIVING_BOMB);
+                        if (Player* target = Acore::Containers::SelectRandomContainerElement(players))
+                        {
+                            DoCast(target, SPELL_LIVING_BOMB);
+                        }
                     }
 
-                    events.RepeatEvent(urand(11000, 16000));
+                    events.RepeatEvent(urand(17000, 25000));
                     break;
                 }
             }

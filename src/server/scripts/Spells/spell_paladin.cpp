@@ -1224,6 +1224,33 @@ class spell_pal_seal_of_righteousness : public AuraScript
     }
 };
 
+class spell_pal_crusader_strike : public SpellScript
+{
+    PrepareSpellScript(spell_pal_crusader_strike);
+
+    void HandleOnHit()
+    {
+        Unit* caster = GetCaster();
+        if (!caster || !caster->HasAura(888051)) // Check if caster has the required aura
+            return;
+
+        Unit* target = GetHitUnit();
+        if (!target)
+            return;
+
+        int32 damage = GetHitDamage();
+        int32 dotDamage = CalculatePct(damage, 6.25); // 6.25% of damage for each tick
+
+        // Apply the DoT as a new instance each time
+        caster->CastCustomSpell(target, 888050, &dotDamage, nullptr, nullptr, true);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_pal_crusader_strike::HandleOnHit);
+    }
+};
+
 void AddSC_paladin_spell_scripts()
 {
     RegisterSpellAndAuraScriptPair(spell_pal_seal_of_command, spell_pal_seal_of_command_aura);
@@ -1252,4 +1279,5 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_righteous_defense);
     RegisterSpellScript(spell_pal_seal_of_righteousness);
     new dual_crusader();
+    RegisterSpellScript(spell_pal_crusader_strike);
 }

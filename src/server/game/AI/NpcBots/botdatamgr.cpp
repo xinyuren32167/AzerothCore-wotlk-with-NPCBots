@@ -1424,19 +1424,28 @@ bool BotDataMgr::GenerateBattlegroundBots(Player const* groupLeader, [[maybe_unu
         }
     }
 
-    uint32 needed_bots_count_a = (queued_players_a < tarteamplayers) ? (tarteamplayers - queued_players_a) : 0;
-    uint32 needed_bots_count_h = (queued_players_h < tarteamplayers) ? (tarteamplayers - queued_players_h) : 0;
+    uint32 needed_bots_count_a = 0;
+    uint32 needed_bots_count_h = 0;
 
-    // Ornfelt: Fix amount of bots in arena skirmish
-    if (bgTypeId == 6)
+    if (bgTypeId == 6) 
     {
-        //avgteamplayers = atype;
-        needed_bots_count_a = atype - queued_players_a;
-        needed_bots_count_h = atype - queued_players_h;
+        // Calculate the number of bots needed for each team
+        needed_bots_count_a = (queued_players_a < atype) ? (atype - queued_players_a) : 0;
+        needed_bots_count_h = (queued_players_h < atype) ? (atype - queued_players_h) : 0;
+
+        // Ensure the bot count does not exceed the maximum players per team
+        needed_bots_count_a = std::min(needed_bots_count_a, maxteamplayers - queued_players_a);
+        needed_bots_count_h = std::min(needed_bots_count_h, maxteamplayers - queued_players_h);
     }
-    
-    ASSERT(needed_bots_count_a <= maxteamplayers);
-    ASSERT(needed_bots_count_h <= maxteamplayers);
+    else
+    {
+        // Original logic for other battleground types
+        needed_bots_count_a = (queued_players_a < tarteamplayers) ? (tarteamplayers - queued_players_a) : 0;
+        needed_bots_count_h = (queued_players_h < tarteamplayers) ? (tarteamplayers - queued_players_h) : 0;
+    }
+
+    //ASSERT(needed_bots_count_a <= maxteamplayers);
+    //ASSERT(needed_bots_count_h <= maxteamplayers);
 
     if (needed_bots_count_a + needed_bots_count_h == 0)
     {
@@ -1502,7 +1511,7 @@ bool BotDataMgr::GenerateBattlegroundBots(Player const* groupLeader, [[maybe_unu
 
     botBGJoinEvents[groupLeader->GetGUID()].AddEventAtOffset([ammr = ammr, atype = atype, bgqTypeId = bgqTypeId, bgTypeId = bgTypeId, bracketId = bracketId]() {
         sBattlegroundMgr->ScheduleQueueUpdate(ammr, atype, bgqTypeId, bgTypeId, bracketId);
-    }, Seconds(2));
+        }, Seconds(2));
 
     for (NpcBotRegistry const* registry3 : { &spawned_bots_a, &spawned_bots_h })
     {
@@ -1516,12 +1525,13 @@ bool BotDataMgr::GenerateBattlegroundBots(Player const* groupLeader, [[maybe_unu
             queue->AddBotAsGroup(bot->GetGUID(), GetTeamIdForFaction(bot->GetFaction()),
                 bgTypeId, bracketEntry, atype, false, gqinfo->ArenaTeamRating, ammr);
 
-            // Ornfelt: Fix bots in arena queueing slowly...
+
+            // Ornfelt: Instant queue for arenas
             if (bgTypeId == 6)
-                seconds_delay += std::max<uint32>(1u, uint32((MINUTE / 4) / std::min<uint32>(needed_bots_count_a, needed_bots_count_h)));
+                seconds_delay = 1; // Set a minimal delay for arenas
             else
                 seconds_delay = std::min<uint32>(uint32(MINUTE * 2), seconds_delay + std::max<uint32>(1u, uint32((MINUTE / 2) / std::max<uint32>(needed_bots_count_a, needed_bots_count_h))));
-            
+
             BotBattlegroundEnterEvent* bbe = new BotBattlegroundEnterEvent(groupLeader->GetGUID(), bot->GetGUID(), bgqTypeId,
                 botBGJoinEvents[groupLeader->GetGUID()].CalculateTime(Milliseconds(uint32(INVITE_ACCEPT_WAIT_TIME) + uint32(BG_START_DELAY_2M)).count()));
             botBGJoinEvents[groupLeader->GetGUID()].AddEventAtOffset(bbe, Seconds(seconds_delay));

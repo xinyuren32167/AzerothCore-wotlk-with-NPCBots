@@ -51,7 +51,7 @@ enum ShamanBaseSpells
     STORMSTRIKE_1                       = 17364,
     LIGHTNING_BOLT_1                    = 403,
     CHAIN_LIGHTNING_1                   = 421,
-    LAVA_BURST_1                        = 51505,
+    LAVA_BURST_1                        = 100131,
     THUNDERSTORM_1                      = 51490,
     LIGHTNING_SHIELD_1                  = 324,
     EARTH_SHIELD_1                      = 974,

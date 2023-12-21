@@ -424,6 +424,7 @@ void Unit::Update(uint32 p_time)
     // Spells must be processed with event system BEFORE they go to _UpdateSpells.
     // Or else we may have some SPELL_STATE_FINISHED spells stalled in pointers, that is bad.
     m_Events.Update(p_time);
+    m_scheduler.Update(p_time);
 
     if (!IsInWorld())
         return;
@@ -8629,18 +8630,18 @@ bool Unit::HandleDummyAuraProc(Unit* victim, uint32 damage, AuraEffect* triggere
                         }
                     // Shaman T9 Elemental 4P Bonus
                     case 67228:
+                    {
+                        // Lava Burst DINKLE: and Molten Cleave
+                        if ((procSpell->SpellFamilyFlags[1] & 0x1000) || procSpell->Id == 920354)
                         {
-                            // Lava Burst
-                            if (procSpell->SpellFamilyFlags[1] & 0x1000)
-                            {
-                                triggered_spell_id = 71824;
-                                SpellInfo const* triggeredSpell = sSpellMgr->GetSpellInfo(triggered_spell_id);
-                                if (!triggeredSpell)
-                                    return false;
-                                basepoints0 = CalculatePct(int32(damage), triggerAmount) / (triggeredSpell->GetMaxDuration() / triggeredSpell->Effects[0].Amplitude);
-                            }
-                            break;
+                            triggered_spell_id = 71824;
+                            SpellInfo const* triggeredSpell = sSpellMgr->GetSpellInfo(triggered_spell_id);
+                            if (!triggeredSpell)
+                                return false;
+                            basepoints0 = CalculatePct(int32(damage), triggerAmount) / (triggeredSpell->GetMaxDuration() / triggeredSpell->Effects[0].Amplitude);
                         }
+                        break;
+                    }
                     // Item - Shaman T10 Elemental 4P Bonus
                     case 70817:
                         {
@@ -10652,13 +10653,9 @@ ReputationRank Unit::GetReactionTo(Unit const* target, bool checkOriginalFaction
     }
     else if (targetPlayerOwner)
     {
-        FactionTemplateEntry const* selfFactionTemplateEntry = GetFactionTemplateEntry();
-        if (selfFactionTemplateEntry)
-        {
-            ReputationRank const* repRank = targetPlayerOwner->GetReputationMgr().GetForcedRankIfAny(selfFactionTemplateEntry);
-            if (repRank) // Ensure repRank is not null before dereferencing
+        if (FactionTemplateEntry const* selfFactionTemplateEntry = GetFactionTemplateEntry())
+            if (ReputationRank const* repRank = targetPlayerOwner->GetReputationMgr().GetForcedRankIfAny(selfFactionTemplateEntry))
                 return *repRank;
-        }
     }
 
     //npcbot
@@ -10674,7 +10671,7 @@ ReputationRank Unit::GetReactionTo(Unit const* target, bool checkOriginalFaction
         {
             if (IsInRaidWith(target))
                 return REP_FRIENDLY;
-    //end npcbot
+            //end npcbot
             if (selfPlayerOwner && targetPlayerOwner)
             {
                 // always friendly to other unit controlled by player, or to the player himself
@@ -10710,7 +10707,7 @@ ReputationRank Unit::GetReactionTo(Unit const* target, bool checkOriginalFaction
                             {
                                 // check contested flags
                                 if (targetFactionTemplateEntry->factionFlags & FACTION_TEMPLATE_FLAG_ATTACK_PVP_ACTIVE_PLAYERS
-                                        && selfPlayerOwner->HasPlayerFlag(PLAYER_FLAGS_CONTESTED_PVP))
+                                    && selfPlayerOwner->HasPlayerFlag(PLAYER_FLAGS_CONTESTED_PVP))
                                     return REP_HOSTILE;
 
                                 // if faction has reputation, hostile state depends only from AtWar state
@@ -10760,15 +10757,10 @@ ReputationRank Unit::GetReactionTo(Unit const* target, bool checkOriginalFaction
         factionTemplateEntry = GetFactionTemplateEntry();
     }
 
-    if (!factionTemplateEntry)
-    {
-        LOG_ERROR("entities.player", "Null FactionTemplateEntry in Unit::GetReactionTo for unit %u", GetGUID().GetCounter());
-        return REP_NEUTRAL; // Or another default reaction
-    }
-
     // do checks dependant only on our faction
     return GetFactionReactionTo(factionTemplateEntry, target);
 }
+
 
 ReputationRank Unit::GetFactionReactionTo(FactionTemplateEntry const* factionTemplateEntry, Unit const* target) const
 {
@@ -12858,8 +12850,8 @@ float Unit::SpellTakenCritChance(Unit const* caster, SpellInfo const* spellProto
                             }
                             break;
                         case SPELLFAMILY_SHAMAN:
-                            // Lava Burst
-                            if (spellProto->SpellFamilyFlags[1] & 0x00001000)
+                            // Lava Burst DINKLE: and Molten Cleave Crit Enhancement
+                            if ((spellProto->SpellFamilyFlags[1] & 0x00001000) || spellProto->Id == 920354)
                             {
                                 if (GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_SHAMAN, 0x10000000, 0, 0, caster->GetGUID()))
                                     if (GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE) > -100)

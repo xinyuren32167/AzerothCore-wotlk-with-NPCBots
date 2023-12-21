@@ -283,17 +283,16 @@ public:
 
         bool ShieldGroup(uint32 diff)
         {
-            if (!IsSpellReady(PW_SHIELD_1, false, diff) || IsCasting() || Rand() > 65 + 100 * (me->GetMap()->IsRaid()))
+            if (!IsSpellReady(PW_SHIELD_1, false, diff) || IsCasting() || Rand() > 10 + 20 * (me->GetMap()->IsRaid()))
                 return false;
-            if (!IAmFree() && !(me->GetLevel() >= 30 && _spec == BOT_SPEC_PRIEST_DISCIPLINE) &&
-                master->GetBotMgr()->HasBotWithSpec(BOT_SPEC_PRIEST_DISCIPLINE))
+            if (!IAmFree() && !(me->GetLevel() >= 30 && _spec == BOT_SPEC_PRIEST_DISCIPLINE))
                 return false;
 
             Group const* gr = !IAmFree() ? master->GetGroup() : GetGroup();
             if (!gr)
             {
                 Unit* u = master;
-                if (u->IsAlive() && !u->getAttackers().empty() && (IsTank(u) || GetHealthPCT(u) < 75) && me->GetDistance(u) < 40 &&
+                if (u->IsAlive() && !u->getAttackers().empty() && (IsTank(u) || GetHealthPCT(u) < 80) && me->GetDistance(u) < 40 &&
                     ShieldTarget(u, diff))
                     return true;
                 if (!IAmFree())
@@ -344,7 +343,7 @@ public:
             if (!IsSpellReady(PW_SHIELD_1, diff) || IsCasting())
                 return false;
             if (target->HasAuraTypeWithFamilyFlags(SPELL_AURA_MECHANIC_IMMUNITY, SPELLFAMILY_PRIEST, 0x20000000) ||
-                target->HasAuraTypeWithFamilyFlags(SPELL_AURA_SCHOOL_ABSORB, SPELLFAMILY_PRIEST, 0x1))
+                target->HasAura(WEAKENED_SOUL_DEBUFF))
                 return false;
 
             if (doCast(target, GetSpell(PW_SHIELD_1)))
@@ -663,7 +662,19 @@ public:
 
             Unit const* u = target->GetVictim();
             bool tanking = u && IsTank(target) && u->GetTypeId() == TYPEID_UNIT && u->ToCreature()->isWorldBoss();
-
+            //Power Word: Shield
+            if (me->getLevel() >= 30 && _spec == BOT_SPEC_PRIEST_DISCIPLINE) // Check if the priest bot is at least level 30 and is Discipline spec
+            {
+                uint32 PW_SHIELD_SPELL = GetSpell(PW_SHIELD_1); // Get the appropriate spell rank
+                if (PW_SHIELD_SPELL && IsSpellReady(PW_SHIELD_SPELL, diff) && // Check if PW_SHIELD is off cooldown
+                    !target->HasAura(WEAKENED_SOUL_DEBUFF)) // Check if the target doesn't have Weakened Soul
+                {
+                    if (doCast(target, PW_SHIELD_SPELL))
+                    {
+                        return true; // Spell was successfully cast
+                    }
+                }
+            }
             //Penance
             if (IsSpellReady(PENANCE_1, diff) && !target->IsCharmed() && !target->isPossessed() && hp <= 80 &&
                 Rand() < 90 && xphploss > _heals[PENANCE_1])
@@ -716,7 +727,22 @@ public:
                     doCast(me, GetSpell(VAMPIRIC_EMBRACE_1)))
                     return true;
             }
-
+            // Casting Power Word: Shield by Discipline Priest bot
+            if (me->getLevel() >= 30 && _spec == BOT_SPEC_PRIEST_DISCIPLINE) // Check if the priest bot is at least level 30 and is Discipline spec
+            {
+                if (target->GetTypeId() == TYPEID_PLAYER) // Check if the target is a player to prevent shield spam out of combat
+                {
+                    uint32 PW_SHIELD_SPELL = GetSpell(PW_SHIELD_1); // Get the appropriate spell rank
+                    if (PW_SHIELD_SPELL && IsSpellReady(PW_SHIELD_SPELL, diff) && // Check if PW_SHIELD is off cooldown
+                        !target->HasAura(WEAKENED_SOUL_DEBUFF)) // Check if the target doesn't have Weakened Soul
+                    {
+                        if (doCast(target, PW_SHIELD_SPELL))
+                        {
+                            return true; // Spell was successfully cast
+                        }
+                    }
+                }
+            }
             if (me->IsInCombat() && !master->GetMap()->IsRaid())
                 return false;
 

@@ -29,6 +29,7 @@
 #include "Optional.h"
 #include "SpellAuraDefines.h"
 #include "SpellDefines.h"
+#include "TaskScheduler.h"
 #include "ThreatMgr.h"
 #include <functional>
 #include <utility>
@@ -2145,7 +2146,7 @@ public:
 
     // Event handler
     EventProcessor m_Events;
-    
+    TaskScheduler m_scheduler;
     
     // stat system
     bool HandleStatModifier(UnitMods unitMod, UnitModifierType modifierType, float amount, bool apply);

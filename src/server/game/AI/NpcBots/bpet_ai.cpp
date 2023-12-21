@@ -2182,7 +2182,7 @@ bool bot_pet_ai::IsTank(Unit const* unit) const
             for (Group::member_citerator itr = slots.begin(); itr != slots.end(); ++itr)
                 if (itr->guid == unit->GetGUID())
                     return itr->flags & MEMBER_FLAG_MAINTANK;
-            if (gr->isLFGGroup() && sLFGMgr->GetRoles(unit->GetGUID()) & lfg::PLAYER_ROLE_TANK)
+            if (gr->isLFGGroup() && sLFGMgr->GetRoles(unit->GetGUID()) & lfg::PLAYER_ROLE_TANK | CLASS_SHAMAN)
                 return true;
         }
     }

@@ -540,20 +540,39 @@ struct boss_cthun : public BossAI
         scheduler.Update(diff);
     }
 
-    void JustDied(Unit* killer) override
+   void JustDied(Unit* killer) override
+{
+    BossAI::JustDied(killer);
+
+    // Despawn the C'Thun portal
+    if (Creature* pPortal = me->FindNearestCreature(NPC_CTHUN_PORTAL, 10.0f))
     {
-        BossAI::JustDied(killer);
+        pPortal->DespawnOrUnsummon();
+    }
 
-        if (Creature* pPortal = me->FindNearestCreature(NPC_CTHUN_PORTAL, 10.0f))
-        {
-            pPortal->DespawnOrUnsummon();
-        }
+    // Despawn the Eye of C'Thun
+    if (Creature* eye = instance->GetCreature(DATA_EYE_OF_CTHUN))
+    {
+        eye->DespawnOrUnsummon();
+    }
 
-        if (Creature* eye = instance->GetCreature(DATA_EYE_OF_CTHUN))
+    // Remove SPELL_DIGESTIVE_ACID from all players
+    Map* map = me->GetMap();
+    if (map && map->IsDungeon())
+    {
+        Map::PlayerList const& players = map->GetPlayers();
+        for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
         {
-            eye->DespawnOrUnsummon();
+            if (Player* player = itr->GetSource())
+            {
+                if (player->IsWithinDistInMap(me, 150.0f))  // Check if player is within 150 yards
+                {
+                    player->RemoveAurasDueToSpell(SPELL_DIGESTIVE_ACID);
+                }
+            }
         }
     }
+}
 
     void SummonedCreatureDies(Creature* creature, Unit* /*killer*/) override
     {

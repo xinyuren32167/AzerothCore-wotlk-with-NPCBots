@@ -130,7 +130,7 @@ public:
         void Reset() override
         {
             _Reset();
-
+            me->SetName("Ragnaros");
             // Never reset intro events!
             if (_isIntroDone && !(extraEvents.GetPhaseMask() & (1 << (PHASE_INTRO - 1))))
             {

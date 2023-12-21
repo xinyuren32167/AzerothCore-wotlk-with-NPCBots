@@ -45,7 +45,6 @@ enum Spells
 
     SPELL_EXPLODE_ORB           = 20037,
     SPELL_EXPLOSION             = 20038, // Instakill everything.
-
     SPELL_WARMING_FLAMES        = 23040,
 };
 
@@ -108,11 +107,13 @@ public:
 
         bool CanAIAttack(Unit const* target) const override
         {
-            if (target->GetTypeId() == TYPEID_UNIT && !secondPhase)
+            // In the first phase, do not attack non-player units (except NPC bots)
+            if (!secondPhase && target->GetTypeId() == TYPEID_UNIT && !target->ToCreature()->IsNPCBot())
             {
                 return false;
             }
 
+            // Check if the target is affected by SPELL_CONFLAGRATION
             if (me->GetThreatMgr().GetThreatListSize() > 1)
             {
                 ThreatContainer::StorageType::const_iterator lastRef = me->GetThreatMgr().GetOnlineContainer().GetThreatList().end();
@@ -126,8 +127,14 @@ public:
                 }
             }
 
+            // Consider stunned or feared targets (players or NPC bots) as valid in both phases
+            if (target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED) || target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING))
+                return true;
+
+            // Default behavior for both phases
             return true;
         }
+
 
         void JustEngagedWith(Unit* /*who*/) override
         {
@@ -146,6 +153,7 @@ public:
             secondPhase = true;
             _charmerGUID.Clear();
             me->RemoveAllAuras();
+            me->SetFullHealth();
 
             DoCastSelf(SPELL_WARMING_FLAMES, true);
 

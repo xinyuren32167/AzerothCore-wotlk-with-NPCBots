@@ -171,7 +171,7 @@ public:
 
             bool shouldDie = true;
             std::list<Creature*> hounds;
-            creatureTarget->GetCreaturesWithEntryInRange(hounds, 80.0f, NPC_CORE_HOUND);
+            creatureTarget->GetCreaturesWithEntryInRange(hounds, 50.0f, NPC_CORE_HOUND);
 
             // Perform lambda based check to find if there is any nearby
             if (!hounds.empty())
@@ -228,11 +228,11 @@ struct npc_lava_spawn : public ScriptedAI
 
     void JustEngagedWith(Unit* /*who*/) override
     {
-        _scheduler.Schedule(15s, [this](TaskContext context)
+        _scheduler.Schedule(20s, [this](TaskContext context)
         {
             std::list<Creature*> lavaSpawns;
             me->GetCreatureListWithEntryInGrid(lavaSpawns, me->GetEntry(), 100.f);
-            if (lavaSpawns.size() < 16)
+            if (lavaSpawns.size() < 10)
             {
                 Talk(TALK_0);
 
@@ -243,7 +243,7 @@ struct npc_lava_spawn : public ScriptedAI
             }
             else
             {
-                context.Repeat(15s);
+                context.Repeat(20s);
             }
         });
     }

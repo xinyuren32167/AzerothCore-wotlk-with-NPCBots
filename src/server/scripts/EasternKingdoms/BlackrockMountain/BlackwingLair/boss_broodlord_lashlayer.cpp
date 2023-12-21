@@ -71,11 +71,12 @@ public:
             BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
 
-            events.ScheduleEvent(EVENT_CLEAVE, randtime(6s, 8s));
-            events.ScheduleEvent(EVENT_BLASTWAVE, randtime(21s, 35s));
-            events.ScheduleEvent(EVENT_MORTALSTRIKE, randtime(20s, 30s));
-            events.ScheduleEvent(EVENT_KNOCKBACK, randtime(17s, 30s));
-            events.ScheduleEvent(EVENT_SPAWN_ADDS, 55s);
+            events.ScheduleEvent(EVENT_CLEAVE, 8s);
+            events.ScheduleEvent(EVENT_BLASTWAVE, 12s);
+            events.ScheduleEvent(EVENT_MORTALSTRIKE, 20s);
+            events.ScheduleEvent(EVENT_KNOCKBACK, 30s);
+            events.ScheduleEvent(EVENT_SPAWN_ADDS, 50s);
+            events.ScheduleEvent(EVENT_CHECK, 1s);
         }
 
         void JustDied(Unit* /*killer*/) override
@@ -130,7 +131,7 @@ public:
                     break;
                 case EVENT_SPAWN_ADDS:
                     SpawnAdds();
-                    events.ScheduleEvent(EVENT_SPAWN_ADDS, 55s);
+                    events.ScheduleEvent(EVENT_SPAWN_ADDS, 50s);
                     break;
                 }
             }

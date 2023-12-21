@@ -77,6 +77,121 @@ enum MiscSpells
     SPELL_GEN_DAMAGE_REDUCTION_AURA                 = 68066,
 };
 
+
+class spell_war_whirlwind : public SpellScript
+{
+    PrepareSpellScript(spell_war_whirlwind);
+
+    void HandleAfterCast()
+    {
+        if (Player* caster = GetCaster()->ToPlayer())
+        {
+            // Skip the script if the unit is an NPC bot
+            if (caster->IsNPCBot())
+            {
+                return;
+            }
+
+            // Check if the player has the aura with ID 98239
+            if (caster->HasAura(98239))
+            {
+                // Custom attribute to identify script-triggered casts
+                if (!caster->HasAura(98241)) 
+                {
+                    // 33% chance to recast the spell
+                    if (urand(0, 2) == 0)
+                    {
+                        // Apply the custom attribute
+                        caster->AddAura(98241, caster);
+
+                        caster->CastSpell(caster, 1680, true);
+
+                        // Remove the custom attribute
+                        caster->RemoveAurasDueToSpell(98241);
+                    }
+                }
+            }
+        }
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_war_whirlwind::HandleAfterCast);
+    }
+};
+
+void AddSC_spell_war_whirlwind()
+{
+    RegisterSpellScript(spell_war_whirlwind);
+}
+
+
+class spell_war_commanding_shout : public SpellScript
+{
+    PrepareSpellScript(spell_war_commanding_shout);
+
+    static constexpr uint32 GLYPH_OF_COMMAND = 68164;
+    static constexpr uint32 HEAL_TEN_HEAL = 1200019;
+
+    void HandleAfterCast()
+    {
+        if (Player* caster = GetCaster()->ToPlayer())
+        {
+            if (caster->HasAura(GLYPH_OF_COMMAND))
+            {
+                caster->CastSpell(caster, HEAL_TEN_HEAL, true);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_war_commanding_shout::HandleAfterCast);
+    }
+};
+
+void AddSC_spell_war_commanding_shout()
+{
+    RegisterSpellScript(spell_war_commanding_shout);
+}
+
+class spell_war_battle_shout : public SpellScript
+{
+    PrepareSpellScript(spell_war_battle_shout);
+
+    static constexpr uint32 GLYPH_OF_BATTLE = 58095;
+    static constexpr uint32 RECKLESSNESS = 1719;   
+    static constexpr uint32 RAGE_TEN_GEN = 23690;
+
+    void HandleOnCast()
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        if (caster->HasAura(GLYPH_OF_BATTLE))
+        {
+            caster->CastSpell(caster, RAGE_TEN_GEN, true);
+
+            // Check for Recklessness aura and cast Rage Ten Gen again if present
+            if (caster->HasAura(RECKLESSNESS))
+            {
+                caster->CastSpell(caster, RAGE_TEN_GEN, true);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnCast += SpellCastFn(spell_war_battle_shout::HandleOnCast);
+    }
+};
+
+void AddSC_spell_war_battle_shout()
+{
+    RegisterSpellScript(spell_war_battle_shout);
+}
+
 class spell_warrior_vanguard_legendary : public SpellScript
 {
     PrepareSpellScript(spell_warrior_vanguard_legendary);
@@ -969,4 +1084,7 @@ void AddSC_warrior_spell_scripts()
     RegisterSpellScript(spell_warr_vigilance_trigger);
     RegisterSpellScript(spell_warr_t3_prot_8p_bonus);
     RegisterSpellScript(spell_warrior_vanguard_legendary);
+    RegisterSpellScript(spell_war_battle_shout);
+    RegisterSpellScript(spell_war_commanding_shout);
+    RegisterSpellScript(spell_war_whirlwind);
 }

@@ -3215,21 +3215,20 @@ void Spell::EffectEnchantItemTmp(SpellEffIndex effIndex)
             return;
         }
 
-        for (int j = BASE_ATTACK; j <= OFF_ATTACK; ++j)
+        // Dinkle: Check and apply only to main hand weapon
+        if (Item* item = p_caster->GetWeaponForAttack(WeaponAttackType(BASE_ATTACK)))
         {
-            if (Item* item = p_caster->GetWeaponForAttack(WeaponAttackType(j)))
+            if (item->IsFitToSpellRequirements(m_spellInfo))
             {
-                if (item->IsFitToSpellRequirements(m_spellInfo))
-                {
-                    Spell* spell = new Spell(m_caster, spellInfo, TRIGGERED_FULL_MASK);
-                    SpellCastTargets targets;
-                    targets.SetItemTarget(item);
-                    spell->prepare(&targets);
-                }
+                Spell* spell = new Spell(m_caster, spellInfo, TRIGGERED_FULL_MASK);
+                SpellCastTargets targets;
+                targets.SetItemTarget(item);
+                spell->prepare(&targets);
             }
         }
         return;
     }
+
     if (!itemTarget)
         return;
 
@@ -3259,7 +3258,7 @@ void Spell::EffectEnchantItemTmp(SpellEffIndex effIndex)
         duration = 3600;                                    // 1 hour
     // shaman family enchantments
     else if (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN)
-        duration = 1800;                                    // 30 mins
+        duration = 7200;                                    // 2 hours
     // other cases with this SpellVisual already selected
     else if (m_spellInfo->SpellVisual[0] == 215)
         duration = 1800;                                    // 30 mins
@@ -3268,7 +3267,7 @@ void Spell::EffectEnchantItemTmp(SpellEffIndex effIndex)
         duration = 600;                                     // 10 mins
     // shaman rockbiter enchantments
     else if (m_spellInfo->SpellVisual[0] == 0)
-        duration = 1800;                                    // 30 mins
+        duration = 7200;                                    // 2 hours
     else if (m_spellInfo->Id == 29702)
         duration = 300;                                     // 5 mins
     else if (m_spellInfo->Id == 37360)

@@ -1090,24 +1090,24 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid, uint32 vendorEntry)
             if (ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(item->item))
             {
                 // npcbot
-                if (_player->HaveBot())
-                {
-                    if (!(itemTemplate->AllowableClass & (_player->GetClassMask() | _player->GetBotMgr()->GetAllNpcBotsClassMask())) &&
-                        itemTemplate->Bonding == BIND_WHEN_PICKED_UP && !_player->IsGameMaster())
-                        continue;
-                }
-                else
+            //    if (_player->HaveBot())
+            //    {
+            //        if (!(itemTemplate->AllowableClass & (_player->GetClassMask() | _player->GetBotMgr()->GetAllNpcBotsClassMask())) &&
+            //            itemTemplate->Bonding == BIND_WHEN_PICKED_UP && !_player->IsGameMaster())
+            //            continue;
+            //    }
+            //    else
                 // end npcbot
-                if (!(itemTemplate->AllowableClass & _player->getClassMask()) && itemTemplate->Bonding == BIND_WHEN_PICKED_UP && !_player->IsGameMaster())
-                {
-                    continue;
-                }
+            //    if (!(itemTemplate->AllowableClass & _player->getClassMask()) && itemTemplate->Bonding == BIND_WHEN_PICKED_UP && !_player->IsGameMaster())
+            //    {
+            //        continue;
+            //    }
                 // Only display items in vendor lists for the team the
                 // player is on. If GM on, display all items.
-                if (!_player->IsGameMaster() && ((itemTemplate->Flags2 & ITEM_FLAGS_EXTRA_HORDE_ONLY && _player->GetTeamId() == TEAM_ALLIANCE) || (itemTemplate->Flags2 & ITEM_FLAGS_EXTRA_ALLIANCE_ONLY && _player->GetTeamId() == TEAM_HORDE)))
-                {
-                    continue;
-                }
+            //    if (!_player->IsGameMaster() && ((itemTemplate->Flags2 & ITEM_FLAGS_EXTRA_HORDE_ONLY && _player->GetTeamId() == TEAM_ALLIANCE) || (itemTemplate->Flags2 & ITEM_FLAGS_EXTRA_ALLIANCE_ONLY && _player->GetTeamId() == TEAM_HORDE)))
+            //    {
+            //        continue;
+            //    }
 
                 // Items sold out are not displayed in list
                 uint32 leftInStock = !item->maxcount ? 0xFFFFFFFF : vendor->GetVendorItemCurrentCount(item);

@@ -479,7 +479,6 @@ enum ShadowFlame
     SPELL_SHADOW_FLAME_DOT = 22682
 };
 
-// 22539 - Shadowflame (used in Blackwing Lair)
 class spell_bwl_shadowflame : public SpellScriptLoader
 {
 public:
@@ -496,12 +495,15 @@ public:
 
         void HandleEffectScriptEffect(SpellEffIndex /*effIndex*/)
         {
-            // If the victim of the spell is an NPC bot, act as if they have "Onyxia Scale Cloak" and don't apply the Shadow Flame DoT (22682)
             if (Unit* victim = GetHitUnit())
             {
                 if (victim->IsNPCBotOrPet())
                 {
-                    return; // Do nothing, NPC bots are treated as having Onyxia Scale Cloak
+                    LOG_ERROR("scripts", "Shadowflame spell hit an NPC bot. Preventing DoT. Intended.");
+
+                    PreventHitAura(); // Explicitly prevent the application of the DoT
+                    RemoveExistingDoT(victim); // Remove the DoT if it's already applied
+                    return;
                 }
 
                 if (!victim->HasAura(SPELL_ONYXIA_SCALE_CLOAK))
@@ -511,9 +513,18 @@ public:
             }
         }
 
+        void RemoveExistingDoT(Unit* victim)
+        {
+            if (victim->HasAura(SPELL_SHADOW_FLAME_DOT))
+            {
+                victim->RemoveAurasDueToSpell(SPELL_SHADOW_FLAME_DOT);
+            }
+        }
+
         void Register() override
         {
             OnEffectHitTarget += SpellEffectFn(spell_bwl_shadowflame_SpellScript::HandleEffectScriptEffect, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+            // Apply the same logic to other effects if necessary
         }
     };
 
@@ -522,6 +533,7 @@ public:
         return new spell_bwl_shadowflame_SpellScript;
     }
 };
+
 
 enum orb_of_command_misc
 {
