@@ -21,15 +21,16 @@
  * Scriptnames of files in this file should be prefixed with "spell_sha_".
  */
 
+#include "CreatureScript.h"
 #include "GridNotifiers.h"
 #include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "SpellScriptLoader.h"
 #include "TemporarySummon.h"
 #include "Unit.h"
 #include "Player.h"
-
 
 enum ShamanSpells
 {
@@ -1283,3 +1284,4 @@ void AddSC_shaman_spell_scripts()
     RegisterSpellScript(spell_sha_stormstrike);
     RegisterSpellScript(spell_sha_feral_spirit);
 }
+

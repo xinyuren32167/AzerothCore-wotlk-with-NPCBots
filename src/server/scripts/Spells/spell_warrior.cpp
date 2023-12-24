@@ -21,12 +21,14 @@
  * Scriptnames of files in this file should be prefixed with "spell_warr_".
  */
 
+#include "CreatureScript.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "SpellScriptLoader.h"
 #include "Spell.h"
 
 enum WarriorSpells
@@ -1088,3 +1090,4 @@ void AddSC_warrior_spell_scripts()
     RegisterSpellScript(spell_war_commanding_shout);
     RegisterSpellScript(spell_war_whirlwind);
 }
+

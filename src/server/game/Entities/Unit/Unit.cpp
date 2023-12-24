@@ -46,13 +46,13 @@
 #include "MovementGenerator.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
-#include "Opcodes.h"
 #include "OutdoorPvP.h"
 #include "PassiveAI.h"
 #include "Pet.h"
 #include "PetAI.h"
 #include "Player.h"
 #include "ReputationMgr.h"
+#include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
@@ -19711,11 +19711,6 @@ void Unit::SetFeared(bool apply, Unit* fearedBy /*= nullptr*/, bool isFear /*= f
     {
         SetTarget();
         GetMotionMaster()->MoveFleeing(fearedBy, isFear ? 0 : sWorld->getIntConfig(CONFIG_CREATURE_FAMILY_FLEE_DELAY));
-
-        if (GetTypeId() == TYPEID_PLAYER)
-        {
-            sScriptMgr->AnticheatSetSkipOnePacketForASH(ToPlayer(), true);
-        }
     }
     else
     {
@@ -19748,11 +19743,6 @@ void Unit::SetConfused(bool apply)
     {
         SetTarget();
         GetMotionMaster()->MoveConfused();
-
-        if (GetTypeId() == TYPEID_PLAYER)
-        {
-            sScriptMgr->AnticheatSetSkipOnePacketForASH(ToPlayer(), true);
-        }
     }
     else
     {
@@ -20686,7 +20676,6 @@ void Unit::KnockbackFrom(float x, float y, float speedXY, float speedZ)
         if (player->HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) || player->HasAuraType(SPELL_AURA_FLY))
             player->SetCanFly(true, true);
 
-        sScriptMgr->AnticheatSetSkipOnePacketForASH(player, true);
         player->SetCanKnockback(true);
     }
 }
@@ -21264,10 +21253,10 @@ bool Unit::HandleSpellClick(Unit* clicker, int8 seatId)
         Unit* target = (itr->second.castFlags & NPC_CLICK_CAST_TARGET_CLICKER) ? clicker : this;
         ObjectGuid origCasterGUID = (itr->second.castFlags & NPC_CLICK_CAST_ORIG_CASTER_OWNER) ? GetOwnerGUID() : clicker->GetGUID();
 
-        SpellInfo const* spellEntry = sSpellMgr->GetSpellInfo(itr->second.spellId);
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->second.spellId);
 
         // xinef: dont allow players to enter vehicles on arena
-        if (spellEntry->HasAura(SPELL_AURA_CONTROL_VEHICLE) && caster->GetTypeId() == TYPEID_PLAYER && caster->FindMap() && caster->FindMap()->IsBattleArena())
+        if (spellInfo->HasAura(SPELL_AURA_CONTROL_VEHICLE) && caster->GetTypeId() == TYPEID_PLAYER && caster->FindMap() && caster->FindMap()->IsBattleArena())
             continue;
 
         if (seatId > -1)
@@ -21276,7 +21265,7 @@ bool Unit::HandleSpellClick(Unit* clicker, int8 seatId)
             bool valid = false;
             while (i < MAX_SPELL_EFFECTS)
             {
-                if (spellEntry->Effects[i].ApplyAuraName == SPELL_AURA_CONTROL_VEHICLE)
+                if (spellInfo->Effects[i].ApplyAuraName == SPELL_AURA_CONTROL_VEHICLE)
                 {
                     valid = true;
                     break;
@@ -21296,18 +21285,18 @@ bool Unit::HandleSpellClick(Unit* clicker, int8 seatId)
             {
                 int32 bp0[MAX_SPELL_EFFECTS];
                 for (uint32 j = 0; j < MAX_SPELL_EFFECTS; ++j)
-                    bp0[j] = spellEntry->Effects[j].BasePoints;
+                    bp0[j] = spellInfo->Effects[j].BasePoints;
 
                 bp0[i] = seatId;
-                Aura::TryRefreshStackOrCreate(spellEntry, MAX_EFFECT_MASK, this, clicker, bp0, nullptr, origCasterGUID);
+                Aura::TryRefreshStackOrCreate(spellInfo, MAX_EFFECT_MASK, this, clicker, bp0, nullptr, origCasterGUID);
             }
         }
         else
         {
             if (IsInMap(caster))
-                caster->CastSpell(target, spellEntry, GetVehicleKit() ? TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE : TRIGGERED_NONE, nullptr, nullptr, origCasterGUID);
+                caster->CastSpell(target, spellInfo, GetVehicleKit() ? TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE : TRIGGERED_NONE, nullptr, nullptr, origCasterGUID);
             else
-                Aura::TryRefreshStackOrCreate(spellEntry, MAX_EFFECT_MASK, this, clicker, nullptr, nullptr, origCasterGUID);
+                Aura::TryRefreshStackOrCreate(spellInfo, MAX_EFFECT_MASK, this, clicker, nullptr, nullptr, origCasterGUID);
         }
 
         result = true;
@@ -21326,7 +21315,6 @@ void Unit::EnterVehicle(Unit* base, int8 seatId)
     if (Player* player = ToPlayer())
     {
         sScriptMgr->AnticheatSetUnderACKmount(player);
-        sScriptMgr->AnticheatSetSkipOnePacketForASH(player, true);
     }
 }
 
@@ -21369,7 +21357,6 @@ void Unit::_EnterVehicle(Vehicle* vehicle, int8 seatId, AuraApplication const* a
             return;
 
         sScriptMgr->AnticheatSetUnderACKmount(player);
-        sScriptMgr->AnticheatSetSkipOnePacketForASH(player, true);
 
         InterruptNonMeleeSpells(false);
         player->StopCastingCharm();
@@ -21442,7 +21429,6 @@ void Unit::ExitVehicle(Position const* /*exitPosition*/)
     if (Player* player = ToPlayer())
     {
         sScriptMgr->AnticheatSetUnderACKmount(player);
-        sScriptMgr->AnticheatSetSkipOnePacketForASH(player, true);
     }
 }
 
@@ -21516,7 +21502,6 @@ void Unit::_ExitVehicle(Position const* exitPosition)
         player->SetFallInformation(GameTime::GetGameTime().count(), GetPositionZ());
 
         sScriptMgr->AnticheatSetUnderACKmount(player);
-        sScriptMgr->AnticheatSetSkipOnePacketForASH(player, true);
     }
     else if (HasUnitMovementFlag(MOVEMENTFLAG_ROOT))
     {

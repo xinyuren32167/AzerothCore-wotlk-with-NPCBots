@@ -15,6 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 /*
  * Scripts for spells with SPELLFAMILY_HUNTER, SPELLFAMILY_PET and SPELLFAMILY_GENERIC spells used by hunter players.
  * Ordered alphabetically using scriptname.
@@ -23,6 +24,7 @@
 
 #include "Cell.h"
 #include "CellImpl.h"
+#include "CreatureScript.h"
 #include "GridNotifiers.h"
 #include "Pet.h"
 #include "Player.h"
@@ -31,6 +33,7 @@
 #include "SpellAuras.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "SpellScriptLoader.h"
 
 /// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
@@ -1440,3 +1443,4 @@ void AddSC_hunter_spell_scripts()
     new HunterTalents();
     RegisterSpellScript(spell_hun_target_self_and_pet);
 }
+

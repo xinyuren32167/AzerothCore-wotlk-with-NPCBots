@@ -15,18 +15,21 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 /*
  * Scripts for spells with SPELLFAMILY_PALADIN and SPELLFAMILY_GENERIC spells used by paladin players.
  * Ordered alphabetically using scriptname.
  * Scriptnames of files in this file should be prefixed with "spell_pal_".
  */
 
+#include "CreatureScript.h"
 #include "Group.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "SpellScriptLoader.h"
 #include "UnitAI.h"
 #include "Spell.h"
 
@@ -1281,3 +1284,4 @@ void AddSC_paladin_spell_scripts()
     new dual_crusader();
     RegisterSpellScript(spell_pal_crusader_strike);
 }
+

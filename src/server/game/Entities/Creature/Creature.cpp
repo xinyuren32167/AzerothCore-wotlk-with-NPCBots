@@ -19,6 +19,7 @@
 #include "BattlegroundMgr.h"
 #include "CellImpl.h"
 #include "Common.h"
+#include "Config.h"
 #include "CreatureAI.h"
 #include "CreatureAISelector.h"
 #include "CreatureGroups.h"
@@ -31,13 +32,13 @@
 #include "GroupMgr.h"
 #include "Log.h"
 #include "LootMgr.h"
-#include "MapMgr.h"
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "OutdoorPvPMgr.h"
 #include "Pet.h"
 #include "Player.h"
 #include "PoolMgr.h"
+#include "ScriptMgr.h"
 #include "ScriptedGossip.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
@@ -1790,11 +1791,32 @@ bool Creature::LoadCreatureFromDB(ObjectGuid::LowType spawnId, Map* map, bool ad
     if (IsNPCBotOrPet())
         map->RemoveCreatureRespawnTime(spawnId);
     //end npcbot
+        
+    // Dinkle adding faster respawn configs
+    float globalRespawnMultiplier = sConfigMgr->GetFloatDefault("CreatureRespawnTimeMultiplier.Global", 1.0f);
+    float dungeonRespawnMultiplier = sConfigMgr->GetFloatDefault("CreatureRespawnTimeMultiplier.Dungeon", 1.0f);
+    float raidRespawnMultiplier = sConfigMgr->GetFloatDefault("CreatureRespawnTimeMultiplier.Raid", 1.0f);
 
-    m_respawnTime  = GetMap()->GetCreatureRespawnTime(m_spawnId);
-    if (m_respawnTime)                          // respawn on Update
+    // Determine the appropriate multiplier based on the map type
+    float respawnMultiplier = globalRespawnMultiplier;
+    if (GetMap()->IsDungeon())
     {
-        m_deathState = DeathState::Dead;
+    respawnMultiplier = dungeonRespawnMultiplier;
+    }
+    else if (GetMap()->IsRaid())
+    {
+    respawnMultiplier = raidRespawnMultiplier;
+    }
+
+    // Apply the multiplier to the respawn delay and time
+    m_respawnDelay = data->spawntimesecs / respawnMultiplier;
+    m_respawnTime  = GetMap()->GetCreatureRespawnTime(m_spawnId);
+
+if (m_respawnTime) // respawn on Update
+{
+    m_deathState = DeathState::Dead;
+    m_respawnTime /= respawnMultiplier;
+
         if (CanFly())
         {
             float tz = map->GetHeight(GetPhaseMask(), data->posX, data->posY, data->posZ, true, MAX_FALL_DISTANCE);

@@ -15,12 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * Scripts for spells with SPELLFAMILY_DEATHKNIGHT and SPELLFAMILY_GENERIC spells used by deathknight players.
- * Ordered alphabetically using scriptname.
- * Scriptnames of files in this file should be prefixed with "spell_dk_".
- */
-
+#include "CreatureScript.h"
 #include "PetDefines.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -30,13 +25,18 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "SpellScriptLoader.h"
 #include "Totem.h"
 #include "UnitAI.h"
 #include "Item.h"
 #include <unordered_set>
 #include <ctime>
 #include <chrono>
-
+ /*
+  * Scripts for spells with SPELLFAMILY_DEATHKNIGHT and SPELLFAMILY_GENERIC spells used by deathknight players.
+  * Ordered alphabetically using scriptname.
+  * Scriptnames of files in this file should be prefixed with "spell_dk_".
+  */
 
 enum DeathKnightSpells
 {
@@ -2495,3 +2495,4 @@ void AddSC_deathknight_spell_scripts()
     RegisterSpellScript(spell_death_knight_dnd);
     RegisterSpellScript(spell_strength_of_will);
 }
+

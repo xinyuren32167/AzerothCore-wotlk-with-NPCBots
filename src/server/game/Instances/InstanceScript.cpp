@@ -74,6 +74,7 @@ void InstanceScript::OnGameObjectCreate(GameObject* go)
 {
     AddObject(go);
     AddDoor(go);
+    sScriptMgr->AfterInstanceGameObjectCreate(instance, go);
 }
 
 void InstanceScript::OnGameObjectRemove(GameObject* go)

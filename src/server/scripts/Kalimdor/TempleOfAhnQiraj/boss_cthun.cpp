@@ -21,11 +21,12 @@
  SDComment: Darkglare tracking issue
  SDCategory: Temple of Ahn'Qiraj
  EndScriptData */
-
+#include "AreaTriggerScript.h"
+#include "CreatureScript.h"
 #include "Player.h"
-#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "SpellScript.h"
+#include "SpellScriptLoader.h"
 #include "temple_of_ahnqiraj.h"
 
 enum Spells
@@ -1095,3 +1096,4 @@ void AddSC_boss_cthun()
     new at_cthun_stomach_exit();
     new at_cthun_center();
 }
+

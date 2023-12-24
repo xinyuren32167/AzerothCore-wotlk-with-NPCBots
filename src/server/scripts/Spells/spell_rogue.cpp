@@ -22,11 +22,13 @@
  */
 
 #include "CellImpl.h"
+#include "CreatureScript.h"
 #include "GridNotifiers.h"
 #include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "SpellScriptLoader.h"
 #include "SpellAuras.h"
 #include "Player.h"
 
@@ -873,3 +875,4 @@ void AddSC_rogue_spell_scripts()
     RegisterSpellScript(spell_rogue_shadowdance_plus);
     new spell_rogue_add_combo_points();
 }
+

@@ -53,14 +53,12 @@
 #include "InstanceSaveMgr.h"
 #include "InstanceScript.h"
 #include "LFGMgr.h"
-#include "Language.h"
 #include "Log.h"
 #include "LootItemStorage.h"
 #include "MapMgr.h"
 #include "MiscPackets.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
-#include "Opcodes.h"
 #include "OutdoorPvP.h"
 #include "OutdoorPvPMgr.h"
 #include "Pet.h"
@@ -80,7 +78,6 @@
 #include "Tokenize.h"
 #include "Transport.h"
 #include "UpdateData.h"
-#include "UpdateFieldFlags.h"
 #include "Util.h"
 #include "Vehicle.h"
 #include "Weather.h"
@@ -1326,9 +1323,6 @@ void Player::SendTeleportAckPacket()
 
 bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientation, uint32 options /*= 0*/, Unit* target /*= nullptr*/, bool newInstance /*= false*/)
 {
-    // for except kick by antispeedhack
-    sScriptMgr->AnticheatSetSkipOnePacketForASH(this, true);
-
     if (!MapMgr::IsValidMapCoord(mapid, x, y, z, orientation))
     {
         LOG_ERROR("entities.player", "TeleportTo: invalid map ({}) or invalid coordinates (X: {}, Y: {}, Z: {}, O: {}) given when teleporting player ({}, name: {}, map: {}, X: {}, Y: {}, Z: {}, O: {}).",
@@ -4588,6 +4582,7 @@ void Player::KillPlayer()
     if (corpseReclaimDelay >= 0)
         SendCorpseReclaimDelay(corpseReclaimDelay);
 
+    sScriptMgr->OnPlayerJustDied(this);
     // don't create corpse at this moment, player might be falling
 
     // update visibility
@@ -6753,21 +6748,126 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 HandleStatModifier(UNIT_MOD_STAT_STRENGTH, BASE_VALUE, float(val), apply);
                 ApplyStatBuffMod(STAT_STRENGTH, float(val), apply);
                 break;
-            case ITEM_MOD_INTELLECT:                        //modify intellect
-                HandleStatModifier(UNIT_MOD_STAT_INTELLECT, BASE_VALUE, float(val), apply);
-                ApplyStatBuffMod(STAT_INTELLECT, float(val), apply);
-                break;
-            case ITEM_MOD_SPIRIT:                           //modify spirit
-                HandleStatModifier(UNIT_MOD_STAT_SPIRIT, BASE_VALUE, float(val), apply);
-                ApplyStatBuffMod(STAT_SPIRIT, float(val), apply);
-                break;
-            case ITEM_MOD_STAMINA:                          //modify stamina
-                HandleStatModifier(UNIT_MOD_STAT_STAMINA, BASE_VALUE, float(val), apply);
-                ApplyStatBuffMod(STAT_STAMINA, float(val), apply);
-                break;
+            // Dinkle: Config Options for intellect gains multiplier
+            case ITEM_MOD_INTELLECT: // Modify intellect
+            {
+                float intellectMultiplier60 = sConfigMgr->GetFloatDefault("IntellectMultiplier.Level1to60", 1.0f);
+                float intellectMultiplier70 = sConfigMgr->GetFloatDefault("IntellectMultiplier.Level61to70", 1.0f);
+                float intellectMultiplier80 = sConfigMgr->GetFloatDefault("IntellectMultiplier.Level71to80", 1.0f);
+
+                // Determine the scaling factor based on the player's level.
+                float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
+
+                if (GetLevel() < 61)
+                {
+                    scalingFactor = intellectMultiplier60;
+                }
+                else if (GetLevel() >= 61 && GetLevel() <= 70)
+                {
+                    scalingFactor = intellectMultiplier70;
+                }
+                else if (GetLevel() >= 71 && GetLevel() <= 80)
+                {
+                    scalingFactor = intellectMultiplier80;
+                }
+                // Apply the scaling factor to the intellect value.
+                float scaledIntellect = float(val) * scalingFactor;
+
+                // Apply the modified intellect.
+                HandleStatModifier(UNIT_MOD_STAT_INTELLECT, BASE_VALUE, scaledIntellect, apply);
+                ApplyStatBuffMod(STAT_INTELLECT, scaledIntellect, apply);
+            }
+            break;
+            // Dinkle: Config Options for spirit gains multiplier
+            case ITEM_MOD_SPIRIT: // Modify spirit
+            {
+                float spiritMultiplier60 = sConfigMgr->GetFloatDefault("SpiritMultiplier.Level1to60", 1.0f);
+                float spiritMultiplier70 = sConfigMgr->GetFloatDefault("SpiritMultiplier.Level61to70", 1.0f);
+                float spiritMultiplier80 = sConfigMgr->GetFloatDefault("SpiritMultiplier.Level71to80", 1.0f);
+
+                // Determine the scaling factor based on the player's level.
+                float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
+
+                if (GetLevel() < 61)
+                {
+                    scalingFactor = spiritMultiplier60;
+                }
+                else if (GetLevel() >= 61 && GetLevel() <= 70)
+                {
+                    scalingFactor = spiritMultiplier70;
+                }
+                else if (GetLevel() >= 71 && GetLevel() <= 80)
+                {
+                    scalingFactor = spiritMultiplier80;
+                }
+                // Apply the scaling factor to the spirit value.
+                float scaledSpirit = float(val) * scalingFactor;
+
+                // Apply the modified spirit.
+                HandleStatModifier(UNIT_MOD_STAT_SPIRIT, BASE_VALUE, scaledSpirit, apply);
+                ApplyStatBuffMod(STAT_SPIRIT, scaledSpirit, apply);
+            }
+            break;
+
+            // Dinkle: Config Options for stamina gains multiplier
+            case ITEM_MOD_STAMINA: // Modify stamina
+            {
+                float staminaMultiplier60 = sConfigMgr->GetFloatDefault("StaminaMultiplier.Level1to60", 1.0f);
+                float staminaMultiplier70 = sConfigMgr->GetFloatDefault("StaminaMultiplier.Level61to70", 1.0f);
+                float staminaMultiplier80 = sConfigMgr->GetFloatDefault("StaminaMultiplier.Level71to80", 1.0f);
+
+                // Determine the scaling factor based on the player's level.
+                float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
+
+                if (GetLevel() < 61)
+                {
+                    scalingFactor = staminaMultiplier60;
+                }
+                else if (GetLevel() >= 61 && GetLevel() <= 70)
+                {
+                    scalingFactor = staminaMultiplier70;
+                }
+                else if (GetLevel() >= 71 && GetLevel() <= 80)
+                {
+                    scalingFactor = staminaMultiplier80;
+                }
+                // Apply the scaling factor to the stamina value.
+                float scaledStamina = float(val) * scalingFactor;
+
+                // Apply the modified stamina.
+                HandleStatModifier(UNIT_MOD_STAT_STAMINA, BASE_VALUE, scaledStamina, apply);
+                ApplyStatBuffMod(STAT_STAMINA, scaledStamina, apply);
+            }
+            break;
+            // Dinkle: Config Option for more defense for lower levels from Defense rating
             case ITEM_MOD_DEFENSE_SKILL_RATING:
-                ApplyRatingMod(CR_DEFENSE_SKILL, int32(val), apply);
-                break;
+            {
+                float defenseRatingMultiplier60 = sConfigMgr->GetFloatDefault("DefenseRatingMultiplier.Level1to60", 2.0f);
+                float defenseRatingMultiplier70 = sConfigMgr->GetFloatDefault("DefenseRatingMultiplier.Level61to70", 1.0f);
+                float defenseRatingMultiplier80 = sConfigMgr->GetFloatDefault("DefenseRatingMultiplier.Level71to80", 1.0f);
+
+                // Determine the scaling factor based on the player's level.
+                float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
+
+                if (GetLevel() < 61)
+                {
+                    scalingFactor = defenseRatingMultiplier60;
+                }
+                else if (GetLevel() >= 61 && GetLevel() <= 70)
+                {
+                    scalingFactor = defenseRatingMultiplier70;
+                }
+                else if (GetLevel() >= 71 && GetLevel() <= 80)
+                {
+                    scalingFactor = defenseRatingMultiplier80;
+                }
+                // Apply the scaling factor to the defense rating value.
+                int32 scaledVal = int32(val * scalingFactor);
+
+                // Apply the modified defense rating.
+                ApplyRatingMod(CR_DEFENSE_SKILL, scaledVal, apply);
+            }
+            break;
             case ITEM_MOD_DODGE_RATING:
                 ApplyRatingMod(CR_DODGE, int32(val), apply);
                 break;
@@ -6822,16 +6922,70 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             case ITEM_MOD_HASTE_SPELL_RATING:
                 ApplyRatingMod(CR_HASTE_SPELL, int32(val), apply);
                 break;
+            // Dinkle: Config Option for more hit 
             case ITEM_MOD_HIT_RATING:
-                ApplyRatingMod(CR_HIT_MELEE, int32(val), apply);
-                ApplyRatingMod(CR_HIT_RANGED, int32(val), apply);
-                ApplyRatingMod(CR_HIT_SPELL, int32(val), apply);
-                break;
+            {
+                float hitRatingMultiplier60 = sConfigMgr->GetFloatDefault("HitRatingMultiplier.Level1to60", 1.0f);
+                float hitRatingMultiplier70 = sConfigMgr->GetFloatDefault("HitRatingMultiplier.Level61to70", 1.0f);
+                float hitRatingMultiplier80 = sConfigMgr->GetFloatDefault("HitRatingMultiplier.Level71to80", 1.0f);
+
+                // Determine the scaling factor based on the player's level.
+                float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
+
+                if (GetLevel() < 61)
+                {
+                    scalingFactor = hitRatingMultiplier60;
+                }
+                else if (GetLevel() >= 61 && GetLevel() <= 70)
+                {
+                    scalingFactor = hitRatingMultiplier70;
+                }
+                else if (GetLevel() >= 71 && GetLevel() <= 80)
+                {
+                    scalingFactor = hitRatingMultiplier80;
+                }
+                // Players level 81 and above get normal hit rating, scalingFactor remains 1.
+
+                // Apply the scaling factor to the hit rating value.
+                int32 scaledVal = int32(val * scalingFactor);
+
+                // Apply the modified hit rating.
+                ApplyRatingMod(CR_HIT_MELEE, scaledVal, apply);
+                ApplyRatingMod(CR_HIT_RANGED, scaledVal, apply);
+                ApplyRatingMod(CR_HIT_SPELL, scaledVal, apply);
+            }
+            break;
+            // Dinkle: Config Option for more crit 
             case ITEM_MOD_CRIT_RATING:
-                ApplyRatingMod(CR_CRIT_MELEE, int32(val), apply);
-                ApplyRatingMod(CR_CRIT_RANGED, int32(val), apply);
-                ApplyRatingMod(CR_CRIT_SPELL, int32(val), apply);
-                break;
+            {
+                float critRatingMultiplier60 = sConfigMgr->GetFloatDefault("CritRatingMultiplier.Level1to60", 1.0f);
+                float critRatingMultiplier70 = sConfigMgr->GetFloatDefault("CritRatingMultiplier.Level61to70", 1.0f);
+                float critRatingMultiplier80 = sConfigMgr->GetFloatDefault("CritRatingMultiplier.Level71to80", 1.0f);
+
+                // Determine the scaling factor based on the player's level.
+                float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
+
+                if (GetLevel() < 61)
+                {
+                    scalingFactor = critRatingMultiplier60;
+                }
+                else if (GetLevel() >= 61 && GetLevel() <= 70)
+                {
+                    scalingFactor = critRatingMultiplier70;
+                }
+                else if (GetLevel() >= 71 && GetLevel() <= 80)
+                {
+                    scalingFactor = critRatingMultiplier80;
+                }
+                // Apply the scaling factor to the crit rating value.
+                int32 scaledVal = int32(val * scalingFactor);
+
+                // Apply the modified crit rating.
+                ApplyRatingMod(CR_CRIT_MELEE, scaledVal, apply);
+                ApplyRatingMod(CR_CRIT_RANGED, scaledVal, apply);
+                ApplyRatingMod(CR_CRIT_SPELL, scaledVal, apply);
+            }
+            break;
             case ITEM_MOD_HIT_TAKEN_RATING:
                 ApplyRatingMod(CR_HIT_TAKEN_MELEE, int32(val), apply);
                 ApplyRatingMod(CR_HIT_TAKEN_RANGED, int32(val), apply);
@@ -6843,14 +6997,66 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 ApplyRatingMod(CR_CRIT_TAKEN_RANGED, int32(val), apply);
                 ApplyRatingMod(CR_CRIT_TAKEN_SPELL, int32(val), apply);
                 break;
+             // Dinkle: Config Option for more haste 
             case ITEM_MOD_HASTE_RATING:
-                ApplyRatingMod(CR_HASTE_MELEE, int32(val), apply);
-                ApplyRatingMod(CR_HASTE_RANGED, int32(val), apply);
-                ApplyRatingMod(CR_HASTE_SPELL, int32(val), apply);
-                break;
+            {
+                float hasteRatingMultiplier60 = sConfigMgr->GetFloatDefault("HasteRatingMultiplier.Level1to60", 1.0f);
+                float hasteRatingMultiplier70 = sConfigMgr->GetFloatDefault("HasteRatingMultiplier.Level61to70", 1.0f);
+                float hasteRatingMultiplier80 = sConfigMgr->GetFloatDefault("HasteRatingMultiplier.Level71to80", 1.0f);
+
+                // Determine the scaling factor based on the player's level.
+                float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
+
+                if (GetLevel() < 61)
+                {
+                    scalingFactor = hasteRatingMultiplier60;
+                }
+                else if (GetLevel() >= 61 && GetLevel() <= 70)
+                {
+                    scalingFactor = hasteRatingMultiplier70;
+                }
+                else if (GetLevel() >= 71 && GetLevel() <= 80)
+                {
+                    scalingFactor = hasteRatingMultiplier80;
+                }
+                // Apply the scaling factor to the haste rating value.
+                int32 scaledVal = int32(val * scalingFactor);
+
+                // Apply the modified haste rating.
+                ApplyRatingMod(CR_HASTE_MELEE, scaledVal, apply);
+                ApplyRatingMod(CR_HASTE_RANGED, scaledVal, apply);
+                ApplyRatingMod(CR_HASTE_SPELL, scaledVal, apply);
+            }
+            break;
+            // Dinkle: Config Option for more Expertise 
             case ITEM_MOD_EXPERTISE_RATING:
-                ApplyRatingMod(CR_EXPERTISE, int32(val), apply);
-                break;
+            {
+                float expertiseRatingMultiplier60 = sConfigMgr->GetFloatDefault("ExpertiseRatingMultiplier.Level1to60", 1.0f);
+                float expertiseRatingMultiplier70 = sConfigMgr->GetFloatDefault("ExpertiseRatingMultiplier.Level61to70", 1.0f);
+                float expertiseRatingMultiplier80 = sConfigMgr->GetFloatDefault("ExpertiseRatingMultiplier.Level71to80", 1.0f);
+
+                // Determine the scaling factor based on the player's level.
+                float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
+
+                if (GetLevel() < 61)
+                {
+                    scalingFactor = expertiseRatingMultiplier60;
+                }
+                else if (GetLevel() >= 61 && GetLevel() <= 70)
+                {
+                    scalingFactor = expertiseRatingMultiplier70;
+                }
+                else if (GetLevel() >= 71 && GetLevel() <= 80)
+                {
+                    scalingFactor = expertiseRatingMultiplier80;
+                }
+                // Apply the scaling factor to the expertise rating value.
+                int32 scaledVal = int32(val * scalingFactor);
+
+                // Apply the modified expertise rating.
+                ApplyRatingMod(CR_EXPERTISE, scaledVal, apply);
+            }
+            break;
             case ITEM_MOD_ATTACK_POWER:
                 HandleStatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(val), apply);
                 HandleStatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);

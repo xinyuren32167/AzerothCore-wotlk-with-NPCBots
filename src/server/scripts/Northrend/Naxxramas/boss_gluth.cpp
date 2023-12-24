@@ -4,10 +4,11 @@
 #include "SpellScript.h"
 #include "naxxramas.h"
 
+#include "CreatureScript.h"
 #include "Player.h"
-#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "SpellScript.h"
+#include "SpellScriptLoader.h"
 #include "naxxramas.h"
 
 enum Spells
@@ -271,3 +272,4 @@ void AddSC_boss_gluth()
     new boss_gluth();
     new spell_gluth_decimate();
 }
+

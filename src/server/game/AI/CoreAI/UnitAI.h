@@ -155,7 +155,7 @@ struct PowerUsersSelector : public Acore::unary_function<Unit*, bool>
 
 struct FarthestTargetSelector : public Acore::unary_function<Unit*, bool>
 {
-    FarthestTargetSelector(Unit const* unit, float dist, bool playerOnly, bool inLos) : _me(unit), _dist(dist), _playerOnly(playerOnly), _inLos(inLos) {}
+    FarthestTargetSelector(Unit const* unit, float maxDist, bool playerOnly, bool inLos, float minDist = 0.f) : _me(unit), _minDist(minDist), _maxDist(maxDist), _playerOnly(playerOnly), _inLos(inLos) {}
 
     bool operator()(Unit const* target) const
     {
@@ -165,7 +165,7 @@ struct FarthestTargetSelector : public Acore::unary_function<Unit*, bool>
         if (_playerOnly && target->GetTypeId() != TYPEID_PLAYER)
             return false;
 
-        if (_dist > 0.0f && !_me->IsWithinCombatRange(target, _dist))
+        if (_maxDist > 0.0f && !_me->IsInRange(target, _minDist, _maxDist))
             return false;
 
         if (_inLos && !_me->IsWithinLOSInMap(target))
@@ -176,7 +176,7 @@ struct FarthestTargetSelector : public Acore::unary_function<Unit*, bool>
 
 private:
     Unit const* _me;
-    float _dist;
+    float _minDist, _maxDist;
     bool _playerOnly;
     bool _inLos;
 };
