@@ -41,6 +41,8 @@
 
 // Add support old api modules
 #include "AllScriptsObjects.h"
+#define MOD_PRESENT_NPCBOTS 1
+
 
 class AuctionHouseObject;
 class AuraScript;
@@ -95,10 +97,6 @@ namespace Acore::ChatCommands
 {
     struct ChatCommandBuilder;
 }
-
-#define VISIBLE_RANGE       166.0f                          //MAX visible range (size of grid)
-
-#define MOD_PRESENT_NPCBOTS 1
 
 // Check out our guide on how to create new hooks in our wiki! https://www.azerothcore.org/wiki/hooks-script
 /*

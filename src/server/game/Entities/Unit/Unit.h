@@ -1847,12 +1847,13 @@ public:
 
     void BuildHeartBeatMsg(WorldPacket* data) const;
 
-    // Using the enum class DeathState from the upstream for clarity
     [[nodiscard]] bool IsAlive() const { return (m_deathState == DeathState::Alive); };
     [[nodiscard]] bool isDying() const { return (m_deathState == DeathState::JustDied); };
     [[nodiscard]] bool isDead() const { return (m_deathState == DeathState::Dead || m_deathState == DeathState::Corpse); };
-
-    // npcbot 
+    //npcbot
+    /*
+    DeathState getDeathState() { return m_deathState; };
+    */
     DeathState getDeathState() const { return m_deathState; };
     //end npcbot
     virtual void setDeathState(DeathState s, bool despawn = false); // overwrited in Creature/Player/Pet
@@ -1870,6 +1871,7 @@ public:
     [[nodiscard]] ObjectGuid GetPetGUID() const { return m_SummonSlot[SUMMON_SLOT_PET]; }
     void SetCritterGUID(ObjectGuid guid) { SetGuidValue(UNIT_FIELD_CRITTER, guid); }
     [[nodiscard]] ObjectGuid GetCritterGUID() const { return GetGuidValue(UNIT_FIELD_CRITTER); }
+
 
     //npcbot
     void SetControlledByPlayer(bool set) { m_ControlledByPlayer = set; }

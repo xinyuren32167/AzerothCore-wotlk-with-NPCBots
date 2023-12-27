@@ -33,6 +33,7 @@
 #include "UnitAI.h"
 #include "Spell.h"
 
+
 //npcbot
 #include "Creature.h"
 //end npcbot

@@ -361,8 +361,7 @@ void Creature::RemoveCorpse(bool setSpawnTime, bool skipVisibility)
     if (IsNPCBotOrPet())
         return;
     //end npcbot
-
-    // Merged changes: Updating the death state check to use the new style from upstream
+    
     if (getDeathState() != DeathState::Corpse)
         return;
 
@@ -2126,7 +2125,7 @@ void Creature::setDeathState(DeathState s, bool despawn)
 
 void Creature::Respawn(bool force)
 {
-    // npcbot
+    //npcbot
     if (IsNPCBotOrPet())
         return;
     // end npcbot

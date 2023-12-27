@@ -646,7 +646,6 @@ void InstanceScript::DoRemoveAurasDueToSpellOnPlayers(uint32 spell)
             player->RemoveAurasDueToSpell(spell);
             if (Pet* pet = player->GetPet())
                 pet->RemoveAurasDueToSpell(spell);
-
             //npcbot: include bots
             if (player->HaveBot())
             {
@@ -664,7 +663,6 @@ void InstanceScript::DoCastSpellOnPlayers(uint32 spell)
     instance->DoForAllPlayers([&](Player* player)
         {
             player->CastSpell(player, spell, true);
-
             //npcbot: include bots
             if (player->HaveBot())
             {

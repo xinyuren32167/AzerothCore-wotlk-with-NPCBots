@@ -419,10 +419,6 @@ void Player::Update(uint32 p_time)
         TeleportTo(teleportStore_dest, teleportStore_options);
     }
 
-    //NpcBot mod: Update
-    _botMgr->Update(p_time);
-    //end Npcbot
-
     if (!IsBeingTeleported() && bRequestForcedVisibilityUpdate)
     {
         bRequestForcedVisibilityUpdate = false;
@@ -430,6 +426,10 @@ void Player::Update(uint32 p_time)
         m_delayed_unit_relocation_timer = 0;
         RemoveFromNotify(NOTIFY_VISIBILITY_CHANGED);
     }
+
+    //NpcBot mod: Update
+    _botMgr->Update(p_time);
+    //end Npcbot
 }
 
 void Player::UpdateMirrorTimers()

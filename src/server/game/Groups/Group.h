@@ -331,7 +331,7 @@ public:
     void DoForAllMembers(std::function<void(Player*)> const& worker);
 
     DataMap CustomData;
-    
+
     //npcbots
     ObjectGuid const* GetTargetIcons() const { return m_targetIcons; }
     //end npcbots
@@ -358,15 +358,15 @@ protected:
     GroupType           m_groupType;
     Difficulty          m_dungeonDifficulty;
     Difficulty          m_raidDifficulty;
-    Battlefield*        m_bfGroup;
-    Battleground*       m_bgGroup;
+    Battlefield* m_bfGroup;
+    Battleground* m_bgGroup;
     ObjectGuid          m_targetIcons[TARGETICONCOUNT];
     LootMethod          m_lootMethod;
     ItemQualities       m_lootThreshold;
     ObjectGuid          m_looterGuid;
     ObjectGuid          m_masterLooterGuid;
     Rolls               RollId;
-    uint8*              m_subGroupsCounts;
+    uint8* m_subGroupsCounts;
     ObjectGuid          m_guid;
     uint32              m_counter;                      // used only in SMSG_GROUP_LIST
     uint32              m_maxEnchantingLevel;
@@ -377,3 +377,4 @@ protected:
     DifficultyPreventionChangeType _difficultyChangePreventionType;
 };
 #endif
+

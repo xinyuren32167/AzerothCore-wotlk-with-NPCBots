@@ -93,7 +93,7 @@ void ScriptMgr::Initialize()
     AddNpcBotScripts();
     //end npcbot
 
-    // LFGScripts from AzerothCore
+    // LFGScripts
     lfg::AddSC_LFGScripts();
 
     ASSERT(_script_loader_callback,

@@ -32,7 +32,6 @@
 #include "SpellAuras.h"
 #include "Player.h"
 
-
 //npcbot
 #include "Creature.h"
 //end npcbot

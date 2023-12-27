@@ -1388,7 +1388,7 @@ public:
             }
             //Consecration
             if (IsSpellReady(CONSECRATION_1, diff) && can_do_holy && HasRole(BOT_ROLE_DPS) && dist < 5 &&
-                !mytar->isMoving() && Rand() < 50)
+                !mytar->isMoving() && Rand() < 80)  // Changed from 50 to 80 for an 80% chance
             {
                 if (doCast(me, GetSpell(CONSECRATION_1)))
                     return;
@@ -1412,7 +1412,7 @@ public:
                     return;
             }
             //Crusader Strike
-            if (IsSpellReady(CRUSADER_STRIKE_1, diff) && can_do_normal && HasRole(BOT_ROLE_DPS) && dist < 5 && Rand() < 90)
+            if (IsSpellReady(CRUSADER_STRIKE_1, diff) && can_do_normal && HasRole(BOT_ROLE_TANK | BOT_ROLE_DPS | BOT_ROLE_TANK_OFF) && dist < 5 && Rand() < 90)
             {
                 if (doCast(mytar, GetSpell(CRUSADER_STRIKE_1)))
                     return;

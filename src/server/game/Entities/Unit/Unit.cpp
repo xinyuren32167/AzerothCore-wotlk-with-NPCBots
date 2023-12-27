@@ -1587,8 +1587,8 @@ void Unit::DealSpellDamage(SpellNonMeleeDamage* damageInfo, bool durabilityLoss,
 // @todo for melee need create structure as in
 void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, WeaponAttackType attackType, const bool sittingVictim)
 {
-    damageInfo->attacker         = this;
-    damageInfo->target           = victim;
+    damageInfo->attacker = this;
+    damageInfo->target = victim;
 
     for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
     {
@@ -1598,16 +1598,16 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         damageInfo->damages[i].resist = 0;
     }
 
-    damageInfo->attackType       = attackType;
-    damageInfo->cleanDamage      = 0;
-    damageInfo->blocked_amount   = 0;
+    damageInfo->attackType = attackType;
+    damageInfo->cleanDamage = 0;
+    damageInfo->blocked_amount = 0;
 
-    damageInfo->TargetState      = 0;
-    damageInfo->HitInfo          = 0;
-    damageInfo->procAttacker     = PROC_FLAG_NONE;
-    damageInfo->procVictim       = PROC_FLAG_NONE;
-    damageInfo->procEx           = PROC_EX_NONE;
-    damageInfo->hitOutCome       = MELEE_HIT_EVADE;
+    damageInfo->TargetState = 0;
+    damageInfo->HitInfo = 0;
+    damageInfo->procAttacker = PROC_FLAG_NONE;
+    damageInfo->procVictim = PROC_FLAG_NONE;
+    damageInfo->procEx = PROC_EX_NONE;
+    damageInfo->hitOutCome = MELEE_HIT_EVADE;
 
     if (!victim)
         return;
@@ -1618,17 +1618,17 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
     // Select HitInfo/procAttacker/procVictim flag based on attack type
     switch (attackType)
     {
-        case BASE_ATTACK:
-            damageInfo->procAttacker = PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PROC_FLAG_DONE_MAINHAND_ATTACK;
-            damageInfo->procVictim   = PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK;
-            break;
-        case OFF_ATTACK:
-            damageInfo->procAttacker = PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PROC_FLAG_DONE_OFFHAND_ATTACK;
-            damageInfo->procVictim   = PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK;
-            damageInfo->HitInfo      = HITINFO_OFFHAND;
-            break;
-        default:
-            return;
+    case BASE_ATTACK:
+        damageInfo->procAttacker = PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PROC_FLAG_DONE_MAINHAND_ATTACK;
+        damageInfo->procVictim = PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK;
+        break;
+    case OFF_ATTACK:
+        damageInfo->procAttacker = PROC_FLAG_DONE_MELEE_AUTO_ATTACK | PROC_FLAG_DONE_OFFHAND_ATTACK;
+        damageInfo->procVictim = PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK;
+        damageInfo->HitInfo = HITINFO_OFFHAND;
+        break;
+    default:
+        return;
     }
 
     // School Immune check
@@ -1686,6 +1686,11 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         // Script Hook For CalculateMeleeDamage -- Allow scripts to change the Damage pre class mitigation calculations
         sScriptMgr->ModifyMeleeDamage(damageInfo->target, damageInfo->attacker, damage);
 
+        if (victim->GetAI())
+        {
+            victim->GetAI()->OnCalculateMeleeDamageReceived(damage, this);
+        }
+
         //NpcBot mod: apply bot damage mods
         if (IsNPCBotOrPet())
         {
@@ -1696,11 +1701,6 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
             damage *= (BotMgr::IsWanderingWorldBot(ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModPhysical());
         }
         //End NpcBot
-
-        if (victim->GetAI())
-        {
-            victim->GetAI()->OnCalculateMeleeDamageReceived(damage, this);
-        }
 
         // Calculate armor reduction
         if (IsDamageReducedByArmor((SpellSchoolMask)(damageInfo->damages[i].damageSchoolMask)))
@@ -1718,8 +1718,8 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
     if (IsNPCBot())
         damageInfo->hitOutCome = ToCreature()->BotRollMeleeOutcomeAgainst(damageInfo->target, damageInfo->attackType);
     else
-    //End NpcBot
-    damageInfo->hitOutCome = RollMeleeOutcomeAgainst(damageInfo->target, damageInfo->attackType);
+        //End NpcBot
+        damageInfo->hitOutCome = RollMeleeOutcomeAgainst(damageInfo->target, damageInfo->attackType);
 
     // If the victim was a sitting player and we didn't roll a miss, then crit.
     if (sittingVictim && damageInfo->hitOutCome != MELEE_HIT_MISS)
@@ -1728,161 +1728,161 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
     }
     switch (damageInfo->hitOutCome)
     {
-        case MELEE_HIT_EVADE:
-            damageInfo->HitInfo        |= HITINFO_MISS | HITINFO_SWINGNOHITSOUND;
-            damageInfo->TargetState     = VICTIMSTATE_EVADES;
-            damageInfo->procEx         |= PROC_EX_EVADE;
+    case MELEE_HIT_EVADE:
+        damageInfo->HitInfo |= HITINFO_MISS | HITINFO_SWINGNOHITSOUND;
+        damageInfo->TargetState = VICTIMSTATE_EVADES;
+        damageInfo->procEx |= PROC_EX_EVADE;
 
-            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            damageInfo->damages[i].damage = 0;
+        }
+
+        damageInfo->cleanDamage = 0;
+        return;
+    case MELEE_HIT_MISS:
+        damageInfo->HitInfo |= HITINFO_MISS;
+        damageInfo->TargetState = VICTIMSTATE_INTACT;
+        damageInfo->procEx |= PROC_EX_MISS;
+
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            damageInfo->damages[i].damage = 0;
+        }
+        damageInfo->cleanDamage = 0;
+        break;
+    case MELEE_HIT_NORMAL:
+        damageInfo->TargetState = VICTIMSTATE_HIT;
+        damageInfo->procEx |= PROC_EX_NORMAL_HIT;
+        break;
+    case MELEE_HIT_CRIT:
+    {
+        damageInfo->HitInfo |= HITINFO_CRITICALHIT;
+        damageInfo->TargetState = VICTIMSTATE_HIT;
+
+        damageInfo->procEx |= PROC_EX_CRITICAL_HIT;
+        // Crit bonus calc
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            damageInfo->damages[i].damage *= 2;
+
+            float mod = 0.0f;
+            // Apply SPELL_AURA_MOD_ATTACKER_RANGED_CRIT_DAMAGE or SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_DAMAGE
+            if (damageInfo->attackType == RANGED_ATTACK)
             {
-                damageInfo->damages[i].damage = 0;
+                mod += damageInfo->target->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_RANGED_CRIT_DAMAGE);
+            }
+            else
+            {
+                mod += damageInfo->target->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_DAMAGE);
+
+                // Increase crit damage from SPELL_AURA_MOD_CRIT_DAMAGE_BONUS
+                mod += (GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS, damageInfo->damages[i].damageSchoolMask) - 1.0f) * 100;
             }
 
-            damageInfo->cleanDamage = 0;
-            return;
-        case MELEE_HIT_MISS:
-            damageInfo->HitInfo        |= HITINFO_MISS;
-            damageInfo->TargetState     = VICTIMSTATE_INTACT;
-            damageInfo->procEx         |= PROC_EX_MISS;
+            uint32 crTypeMask = damageInfo->target->GetCreatureTypeMask();
 
-            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+            // Increase crit damage from SPELL_AURA_MOD_CRIT_PERCENT_VERSUS
+            mod += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, crTypeMask);
+            if (mod != 0)
             {
-                damageInfo->damages[i].damage = 0;
+                AddPct(damageInfo->damages[i].damage, mod);
             }
-            damageInfo->cleanDamage     = 0;
-            break;
-        case MELEE_HIT_NORMAL:
-            damageInfo->TargetState     = VICTIMSTATE_HIT;
-            damageInfo->procEx         |= PROC_EX_NORMAL_HIT;
-            break;
-        case MELEE_HIT_CRIT:
+        }
+        break;
+    }
+    case MELEE_HIT_PARRY:
+        damageInfo->TargetState = VICTIMSTATE_PARRY;
+        damageInfo->procEx |= PROC_EX_PARRY;
+        damageInfo->cleanDamage = 0;
+
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            damageInfo->cleanDamage += damageInfo->damages[i].damage;
+            damageInfo->damages[i].damage = 0;
+        }
+        break;
+    case MELEE_HIT_DODGE:
+        damageInfo->TargetState = VICTIMSTATE_DODGE;
+        damageInfo->procEx |= PROC_EX_DODGE;
+        damageInfo->cleanDamage = 0;
+
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            damageInfo->cleanDamage += damageInfo->damages[i].damage;
+            damageInfo->damages[i].damage = 0;
+        }
+        break;
+    case MELEE_HIT_BLOCK:
+    {
+        damageInfo->TargetState = VICTIMSTATE_HIT;
+        damageInfo->HitInfo |= HITINFO_BLOCK;
+        damageInfo->procEx |= PROC_EX_BLOCK;
+        damageInfo->blocked_amount = damageInfo->target->GetShieldBlockValue();
+        // double blocked amount if block is critical
+        if (damageInfo->target->isBlockCritical())
+            damageInfo->blocked_amount += damageInfo->blocked_amount;
+
+        uint32 remainingBlock = damageInfo->blocked_amount;
+        uint8 fullBlockMask = 0;
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            if (remainingBlock && remainingBlock >= damageInfo->damages[i].damage)
             {
-                damageInfo->HitInfo        |= HITINFO_CRITICALHIT;
-                damageInfo->TargetState     = VICTIMSTATE_HIT;
+                fullBlockMask |= (1 << i);
 
-                damageInfo->procEx         |= PROC_EX_CRITICAL_HIT;
-                // Crit bonus calc
-                for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-                {
-                    damageInfo->damages[i].damage *= 2;
-
-                    float mod = 0.0f;
-                    // Apply SPELL_AURA_MOD_ATTACKER_RANGED_CRIT_DAMAGE or SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_DAMAGE
-                    if (damageInfo->attackType == RANGED_ATTACK)
-                    {
-                        mod += damageInfo->target->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_RANGED_CRIT_DAMAGE);
-                    }
-                    else
-                    {
-                        mod += damageInfo->target->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_DAMAGE);
-
-                        // Increase crit damage from SPELL_AURA_MOD_CRIT_DAMAGE_BONUS
-                        mod += (GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS, damageInfo->damages[i].damageSchoolMask) - 1.0f) * 100;
-                    }
-
-                    uint32 crTypeMask = damageInfo->target->GetCreatureTypeMask();
-
-                    // Increase crit damage from SPELL_AURA_MOD_CRIT_PERCENT_VERSUS
-                    mod += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, crTypeMask);
-                    if (mod != 0)
-                    {
-                        AddPct(damageInfo->damages[i].damage, mod);
-                    }
-                }
-                break;
-            }
-        case MELEE_HIT_PARRY:
-            damageInfo->TargetState  = VICTIMSTATE_PARRY;
-            damageInfo->procEx      |= PROC_EX_PARRY;
-            damageInfo->cleanDamage = 0;
-
-            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-            {
+                remainingBlock -= damageInfo->damages[i].damage;
                 damageInfo->cleanDamage += damageInfo->damages[i].damage;
                 damageInfo->damages[i].damage = 0;
             }
-            break;
-        case MELEE_HIT_DODGE:
-            damageInfo->TargetState  = VICTIMSTATE_DODGE;
-            damageInfo->procEx      |= PROC_EX_DODGE;
-            damageInfo->cleanDamage = 0;
-
-            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+            else
             {
-                damageInfo->cleanDamage += damageInfo->damages[i].damage;
-                damageInfo->damages[i].damage = 0;
+                damageInfo->cleanDamage += remainingBlock;
+                damageInfo->damages[i].damage -= remainingBlock;
+                remainingBlock = 0;
             }
-            break;
-        case MELEE_HIT_BLOCK:
-        {
-            damageInfo->TargetState = VICTIMSTATE_HIT;
-            damageInfo->HitInfo |= HITINFO_BLOCK;
-            damageInfo->procEx |= PROC_EX_BLOCK;
-            damageInfo->blocked_amount = damageInfo->target->GetShieldBlockValue();
-            // double blocked amount if block is critical
-            if (damageInfo->target->isBlockCritical())
-                damageInfo->blocked_amount += damageInfo->blocked_amount;
-
-            uint32 remainingBlock = damageInfo->blocked_amount;
-            uint8 fullBlockMask = 0;
-            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-            {
-                if (remainingBlock && remainingBlock >= damageInfo->damages[i].damage)
-                {
-                    fullBlockMask |= (1 << i);
-
-                    remainingBlock -= damageInfo->damages[i].damage;
-                    damageInfo->cleanDamage += damageInfo->damages[i].damage;
-                    damageInfo->damages[i].damage = 0;
-                }
-                else
-                {
-                    damageInfo->cleanDamage += remainingBlock;
-                    damageInfo->damages[i].damage -= remainingBlock;
-                    remainingBlock = 0;
-                }
-            }
-
-            // full block
-            if (fullBlockMask == ((1 << 0) | (1 << 1)))
-            {
-                damageInfo->TargetState = VICTIMSTATE_BLOCKS;
-                damageInfo->procEx |= PROC_EX_FULL_BLOCK;
-                damageInfo->blocked_amount -= remainingBlock;
-            }
-            break;
         }
-        case MELEE_HIT_GLANCING:
+
+        // full block
+        if (fullBlockMask == ((1 << 0) | (1 << 1)))
         {
-            damageInfo->HitInfo     |= HITINFO_GLANCING;
-            damageInfo->TargetState  = VICTIMSTATE_HIT;
-            damageInfo->procEx      |= PROC_EX_NORMAL_HIT;
-            int32 leveldif = int32(victim->GetLevel()) - int32(GetLevel());
-            if (leveldif > 3)
-                leveldif = 3;
-            float reducePercent = 1 - leveldif * 0.1f;
-
-            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-            {
-                uint32 reducedDamage = uint32(reducePercent * damageInfo->damages[i].damage);
-                damageInfo->cleanDamage += damageInfo->damages[i].damage - reducedDamage;
-                damageInfo->damages[i].damage = reducedDamage;
-            }
-            break;
+            damageInfo->TargetState = VICTIMSTATE_BLOCKS;
+            damageInfo->procEx |= PROC_EX_FULL_BLOCK;
+            damageInfo->blocked_amount -= remainingBlock;
         }
-        case MELEE_HIT_CRUSHING:
-            damageInfo->HitInfo     |= HITINFO_CRUSHING;
-            damageInfo->TargetState  = VICTIMSTATE_HIT;
-            damageInfo->procEx      |= PROC_EX_NORMAL_HIT;
+        break;
+    }
+    case MELEE_HIT_GLANCING:
+    {
+        damageInfo->HitInfo |= HITINFO_GLANCING;
+        damageInfo->TargetState = VICTIMSTATE_HIT;
+        damageInfo->procEx |= PROC_EX_NORMAL_HIT;
+        int32 leveldif = int32(victim->GetLevel()) - int32(GetLevel());
+        if (leveldif > 3)
+            leveldif = 3;
+        float reducePercent = 1 - leveldif * 0.1f;
 
-            // 150% normal damage
-            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-            {
-                damageInfo->damages[i].damage += (damageInfo->damages[i].damage / 2);
-            }
-            break;
-        default:
-            break;
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            uint32 reducedDamage = uint32(reducePercent * damageInfo->damages[i].damage);
+            damageInfo->cleanDamage += damageInfo->damages[i].damage - reducedDamage;
+            damageInfo->damages[i].damage = reducedDamage;
+        }
+        break;
+    }
+    case MELEE_HIT_CRUSHING:
+        damageInfo->HitInfo |= HITINFO_CRUSHING;
+        damageInfo->TargetState = VICTIMSTATE_HIT;
+        damageInfo->procEx |= PROC_EX_NORMAL_HIT;
+
+        // 150% normal damage
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            damageInfo->damages[i].damage += (damageInfo->damages[i].damage / 2);
+        }
+        break;
+    default:
+        break;
     }
 
     // Always apply HITINFO_AFFECTS_VICTIM in case its not a miss
