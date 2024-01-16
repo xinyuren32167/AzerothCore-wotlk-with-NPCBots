@@ -353,6 +353,8 @@ public:
     static float globalRespawnMultiplier;
     static float dungeonRespawnMultiplier;
     static float raidRespawnMultiplier;
+    
+    void DoForAllOnlinePlayers(std::function<void(Player*)> exec) override;
 
 protected:
     void _UpdateGameTime();
