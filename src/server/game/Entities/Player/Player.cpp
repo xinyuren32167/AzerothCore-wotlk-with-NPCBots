@@ -143,6 +143,8 @@ enum CharacterCustomizeFlags
 
 static uint32 copseReclaimDelay[MAX_DEATH_COUNT] = { 30, 60, 120 };
 
+
+
 // we can disable this warning for this since it only
 // causes undefined behavior when passed to the base class constructor
 #ifdef _MSC_VER
@@ -6643,6 +6645,84 @@ void Player::_ApplyItemMods(Item* item, uint8 slot, bool apply)
     LOG_DEBUG("entities.player.items", "_ApplyItemMods complete.");
 }
 
+// Define floats for stat modifiers
+float Player::intellectMultiplier60 = 0.0f;
+float Player::intellectMultiplier70 = 0.0f;
+float Player::intellectMultiplier80 = 0.0f;
+
+float Player::spiritMultiplier60 = 0.0f;
+float Player::spiritMultiplier70 = 0.0f;
+float Player::spiritMultiplier80 = 0.0f;
+
+float Player::staminaMultiplier60 = 0.0f;
+float Player::staminaMultiplier70 = 0.0f;
+float Player::staminaMultiplier80 = 0.0f;
+
+float Player::defenseRatingMultiplier60 = 0.0f;
+float Player::defenseRatingMultiplier70 = 0.0f;
+float Player::defenseRatingMultiplier80 = 0.0f;
+
+float Player::hitRatingMultiplier60 = 0.0f;
+float Player::hitRatingMultiplier70 = 0.0f;
+float Player::hitRatingMultiplier80 = 0.0f;
+
+float Player::critRatingMultiplier60 = 0.0f;
+float Player::critRatingMultiplier70 = 0.0f;
+float Player::critRatingMultiplier80 = 0.0f;
+
+float Player::hasteRatingMultiplier60 = 0.0f;
+float Player::hasteRatingMultiplier70 = 0.0f;
+float Player::hasteRatingMultiplier80 = 0.0f;
+
+float Player::expertiseRatingMultiplier60 = 0.0f;
+float Player::expertiseRatingMultiplier70 = 0.0f;
+float Player::expertiseRatingMultiplier80 = 0.0f;
+
+float Player::manaBonusIntellectMultiplier = 1.0f;
+
+//Dinkle Stat Modifiers
+void Player::LoadStatMultipliers() {
+    intellectMultiplier60 = sConfigMgr->GetFloatDefault("IntellectMultiplier.Level1to60", 1.0f);
+    intellectMultiplier70 = sConfigMgr->GetFloatDefault("IntellectMultiplier.Level61to70", 1.0f);
+    intellectMultiplier80 = sConfigMgr->GetFloatDefault("IntellectMultiplier.Level71to80", 1.0f);
+    
+    spiritMultiplier60 = sConfigMgr->GetFloatDefault("SpiritMultiplier.Level1to60", 1.0f);
+    spiritMultiplier70 = sConfigMgr->GetFloatDefault("SpiritMultiplier.Level61to70", 1.0f);
+    spiritMultiplier80 = sConfigMgr->GetFloatDefault("SpiritMultiplier.Level71to80", 1.0f);
+
+    staminaMultiplier60 = sConfigMgr->GetFloatDefault("StaminaMultiplier.Level1to60", 1.0f);
+    staminaMultiplier70 = sConfigMgr->GetFloatDefault("StaminaMultiplier.Level61to70", 1.0f);
+    staminaMultiplier80 = sConfigMgr->GetFloatDefault("StaminaMultiplier.Level71to80", 1.0f);
+
+    defenseRatingMultiplier60 = sConfigMgr->GetFloatDefault("DefenseRatingMultiplier.Level1to60", 1.0f);
+    defenseRatingMultiplier70 = sConfigMgr->GetFloatDefault("DefenseRatingMultiplier.Level61to70", 1.0f);
+    defenseRatingMultiplier80 = sConfigMgr->GetFloatDefault("DefenseRatingMultiplier.Level71to80", 1.0f);
+
+    hitRatingMultiplier60 = sConfigMgr->GetFloatDefault("HitRatingMultiplier.Level1to60", 1.0f);
+    hitRatingMultiplier70 = sConfigMgr->GetFloatDefault("HitRatingMultiplier.Level61to70", 1.0f);
+    hitRatingMultiplier80 = sConfigMgr->GetFloatDefault("HitRatingMultiplier.Level71to80", 1.0f);
+
+    critRatingMultiplier60 = sConfigMgr->GetFloatDefault("CritRatingMultiplier.Level1to60", 1.0f);
+    critRatingMultiplier70 = sConfigMgr->GetFloatDefault("CritRatingMultiplier.Level61to70", 1.0f);
+    critRatingMultiplier80 = sConfigMgr->GetFloatDefault("CritRatingMultiplier.Level71to80", 1.0f);
+
+    hasteRatingMultiplier60 = sConfigMgr->GetFloatDefault("HasteRatingMultiplier.Level1to60", 1.0f);
+    hasteRatingMultiplier70 = sConfigMgr->GetFloatDefault("HasteRatingMultiplier.Level61to70", 1.0f);
+    hasteRatingMultiplier80 = sConfigMgr->GetFloatDefault("HasteRatingMultiplier.Level71to80", 1.0f);
+
+    expertiseRatingMultiplier60 = sConfigMgr->GetFloatDefault("ExpertiseRatingMultiplier.Level1to60", 1.0f);
+    expertiseRatingMultiplier70 = sConfigMgr->GetFloatDefault("ExpertiseRatingMultiplier.Level61to70", 1.0f);
+    expertiseRatingMultiplier80 = sConfigMgr->GetFloatDefault("ExpertiseRatingMultiplier.Level71to80", 1.0f);
+
+    manaBonusIntellectMultiplier = sConfigMgr->GetFloatDefault("Player.ManaBonusIntellectMultiplier", 1.0f);
+
+    // Enforce a maximum value of 10
+    if (manaBonusIntellectMultiplier > 10.0f) {
+        manaBonusIntellectMultiplier = 10.0f;
+        LOG_ERROR("server.loading", "Player.ManaBonusIntellectMultiplier in configuration file is too high; value has been reset to 10.");
+    }
+}
+
 void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply, bool only_level_scale /*= false*/)
 {
     if (slot >= INVENTORY_SLOT_BAG_END || !proto)
@@ -6751,24 +6831,20 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             // Dinkle: Config Options for intellect gains multiplier
             case ITEM_MOD_INTELLECT: // Modify intellect
             {
-                float intellectMultiplier60 = sConfigMgr->GetFloatDefault("IntellectMultiplier.Level1to60", 1.0f);
-                float intellectMultiplier70 = sConfigMgr->GetFloatDefault("IntellectMultiplier.Level61to70", 1.0f);
-                float intellectMultiplier80 = sConfigMgr->GetFloatDefault("IntellectMultiplier.Level71to80", 1.0f);
-
                 // Determine the scaling factor based on the player's level.
                 float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
 
                 if (GetLevel() < 61)
                 {
-                    scalingFactor = intellectMultiplier60;
+                    scalingFactor = Player::intellectMultiplier60;
                 }
                 else if (GetLevel() >= 61 && GetLevel() <= 70)
                 {
-                    scalingFactor = intellectMultiplier70;
+                    scalingFactor = Player::intellectMultiplier70;
                 }
                 else if (GetLevel() >= 71 && GetLevel() <= 80)
                 {
-                    scalingFactor = intellectMultiplier80;
+                    scalingFactor = Player::intellectMultiplier80;
                 }
                 // Apply the scaling factor to the intellect value.
                 float scaledIntellect = float(val) * scalingFactor;
@@ -6776,29 +6852,26 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 // Apply the modified intellect.
                 HandleStatModifier(UNIT_MOD_STAT_INTELLECT, BASE_VALUE, scaledIntellect, apply);
                 ApplyStatBuffMod(STAT_INTELLECT, scaledIntellect, apply);
+                break;
             }
             break;
             // Dinkle: Config Options for spirit gains multiplier
             case ITEM_MOD_SPIRIT: // Modify spirit
             {
-                float spiritMultiplier60 = sConfigMgr->GetFloatDefault("SpiritMultiplier.Level1to60", 1.0f);
-                float spiritMultiplier70 = sConfigMgr->GetFloatDefault("SpiritMultiplier.Level61to70", 1.0f);
-                float spiritMultiplier80 = sConfigMgr->GetFloatDefault("SpiritMultiplier.Level71to80", 1.0f);
-
                 // Determine the scaling factor based on the player's level.
                 float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
 
                 if (GetLevel() < 61)
                 {
-                    scalingFactor = spiritMultiplier60;
+                    scalingFactor = Player::spiritMultiplier60;
                 }
                 else if (GetLevel() >= 61 && GetLevel() <= 70)
                 {
-                    scalingFactor = spiritMultiplier70;
+                    scalingFactor = Player::spiritMultiplier70;
                 }
                 else if (GetLevel() >= 71 && GetLevel() <= 80)
                 {
-                    scalingFactor = spiritMultiplier80;
+                    scalingFactor = Player::spiritMultiplier80;
                 }
                 // Apply the scaling factor to the spirit value.
                 float scaledSpirit = float(val) * scalingFactor;
@@ -6808,28 +6881,23 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 ApplyStatBuffMod(STAT_SPIRIT, scaledSpirit, apply);
             }
             break;
-
             // Dinkle: Config Options for stamina gains multiplier
             case ITEM_MOD_STAMINA: // Modify stamina
             {
-                float staminaMultiplier60 = sConfigMgr->GetFloatDefault("StaminaMultiplier.Level1to60", 1.0f);
-                float staminaMultiplier70 = sConfigMgr->GetFloatDefault("StaminaMultiplier.Level61to70", 1.0f);
-                float staminaMultiplier80 = sConfigMgr->GetFloatDefault("StaminaMultiplier.Level71to80", 1.0f);
-
                 // Determine the scaling factor based on the player's level.
                 float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
 
                 if (GetLevel() < 61)
                 {
-                    scalingFactor = staminaMultiplier60;
+                    scalingFactor = Player::staminaMultiplier60;
                 }
                 else if (GetLevel() >= 61 && GetLevel() <= 70)
                 {
-                    scalingFactor = staminaMultiplier70;
+                    scalingFactor = Player::staminaMultiplier70;
                 }
                 else if (GetLevel() >= 71 && GetLevel() <= 80)
                 {
-                    scalingFactor = staminaMultiplier80;
+                    scalingFactor = Player::staminaMultiplier80;
                 }
                 // Apply the scaling factor to the stamina value.
                 float scaledStamina = float(val) * scalingFactor;
@@ -6842,24 +6910,20 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             // Dinkle: Config Option for more defense for lower levels from Defense rating
             case ITEM_MOD_DEFENSE_SKILL_RATING:
             {
-                float defenseRatingMultiplier60 = sConfigMgr->GetFloatDefault("DefenseRatingMultiplier.Level1to60", 2.0f);
-                float defenseRatingMultiplier70 = sConfigMgr->GetFloatDefault("DefenseRatingMultiplier.Level61to70", 1.0f);
-                float defenseRatingMultiplier80 = sConfigMgr->GetFloatDefault("DefenseRatingMultiplier.Level71to80", 1.0f);
-
                 // Determine the scaling factor based on the player's level.
                 float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
 
                 if (GetLevel() < 61)
                 {
-                    scalingFactor = defenseRatingMultiplier60;
+                    scalingFactor = Player::defenseRatingMultiplier60;
                 }
                 else if (GetLevel() >= 61 && GetLevel() <= 70)
                 {
-                    scalingFactor = defenseRatingMultiplier70;
+                    scalingFactor = Player::defenseRatingMultiplier70;
                 }
                 else if (GetLevel() >= 71 && GetLevel() <= 80)
                 {
-                    scalingFactor = defenseRatingMultiplier80;
+                    scalingFactor = Player::defenseRatingMultiplier80;
                 }
                 // Apply the scaling factor to the defense rating value.
                 int32 scaledVal = int32(val * scalingFactor);
@@ -6922,65 +6986,36 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             case ITEM_MOD_HASTE_SPELL_RATING:
                 ApplyRatingMod(CR_HASTE_SPELL, int32(val), apply);
                 break;
-            // Dinkle: Config Option for more hit 
+                // Dinkle: Config Option for more hit 
             case ITEM_MOD_HIT_RATING:
             {
-                float hitRatingMultiplier60 = sConfigMgr->GetFloatDefault("HitRatingMultiplier.Level1to60", 1.0f);
-                float hitRatingMultiplier70 = sConfigMgr->GetFloatDefault("HitRatingMultiplier.Level61to70", 1.0f);
-                float hitRatingMultiplier80 = sConfigMgr->GetFloatDefault("HitRatingMultiplier.Level71to80", 1.0f);
-
-                // Determine the scaling factor based on the player's level.
                 float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
-
                 if (GetLevel() < 61)
-                {
-                    scalingFactor = hitRatingMultiplier60;
-                }
+                    scalingFactor = Player::hitRatingMultiplier60;
                 else if (GetLevel() >= 61 && GetLevel() <= 70)
-                {
-                    scalingFactor = hitRatingMultiplier70;
-                }
+                    scalingFactor = Player::hitRatingMultiplier70;
                 else if (GetLevel() >= 71 && GetLevel() <= 80)
-                {
-                    scalingFactor = hitRatingMultiplier80;
-                }
-                // Players level 81 and above get normal hit rating, scalingFactor remains 1.
+                    scalingFactor = Player::hitRatingMultiplier80;
 
-                // Apply the scaling factor to the hit rating value.
                 int32 scaledVal = int32(val * scalingFactor);
-
-                // Apply the modified hit rating.
                 ApplyRatingMod(CR_HIT_MELEE, scaledVal, apply);
                 ApplyRatingMod(CR_HIT_RANGED, scaledVal, apply);
                 ApplyRatingMod(CR_HIT_SPELL, scaledVal, apply);
             }
             break;
+
             // Dinkle: Config Option for more crit 
             case ITEM_MOD_CRIT_RATING:
             {
-                float critRatingMultiplier60 = sConfigMgr->GetFloatDefault("CritRatingMultiplier.Level1to60", 1.0f);
-                float critRatingMultiplier70 = sConfigMgr->GetFloatDefault("CritRatingMultiplier.Level61to70", 1.0f);
-                float critRatingMultiplier80 = sConfigMgr->GetFloatDefault("CritRatingMultiplier.Level71to80", 1.0f);
-
-                // Determine the scaling factor based on the player's level.
                 float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
-
                 if (GetLevel() < 61)
-                {
-                    scalingFactor = critRatingMultiplier60;
-                }
+                    scalingFactor = Player::critRatingMultiplier60;
                 else if (GetLevel() >= 61 && GetLevel() <= 70)
-                {
-                    scalingFactor = critRatingMultiplier70;
-                }
+                    scalingFactor = Player::critRatingMultiplier70;
                 else if (GetLevel() >= 71 && GetLevel() <= 80)
-                {
-                    scalingFactor = critRatingMultiplier80;
-                }
-                // Apply the scaling factor to the crit rating value.
-                int32 scaledVal = int32(val * scalingFactor);
+                    scalingFactor = Player::critRatingMultiplier80;
 
-                // Apply the modified crit rating.
+                int32 scaledVal = int32(val * scalingFactor);
                 ApplyRatingMod(CR_CRIT_MELEE, scaledVal, apply);
                 ApplyRatingMod(CR_CRIT_RANGED, scaledVal, apply);
                 ApplyRatingMod(CR_CRIT_SPELL, scaledVal, apply);
@@ -7000,29 +7035,15 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
              // Dinkle: Config Option for more haste 
             case ITEM_MOD_HASTE_RATING:
             {
-                float hasteRatingMultiplier60 = sConfigMgr->GetFloatDefault("HasteRatingMultiplier.Level1to60", 1.0f);
-                float hasteRatingMultiplier70 = sConfigMgr->GetFloatDefault("HasteRatingMultiplier.Level61to70", 1.0f);
-                float hasteRatingMultiplier80 = sConfigMgr->GetFloatDefault("HasteRatingMultiplier.Level71to80", 1.0f);
-
-                // Determine the scaling factor based on the player's level.
                 float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
-
                 if (GetLevel() < 61)
-                {
-                    scalingFactor = hasteRatingMultiplier60;
-                }
+                    scalingFactor = Player::hasteRatingMultiplier60;
                 else if (GetLevel() >= 61 && GetLevel() <= 70)
-                {
-                    scalingFactor = hasteRatingMultiplier70;
-                }
+                    scalingFactor = Player::hasteRatingMultiplier70;
                 else if (GetLevel() >= 71 && GetLevel() <= 80)
-                {
-                    scalingFactor = hasteRatingMultiplier80;
-                }
-                // Apply the scaling factor to the haste rating value.
-                int32 scaledVal = int32(val * scalingFactor);
+                    scalingFactor = Player::hasteRatingMultiplier80;
 
-                // Apply the modified haste rating.
+                int32 scaledVal = int32(val * scalingFactor);
                 ApplyRatingMod(CR_HASTE_MELEE, scaledVal, apply);
                 ApplyRatingMod(CR_HASTE_RANGED, scaledVal, apply);
                 ApplyRatingMod(CR_HASTE_SPELL, scaledVal, apply);
@@ -7031,29 +7052,15 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             // Dinkle: Config Option for more Expertise 
             case ITEM_MOD_EXPERTISE_RATING:
             {
-                float expertiseRatingMultiplier60 = sConfigMgr->GetFloatDefault("ExpertiseRatingMultiplier.Level1to60", 1.0f);
-                float expertiseRatingMultiplier70 = sConfigMgr->GetFloatDefault("ExpertiseRatingMultiplier.Level61to70", 1.0f);
-                float expertiseRatingMultiplier80 = sConfigMgr->GetFloatDefault("ExpertiseRatingMultiplier.Level71to80", 1.0f);
-
-                // Determine the scaling factor based on the player's level.
                 float scalingFactor = 1.0f; // Default scaling factor is 1 (no change).
-
                 if (GetLevel() < 61)
-                {
-                    scalingFactor = expertiseRatingMultiplier60;
-                }
+                    scalingFactor = Player::expertiseRatingMultiplier60;
                 else if (GetLevel() >= 61 && GetLevel() <= 70)
-                {
-                    scalingFactor = expertiseRatingMultiplier70;
-                }
+                    scalingFactor = Player::expertiseRatingMultiplier70;
                 else if (GetLevel() >= 71 && GetLevel() <= 80)
-                {
-                    scalingFactor = expertiseRatingMultiplier80;
-                }
-                // Apply the scaling factor to the expertise rating value.
-                int32 scaledVal = int32(val * scalingFactor);
+                    scalingFactor = Player::expertiseRatingMultiplier80;
 
-                // Apply the modified expertise rating.
+                int32 scaledVal = int32(val * scalingFactor);
                 ApplyRatingMod(CR_EXPERTISE, scaledVal, apply);
             }
             break;

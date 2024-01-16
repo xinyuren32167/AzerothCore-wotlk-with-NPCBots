@@ -349,6 +349,11 @@ public:
 
     void RemoveOldCorpses() override;
 
+    //Dinkle
+    static float globalRespawnMultiplier;
+    static float dungeonRespawnMultiplier;
+    static float raidRespawnMultiplier;
+
 protected:
     void _UpdateGameTime();
     // callback for UpdateRealmCharacters

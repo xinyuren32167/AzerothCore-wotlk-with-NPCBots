@@ -497,8 +497,33 @@ void GameObject::Update(uint32 diff)
                             break;
                         }
                     case GAMEOBJECT_TYPE_FISHINGNODE:
+                    {
+                        bool FastBobber = sWorld->getBoolConfig(CONFIG_FISHING_BOBBER_FAST);
+
+                        // Check if the fast bobber option is enabled
+                        if (FastBobber)
                         {
-                            // fishing code (bobber ready)
+                            // Make the bobber ready nearly instantly
+                            Unit* caster = GetOwner();
+                            if (caster && caster->GetTypeId() == TYPEID_PLAYER)
+                            {
+                                SetGoState(GO_STATE_ACTIVE);
+                                ReplaceAllGameObjectFlags(GO_FLAG_NODESPAWN);
+
+                                UpdateData udata;
+                                WorldPacket packet;
+                                BuildValuesUpdateBlockForPlayer(&udata, caster->ToPlayer());
+                                udata.BuildPacket(&packet);
+                                caster->ToPlayer()->GetSession()->SendPacket(&packet);
+
+                                SendCustomAnim(GetGoAnimProgress());
+                            }
+
+                            m_lootState = GO_READY; // Bobber is now ready
+                        }
+                        else
+                        {
+                            // Original fishing code for normal bobber behavior
                             if (GameTime::GetGameTime().count() > m_respawnTime - FISHING_BOBBER_READY_TIME)
                             {
                                 // splash bobber (bobber ready now)
@@ -509,7 +534,7 @@ void GameObject::Update(uint32 diff)
                                     ReplaceAllGameObjectFlags(GO_FLAG_NODESPAWN);
 
                                     UpdateData udata;
-                                    WorldPacket packet;
+                                    WorldPacket packet; 
                                     BuildValuesUpdateBlockForPlayer(&udata, caster->ToPlayer());
                                     udata.BuildPacket(&packet);
                                     caster->ToPlayer()->GetSession()->SendPacket(&packet);
@@ -517,10 +542,11 @@ void GameObject::Update(uint32 diff)
                                     SendCustomAnim(GetGoAnimProgress());
                                 }
 
-                                m_lootState = GO_READY;                 // can be successfully open with some chance
+                                m_lootState = GO_READY; // can be successfully open with some chance
                             }
-                            return;
                         }
+                        return;
+                    }
                     case GAMEOBJECT_TYPE_SUMMONING_RITUAL:
                         {
                             if (GameTime::GetGameTimeMS().count() < m_cooldownTime)

@@ -1390,6 +1390,32 @@ public:
     void SendItemDurations();
     void LoadCorpse(PreparedQueryResult result);
     void LoadPet();
+    static float intellectMultiplier60;
+    static float intellectMultiplier70;
+    static float intellectMultiplier80;
+    static float spiritMultiplier60;
+    static float spiritMultiplier70;
+    static float spiritMultiplier80;
+    static float staminaMultiplier60;
+    static float staminaMultiplier70;
+    static float staminaMultiplier80;
+    static float defenseRatingMultiplier60;
+    static float defenseRatingMultiplier70;
+    static float defenseRatingMultiplier80;
+    static float hitRatingMultiplier60;
+    static float hitRatingMultiplier70;
+    static float hitRatingMultiplier80;
+    static float critRatingMultiplier60;
+    static float critRatingMultiplier70;
+    static float critRatingMultiplier80;
+    static float hasteRatingMultiplier60;
+    static float hasteRatingMultiplier70;
+    static float hasteRatingMultiplier80;
+    static float expertiseRatingMultiplier60;
+    static float expertiseRatingMultiplier70;
+    static float expertiseRatingMultiplier80;
+    static float manaBonusIntellectMultiplier;
+    static void LoadStatMultipliers();
 
     bool AddItem(uint32 itemId, uint32 count);
 

@@ -39,7 +39,6 @@ void AddSC_dk_a_knights_cold_sojourn();
 void AddSC_dk_spell_flesh_goliath();
 void AddSC_spell_filter_npcbots();
 void AddSC_spell_dk_gorefiends_grasp();
-void AddSC_spell_dk_gorefiends_grasp_damage();
 void AddSC_spell_dk_frost_latch_taunt();
 void AddSC_spell_dk_bone_shield_duskhaven();
 void AddSC_spell_dk_scripts();
@@ -56,7 +55,10 @@ void AddSC_TitanGrip();
 void AddSC_spell_custom_spell_usable_while_dead();
 void AddSC_player_script_remove_aura_on_resurrect();
 void AddSC_spell_up_up_and_away();
-
+void AddSC_spell_dru_frenzied_regeneration();
+void AddSC_spell_dru_rejuvenation();
+void AddSC_go_inconspicuous_chest();
+void AddSC_spell_gorefiends_grasp_damage();
 //void AddSC_PlayerTeleportRevive();
 //void AddSC_transform_race_command();
 //void AddSC_boss_the_hidden_watcher();
@@ -88,7 +90,6 @@ void AddCustomScripts()
     AddSC_dk_spell_flesh_goliath();
     AddSC_spell_filter_npcbots();
     AddSC_spell_dk_gorefiends_grasp();
-    AddSC_spell_dk_gorefiends_grasp_damage();
     AddSC_spell_dk_frost_latch_taunt();
     AddSC_spell_dk_bone_shield_duskhaven();
     AddSC_spell_dk_scripts();
@@ -105,7 +106,10 @@ void AddCustomScripts()
     AddSC_spell_custom_spell_usable_while_dead();
     AddSC_player_script_remove_aura_on_resurrect();
     AddSC_spell_up_up_and_away();
-
+    AddSC_spell_dru_frenzied_regeneration();
+    AddSC_spell_dru_rejuvenation();
+    AddSC_go_inconspicuous_chest();
+    AddSC_spell_gorefiends_grasp_damage();
     //AddSC_PlayerTeleportRevive();
     //AddSC_transform_race_command();
     //AddSC_boss_the_hidden_watcher();

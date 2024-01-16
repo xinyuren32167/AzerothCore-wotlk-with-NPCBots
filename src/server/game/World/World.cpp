@@ -411,6 +411,11 @@ bool World::RemoveQueuedPlayer(WorldSession* sess)
     return found;
 }
 
+//Dinkle
+float World::globalRespawnMultiplier = 1.0f;
+float World::dungeonRespawnMultiplier = 1.0f;
+float World::raidRespawnMultiplier = 1.0f;
+
 /// Initialize config values
 void World::LoadConfigSettings(bool reload)
 {
@@ -436,6 +441,7 @@ void World::LoadConfigSettings(bool reload)
 
     ///- Read the player limit and the Message of the day from the config file
     if (!reload)
+    Player::LoadStatMultipliers();
     {
         SetPlayerAmountLimit(sConfigMgr->GetOption<int32>("PlayerLimit", 1000));
     }
@@ -443,6 +449,8 @@ void World::LoadConfigSettings(bool reload)
     ///- Read ticket system setting from the config file
     _bool_configs[CONFIG_ALLOW_TICKETS] = sConfigMgr->GetOption<bool>("AllowTickets", true);
     _bool_configs[CONFIG_DELETE_CHARACTER_TICKET_TRACE] = sConfigMgr->GetOption<bool>("DeletedCharacterTicketTrace", false);
+    //Dinkle: Fishing
+    _bool_configs[CONFIG_FISHING_BOBBER_FAST] = sConfigMgr->GetOption<bool>("Fishing.FastBobber", false);
 
     ///- Get string for new logins (newly created characters)
     SetNewCharString(sConfigMgr->GetOption<std::string>("PlayerStart.String", ""));
@@ -526,6 +534,7 @@ void World::LoadConfigSettings(bool reload)
     _rate_values[ RATE_BUYVALUE_ITEM_LEGENDARY]    = sConfigMgr->GetOption<float>("Rate.BuyValue.Item.Legendary", 1.0f);
     _rate_values[RATE_BUYVALUE_ITEM_ARTIFACT]      = sConfigMgr->GetOption<float>("Rate.BuyValue.Item.Artifact", 1.0f);
     _rate_values[RATE_BUYVALUE_ITEM_HEIRLOOM]      = sConfigMgr->GetOption<float>("Rate.BuyValue.Item.Heirloom", 1.0f);
+
 
     if (_rate_values[RATE_REPAIRCOST] < 0.0f)
     {
@@ -907,6 +916,11 @@ void World::LoadConfigSettings(bool reload)
         LOG_ERROR("server.loading", "MinPetitionSigns ({}) must be in range 0..9. Set to 9.", _int_configs[CONFIG_MIN_PETITION_SIGNS]);
         _int_configs[CONFIG_MIN_PETITION_SIGNS] = 9;
     }
+
+    //Dinkle
+    globalRespawnMultiplier = sConfigMgr->GetFloatDefault("CreatureRespawnTimeMultiplier.Global", 1.0f);
+    dungeonRespawnMultiplier = sConfigMgr->GetFloatDefault("CreatureRespawnTimeMultiplier.Dungeon", 1.0f);
+    raidRespawnMultiplier = sConfigMgr->GetFloatDefault("CreatureRespawnTimeMultiplier.Raid", 1.0f);
 
     _int_configs[CONFIG_GM_LOGIN_STATE]        = sConfigMgr->GetOption<int32>("GM.LoginState", 2);
     _int_configs[CONFIG_GM_VISIBLE_STATE]      = sConfigMgr->GetOption<int32>("GM.Visible", 2);

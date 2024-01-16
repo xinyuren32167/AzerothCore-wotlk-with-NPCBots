@@ -349,14 +349,7 @@ void bot_ai::InitializeAI()
 {
     if (!me->GetSpawnId() && !IsTempBot())
         SetWanderer();
-    me->AddAura(22683, me);
-    
-    if (IAmFree())
-    {
-        // Apply the aura only to 'free' bots
-        me->AddAura(22683, me);
-    }
-    
+
     Reset();
 }
 
@@ -6898,31 +6891,20 @@ void bot_ai::_OnHealthUpdate() const
     if (me->GetMap()->IsRaid())
         m_totalhp *= BotMgr::GetBotHPRaidMod();
 
-    // Load the tank HP modifier from the config, defaulting to 1 if not set
-    float tankHPModifier = sConfigMgr->GetFloatDefault("NpcBot.TankHPModifier", 1.0f);
-
-    // Tank Bonus
-    if (IsTank() || IsOffTank())
-        m_totalhp *= tankHPModifier;
-
-    if (!me->GetMap()->IsBattlegroundOrArena())
-    {
-        MapEntry const* mapEntry = sMapStore.LookupEntry(me->GetMapId());
-        if (me->GetLevel() < 61 && mapEntry->Expansion() == CONTENT_1_60)
-            m_totalhp *= 0.8;
-        else if (me->GetLevel() < 71 && mapEntry->Expansion() == CONTENT_61_70)
-            m_totalhp *= 0.85;
-    }
-
     //IndividualProgression
     if (!me->GetMap()->IsBattlegroundOrArena())
     {
         MapEntry const* mapEntry = sMapStore.LookupEntry(me->GetMapId());
         if (me->GetLevel() < 61 && mapEntry->Expansion() == CONTENT_1_60)
-            m_totalhp *= 0.8;
+            m_totalhp *= BotMgr::GetBotRatesClassic();
         else if (me->GetLevel() < 71 && mapEntry->Expansion() == CONTENT_61_70)
-            m_totalhp *= 0.85;
+            m_totalhp *= BotMgr::GetBotRatesTBC();
     }
+
+    // Apply Tank Bonus after considering the content rates
+    if (IsTank() || IsOffTank())
+        m_totalhp *= BotMgr::GetTankHPModifier();
+
     //hp bonuses
     uint8 bonuspct = 0;
     //Endurance Training
@@ -7107,16 +7089,16 @@ void bot_ai::_OnManaRegenUpdate() const
         power_regen_mp5 += 0.024f * _getTotalBotStat(BOT_STAT_MOD_INTELLECT);
     //Mana regen Cheat
     if (me->GetMap()->IsRaid())
-        power_regen_mp5 *= 2;
+        power_regen_mp5 *= 2.5;
 
     if (me->GetMap()->IsDungeon())
-        power_regen_mp5 *= 2;
+        power_regen_mp5 *= 2.5;
 
     if (me->GetMap()->IsHeroic())
-        power_regen_mp5 *= 2;
+        power_regen_mp5 *= 2.5;
 
     if ((me->GetMap()->IsRaid() || me->GetMap()->IsDungeon()) && me->GetBotClass() == BOT_CLASS_PRIEST || me->GetBotClass() == BOT_CLASS_PALADIN)
-        power_regen_mp5 *= 2;
+        power_regen_mp5 *= 2.5;
     me->SetStatFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER, power_regen_mp5 + CalculatePct(value, modManaRegenInterrupt));
     me->SetStatFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER, power_regen_mp5 + value);
 }
@@ -7485,7 +7467,20 @@ void bot_ai::ApplyBotDamageMultiplierHeal(Unit const* victim, float& heal, Spell
 {
     //HEALING SPELLS amount bonus
     ApplyClassDamageMultiplierHeal(victim, heal, spellInfo, damagetype, stack);
-    heal = (heal * (BotMgr::IsWanderingWorldBot(me) ? BotMgr::GetBotWandererHealingMod() : BotMgr::GetBotHealingMod()));
+    //IndividualProgression
+    if (!me->GetMap()->IsBattlegroundOrArena())
+    {
+        MapEntry const* mapEntry = sMapStore.LookupEntry(me->GetMapId());
+        if (me->GetLevel() < 61 && mapEntry->Expansion() == CONTENT_1_60)
+            heal *= BotMgr::GetBotRatesClassic();
+        else if (me->GetLevel() < 71 && mapEntry->Expansion() == CONTENT_61_70)
+            heal *= BotMgr::GetBotRatesTBC();
+    }
+
+    if (!me->GetMap()->IsBattlegroundOrArena())
+        heal = (heal * (BotMgr::IsWanderingWorldBot(me) ? BotMgr::GetBotWandererHealingMod() : BotMgr::GetBotHealingMod()));
+    else
+        heal = heal;
 }
 void bot_ai::ApplyBotCritMultiplierAll(Unit const* victim, float& crit_chance, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, WeaponAttackType attackType) const
 {
@@ -11114,7 +11109,7 @@ void bot_ai::SpawnKillReward(Player* looter) const
         uint32 nextLevelExp = sObjectMgr->GetXPForLevel(nextLevel);
 
         uint32 expForNextLevel = nextLevelExp - currentLevelExp;
-        uint32 expBoost = expForNextLevel * 0.0035;
+        uint32 expBoost = expForNextLevel * 0.0055;
 
         looter->GiveXP(expBoost, nullptr);
     }
@@ -14130,6 +14125,12 @@ void bot_ai::DefaultInit()
 void bot_ai::ApplyRacials()
 {
     uint8 myrace = me->GetRace();
+    //Dinkle: Onyxia Scale Cloak
+    RefreshAura(22683);
+    // Dinkle: Check if the bot is a Tank or OffTank and refresh threat aura if true
+    if (IsTank() || IsOffTank()) {
+        RefreshAura(825780);
+    }
     switch (myrace)
     {
         case RACE_HUMAN:

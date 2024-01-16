@@ -75,6 +75,7 @@
 //npcbot
 #include "botdatamgr.h"
 #include "botmgr.h"
+#include <bot_ai.h>
 //end npcbot
 
 float baseMoveSpeed[MAX_MOVE_TYPE] =
@@ -1433,7 +1434,23 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
                     if (damageSchoolMask & SPELL_SCHOOL_MASK_NORMAL)
                         damage *= (BotMgr::IsWanderingWorldBot(ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModPhysical());
                     else if (damageSchoolMask & SPELL_SCHOOL_MASK_MAGIC)
-                        damage *= (BotMgr::IsWanderingWorldBot(ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModSpell());
+                        damage *= BotMgr::GetBotDamageModSpell();
+
+                    //IndividualProgression
+                    if (!ToCreature()->GetMap()->IsBattlegroundOrArena())
+                    {
+                        MapEntry const* mapEntry = sMapStore.LookupEntry(ToCreature()->GetMapId());
+                        if (ToCreature()->GetLevel() < 61 && mapEntry->Expansion() == CONTENT_1_60)
+                            damage *= BotMgr::GetBotRatesClassic();
+                        else if (ToCreature()->GetLevel() < 71 && mapEntry->Expansion() == CONTENT_61_70)
+                            damage *= BotMgr::GetBotRatesTBC();
+                    }
+
+                    //Reduce pet Damage
+                    if (ToCreature()->GetBotPetAI() && bot_ai::IsPetMelee(GetEntry()))
+                        damage *= 0.15;
+
+                    damage *= (BotMgr::IsWanderingWorldBot(ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModSpell());
                 }
                 //End NpcBot
 
@@ -1516,6 +1533,23 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
                         damage *= (BotMgr::IsWanderingWorldBot(ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModPhysical());
                     else if (damageSchoolMask & SPELL_SCHOOL_MASK_MAGIC)
                         damage *= (BotMgr::IsWanderingWorldBot(ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModSpell());
+                    damage *= BotMgr::GetBotDamageModSpell();
+
+                    //IndividualProgression
+                    if (!ToCreature()->GetMap()->IsBattlegroundOrArena())
+                    {
+                        MapEntry const* mapEntry = sMapStore.LookupEntry(ToCreature()->GetMapId());
+                        if (ToCreature()->GetLevel() < 61 && mapEntry->Expansion() == CONTENT_1_60)
+                            damage *= BotMgr::GetBotRatesClassic();
+                        else if (ToCreature()->GetLevel() < 71 && mapEntry->Expansion() == CONTENT_61_70)
+                            damage *= BotMgr::GetBotRatesTBC();
+                    }
+
+                    //Reduce pet Damage
+                    if (ToCreature()->GetBotPetAI() && bot_ai::IsPetMelee(GetEntry()))
+                        damage *= 0.15;
+
+                    damage *= (BotMgr::IsWanderingWorldBot(ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModSpell());
                 }
                 //End NpcBot
 
@@ -1698,6 +1732,21 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
             //damage is unused. TODO: remove this redundant argument
             ToCreature()->ApplyBotDamageMultiplierMelee(damageInfo->damages[i].damage, *damageInfo);
             damage = damageInfo->damages[i].damage;
+            damage *= BotMgr::GetBotDamageModPhysical();
+
+            //IndividualProgression
+            if (!ToCreature()->GetMap()->IsBattlegroundOrArena())
+            {
+                MapEntry const* mapEntry = sMapStore.LookupEntry(ToCreature()->GetMapId());
+                if (ToCreature()->GetLevel() < 61 && mapEntry->Expansion() == CONTENT_1_60)
+                    damage *= BotMgr::GetBotRatesClassic();
+                else if (ToCreature()->GetLevel() < 71 && mapEntry->Expansion() == CONTENT_61_70)
+                    damage *= BotMgr::GetBotRatesTBC();
+            }
+
+            //Reduce pet Damage
+            if (ToCreature()->GetBotPetAI() && bot_ai::IsPetMelee(GetEntry()))
+                damage *= 0.15;
             damage *= (BotMgr::IsWanderingWorldBot(ToCreature()) ? BotMgr::GetBotWandererDamageMod() : BotMgr::GetBotDamageModPhysical());
         }
         //End NpcBot

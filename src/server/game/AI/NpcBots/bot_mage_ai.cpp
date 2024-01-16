@@ -124,7 +124,9 @@ enum MagePassives
     GLYPG_REMOVE_CURSE                  = 56364,
     GLYPH_ICY_VEINS                     = 56374,
     GLYPH_LIVING_BOMB                   = 63091,
-    GLYPH_ICE_LANCE                     = 56377
+    GLYPH_ICE_LANCE                     = 56377,
+    ARCANE_FOCUS                        = 22007 //Dinkle
+
 };
 enum MageSpecial
 {
@@ -1762,6 +1764,8 @@ public:
             RefreshAura(GLYPH_ICY_VEINS, level >= 20 ? 1 : 0);
             RefreshAura(GLYPH_LIVING_BOMB, level >= 60 ? 1 : 0);
             RefreshAura(GLYPH_ICE_LANCE, level >= 66 ? 1 : 0);
+            RefreshAura(ARCANE_FOCUS);
+
         }
 
         bool CanUseManually(uint32 basespell) const override

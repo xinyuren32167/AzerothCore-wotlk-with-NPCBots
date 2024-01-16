@@ -159,6 +159,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket& recvData)
         return;
     }
 
+    // Dinkle: Get the auctioneer creature and check conditions
     Creature* creature = GetPlayer()->GetNPCIfCanInteractWith(auctioneer, UNIT_NPC_FLAG_AUCTIONEER);
     if (!creature)
     {
@@ -166,6 +167,14 @@ void WorldSession::HandleAuctionSellItem(WorldPacket& recvData)
         return;
     }
 
+    // Check to prevent Murky (creature ID 15186) from listing items
+    if (creature->GetEntry() == 15186) // Murky's Creature ID
+    {
+        // Murky is not allowed to list items, send a message to the player
+        ChatHandler(GetPlayer()->GetSession()).PSendSysMessage("You cannot list items with Murky, but you are welcome to make purchases.");
+        return; // Exit the function early
+    }
+    
     AuctionHouseEntry const* auctionHouseEntry = AuctionHouseMgr::GetAuctionHouseEntry(creature->GetFaction());
     if (!auctionHouseEntry)
     {

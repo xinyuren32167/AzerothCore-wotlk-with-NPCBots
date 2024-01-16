@@ -10,7 +10,8 @@
 #include "Player.h"
 #include "ScriptedGossip.h"
 #include "ScriptMgr.h"
-#include <botdatamgr.cpp>
+#include "botdatamgr.h"
+
 using namespace lfg;
 /*
 NPCbot giver NPC by Trickerer (<https://github.com/trickerer/> <onlysuffering@gmail.com>)
@@ -28,7 +29,7 @@ Complete - 100%
 #define RACE_VOID_ELF 12
 #define RACE_VULPERA 13
 #define RACE_HIGH_ELF 14
-#define RACE_PANDAREN 22
+#define RACE_PANDAREN 15
 #define RACE_WORGEN 16
 #define RACE_EREDAR 17
 #define RACE_ZADALARI 18
@@ -53,6 +54,9 @@ Complete - 100%
 
 class script_bot_giver : public CreatureScript
 {
+private:
+    NpcBotRegistry _existingBots; // Declare _existingBots as a member variable
+
 public:
     script_bot_giver() : CreatureScript("script_bot_giver") { }
 

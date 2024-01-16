@@ -2437,12 +2437,13 @@ public:
             handler->SetSentErrorMessage(true);
             return false;
         }
-        if (owner->GetBotMgr()->IsPartyInCombat() && (owner->IsPvP() || owner->IsFFAPvP()))
-        {
-            handler->GetSession()->SendNotification("You can't do that while in PvP combat");
-            handler->SetSentErrorMessage(true);
-            return false;
-        }
+        // Dinkle: Remove pvp condition.
+       // if (owner->GetBotMgr()->IsPartyInCombat() && (owner->IsPvP() || owner->IsFFAPvP()))
+      //  {
+        //    handler->GetSession()->SendNotification("You can't do that while in PvP combat");
+        //    handler->SetSentErrorMessage(true);
+       //     return false;
+       // }
 
         owner->GetBotMgr()->RecallAllBots(true);
         return true;
@@ -4184,9 +4185,37 @@ public:
     }
 };
 
+//Dinkle: For releveling purposes
+class player_level_bots_remove : public PlayerScript
+{
+public:
+    player_level_bots_remove() : PlayerScript("player_level_bots_remove") {}
+
+    void OnLevelChanged(Player* player, uint8 /*oldLevel*/) override
+    {
+        // Check if the new level is 1
+        if (player->GetLevel() == 1)
+        {
+            RemoveAllBots(player);
+        }
+    }
+
+private:
+    void RemoveAllBots(Player* player)
+    {
+        if (player->HaveBot())
+        {
+            player->RemoveAllBots(BOT_REMOVE_DISMISS);
+
+            ChatHandler(player->GetSession()).PSendSysMessage("All NPC bots have been removed.");
+        }
+    }
+};
+
 void AddSC_script_bot_commands()
 {
     new script_bot_commands();
+    new player_level_bots_remove();
 }
 
 #ifdef _MSC_VER

@@ -286,11 +286,11 @@ float Player::GetHealthBonusFromStamina()
 float Player::GetManaBonusFromIntellect()
 {
     float intellect = GetStat(STAT_INTELLECT);
-
     float baseInt = intellect < 20 ? intellect : 20;
     float moreInt = intellect - baseInt;
 
-    return baseInt + (moreInt * 15.0f);
+    // Dinkle: Use the cached multiplier
+    return (baseInt + (moreInt * 15.0f)) * Player::manaBonusIntellectMultiplier;
 }
 
 void Player::UpdateMaxHealth()

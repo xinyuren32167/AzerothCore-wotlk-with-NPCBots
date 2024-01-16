@@ -1790,21 +1790,16 @@ bool Creature::LoadCreatureFromDB(ObjectGuid::LowType spawnId, Map* map, bool ad
     if (IsNPCBotOrPet())
         map->RemoveCreatureRespawnTime(spawnId);
     //end npcbot
-        
-    // Dinkle adding faster respawn configs
-    float globalRespawnMultiplier = sConfigMgr->GetFloatDefault("CreatureRespawnTimeMultiplier.Global", 1.0f);
-    float dungeonRespawnMultiplier = sConfigMgr->GetFloatDefault("CreatureRespawnTimeMultiplier.Dungeon", 1.0f);
-    float raidRespawnMultiplier = sConfigMgr->GetFloatDefault("CreatureRespawnTimeMultiplier.Raid", 1.0f);
 
-    // Determine the appropriate multiplier based on the map type
-    float respawnMultiplier = globalRespawnMultiplier;
+    // Dinkle: Determine the appropriate multiplier based on the map type
+    float respawnMultiplier = World::globalRespawnMultiplier;
     if (GetMap()->IsDungeon())
     {
-    respawnMultiplier = dungeonRespawnMultiplier;
+        respawnMultiplier = World::dungeonRespawnMultiplier;
     }
     else if (GetMap()->IsRaid())
     {
-    respawnMultiplier = raidRespawnMultiplier;
+        respawnMultiplier = World::raidRespawnMultiplier;
     }
 
     // Apply the multiplier to the respawn delay and time

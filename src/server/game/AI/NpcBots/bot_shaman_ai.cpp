@@ -2588,6 +2588,13 @@ public:
 
             RefreshAura(GLYPH_THUNDERSTORM, GetSpell(THUNDERSTORM_1) ? 1 : 0);
             RefreshAura(GLYPH_TOTEM_OF_WRATH, GetSpell(TOTEM_OF_WRATH_1) ? 1 : 0);
+            if (level >= 1) {
+                RefreshAura(100110, 1); // Dinkle: New Passives
+                RefreshAura(100119, 1); 
+                RefreshAura(67228, 1);  
+                RefreshAura(64928, 1);
+                RefreshAura(23573, 1);
+            }
         }
 
         bool CanUseManually(uint32 basespell) const override

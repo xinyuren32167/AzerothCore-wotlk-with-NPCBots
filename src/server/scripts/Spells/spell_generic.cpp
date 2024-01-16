@@ -1212,17 +1212,18 @@ class spell_gen_adaptive_warding : public AuraScript
         if (!eventInfo.GetSpellInfo())
             return false;
 
-        // find Mage Armor
-        if (!GetTarget()->GetAuraEffect(SPELL_AURA_MOD_MANA_REGEN_INTERRUPT, SPELLFAMILY_MAGE, 0x10000000, 0x0, 0x0))
+        // Check for Mage Armor or Molten Armor Dinkle
+        if (!(GetTarget()->GetAuraEffect(SPELL_AURA_MOD_MANA_REGEN_INTERRUPT, SPELLFAMILY_MAGE, 0x10000000, 0x0, 0x0) ||
+            GetTarget()->GetAuraEffect(SPELL_AURA_MOD_RATING_FROM_STAT, SPELLFAMILY_MAGE, 0x00040000, 0x0, 0x0)))
             return false;
 
         switch (GetFirstSchoolInMask(eventInfo.GetSchoolMask()))
         {
-            case SPELL_SCHOOL_NORMAL:
-            case SPELL_SCHOOL_HOLY:
-                return false;
-            default:
-                break;
+        case SPELL_SCHOOL_NORMAL:
+        case SPELL_SCHOOL_HOLY:
+            return false;
+        default:
+            break;
         }
         return true;
     }
@@ -1234,23 +1235,23 @@ class spell_gen_adaptive_warding : public AuraScript
         uint32 spellId = 0;
         switch (GetFirstSchoolInMask(eventInfo.GetSchoolMask()))
         {
-            case SPELL_SCHOOL_FIRE:
-                spellId = SPELL_GEN_ADAPTIVE_WARDING_FIRE;
-                break;
-            case SPELL_SCHOOL_NATURE:
-                spellId = SPELL_GEN_ADAPTIVE_WARDING_NATURE;
-                break;
-            case SPELL_SCHOOL_FROST:
-                spellId = SPELL_GEN_ADAPTIVE_WARDING_FROST;
-                break;
-            case SPELL_SCHOOL_SHADOW:
-                spellId = SPELL_GEN_ADAPTIVE_WARDING_SHADOW;
-                break;
-            case SPELL_SCHOOL_ARCANE:
-                spellId = SPELL_GEN_ADAPTIVE_WARDING_ARCANE;
-                break;
-            default:
-                return;
+        case SPELL_SCHOOL_FIRE:
+            spellId = SPELL_GEN_ADAPTIVE_WARDING_FIRE;
+            break;
+        case SPELL_SCHOOL_NATURE:
+            spellId = SPELL_GEN_ADAPTIVE_WARDING_NATURE;
+            break;
+        case SPELL_SCHOOL_FROST:
+            spellId = SPELL_GEN_ADAPTIVE_WARDING_FROST;
+            break;
+        case SPELL_SCHOOL_SHADOW:
+            spellId = SPELL_GEN_ADAPTIVE_WARDING_SHADOW;
+            break;
+        case SPELL_SCHOOL_ARCANE:
+            spellId = SPELL_GEN_ADAPTIVE_WARDING_ARCANE;
+            break;
+        default:
+            return;
         }
         GetTarget()->CastSpell(GetTarget(), spellId, true, nullptr, aurEff);
     }

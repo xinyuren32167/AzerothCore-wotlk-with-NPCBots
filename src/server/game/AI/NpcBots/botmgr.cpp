@@ -154,6 +154,9 @@ float _mult_dmg_necromancer;
 float _mult_dmg_seawitch;
 float _mult_dmg_cryptlord;
 float _bothk_rate_honor;
+float _botRatesClassic;
+float _botRatesTBC;
+float _tankHPModifier;
 std::vector<float> _mult_dmg_levels;
 BotBrackets _botwanderer_pct_level_brackets;
 std::vector<uint32> _enabled_wander_node_maps;
@@ -385,6 +388,9 @@ void BotMgr::LoadConfig(bool reload)
     _bothk_message_enable           = sConfigMgr->GetBoolDefault("NpcBot.HK.Message.Enable", false);
     _bothk_achievements_enable      = sConfigMgr->GetBoolDefault("NpcBot.HK.Achievements.Enable", false);
     _bothk_rate_honor               = sConfigMgr->GetFloatDefault("NpcBot.HK.Rate.Honor", 1.0);
+    _botRatesClassic                = sConfigMgr->GetFloatDefault("NpcBot.Rate.Classic", 1.0f);
+    _botRatesTBC                    = sConfigMgr->GetFloatDefault("NpcBot.Rate.TBC", 1.0f);
+    _tankHPModifier                 = sConfigMgr->GetFloatDefault("NpcBot.TankHPModifier", 1.0f);
 
     _mult_dmg_levels.clear();
     std::string mult_dps_by_levels = sConfigMgr->GetStringDefault("NpcBot.Mult.Damage.Levels", "1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0");
@@ -473,6 +479,8 @@ void BotMgr::LoadConfig(bool reload)
     RoundToInterval(_mult_dmg_seawitch, 0.1f, 10.f);
     RoundToInterval(_mult_dmg_cryptlord, 0.1f, 10.f);
     RoundToInterval(_bothk_rate_honor, 0.1f, 10.f);
+    RoundToInterval(_botRatesClassic, 0.1f, 10.f);
+    RoundToInterval(_botRatesTBC, 0.1f, 10.f);
 }
 
 void BotMgr::ResolveConfigConflicts()
@@ -1424,6 +1432,7 @@ void BotMgr::RemoveAllBots(uint8 removetype)
     while (!_bots.empty())
         RemoveBot(_bots.begin()->second->GetGUID(), removetype);
 }
+
 //Bot is being abandoned by player
 void BotMgr::RemoveBot(ObjectGuid guid, uint8 removetype)
 {
@@ -2682,6 +2691,19 @@ float BotMgr::GetBotManaMod()
 {
     return _mult_mana;
 }
+float BotMgr::GetBotRatesClassic()
+{
+    return _botRatesClassic;
+}
+float BotMgr::GetBotRatesTBC()
+{
+    return _botRatesTBC;
+}
+float BotMgr::GetTankHPModifier()
+{
+    return _tankHPModifier;
+}
+
 //Boxhead: Set bot roles and talents in dungeon
 void BotMgr::SetRandomBotTalentsForGroup(Creature const* bot, uint32 botrole)
 {
