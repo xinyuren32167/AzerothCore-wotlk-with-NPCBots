@@ -121,7 +121,7 @@ namespace Movement
 
     void MoveSpline::init_spline(const MoveSplineInitArgs& args)
     {
-        const SplineBase::EvaluationMode modes[2] = {SplineBase::ModeLinear, SplineBase::ModeCatmullrom};
+        const SplineBase::EvaluationMode modes[2] = { SplineBase::ModeLinear, SplineBase::ModeCatmullrom };
         if (args.flags.cyclic)
         {
             uint32 cyclic_point = 0;
@@ -201,14 +201,13 @@ namespace Movement
     bool MoveSplineInitArgs::Validate(Unit* unit) const
     {
 #define CHECK(exp) \
-        if (!(exp)) \
-        { \
-            if (unit) \
-                LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: expression '{}' failed for {}", #exp, unit->GetGUID().ToString()); \
-            else \
-                LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: expression '{}' failed for cyclic spline continuation", #exp); \
-            return false;\
-        }
+if (!(exp)) \
+{ \
+    if (!unit) \
+        LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: expression '{}' failed for cyclic spline continuation", #exp); \
+    return false;\
+}
+
         CHECK(path.size() > 1);
         CHECK(velocity > 0.01f);
         CHECK(time_perc >= 0.f && time_perc <= 1.f);
