@@ -219,6 +219,22 @@ public:
 
                     uint8 availCount = 0;
 
+                    // Dinkle: Limit Dark rangers
+                    if (botclass == BOT_CLASS_DARK_RANGER)
+                    {
+                        uint8 darkRangerCount = 0;
+                        BotMap const* map = player->GetBotMgr()->GetBotMap();
+                        for (BotMap::const_iterator itr = map->begin(); itr != map->end(); ++itr)
+                            if (itr->second->GetBotClass() == BOT_CLASS_DARK_RANGER)
+                                ++darkRangerCount;
+
+                        if (darkRangerCount >= BotMgr::GetMaxDarkRangerBots())
+                        {
+                            WhisperTo(player, me, "You cannot hire more Dark Rangers due to the limit set in your configuration.");
+                            break; // Stop processing and close the gossip window
+                        }
+                    }
+
                     // Calculate the start and end indices for the bots on this page
                     uint8 startIndex = pageNumber * BOTS_PER_PAGE;
                     uint8 endIndex = startIndex + BOTS_PER_PAGE;
@@ -238,6 +254,14 @@ public:
                         if (BotMgr::FilterRaces() && botclass < BOT_CLASS_EX_START && (bot->GetRaceMask() & RACEMASK_ALL_PLAYABLE) &&
                             !(bot->GetRaceMask() & ((player->GetRaceMask() & RACEMASK_ALLIANCE) ? RACEMASK_ALLIANCE : RACEMASK_HORDE)))
                             continue;
+
+                        // Dinkle test for specific quest status complete on custom bots.
+                        if (bot->GetName() == "Sylvanas" && !player->HasAchieved(762))
+                        {
+                            // Player has not earned the required achievement to hire "Sylvanas"
+                            // WhisperTo(player, me, "You must earn the required achievement to hire Sylvanas.");
+                            continue; // Skip adding "Sylvanas" as an option and continue with the next bot
+                        }
 
                         // Only add the bot if it is on this page
                         if (botIndex >= startIndex && botIndex < endIndex)
@@ -355,11 +379,11 @@ public:
                     std::ostringstream message1;
                     message1 << bot_ai::LocalizedNpcText(player, BOT_TEXT_BOTGIVER_WISH_TO_HIRE_) << '?';
 
-                    player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_TALK, "Hire 10 bots",
-                        HIRE_RAID_GROUP_10, GOSSIP_ACTION_INFO_DEF, message1.str(), BotMgr::GetNpcBotCost(player->GetLevel(), BOT_CLASS_NONE)*9, false);
+                  // player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_TALK, "Hire 10 bots",
+                  //     HIRE_RAID_GROUP_10, GOSSIP_ACTION_INFO_DEF, message1.str(), BotMgr::GetNpcBotCost(player->GetLevel(), BOT_CLASS_NONE)*9, false);
 
-                    player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_TALK, "Hire 25 bots",
-                        HIRE_RAID_GROUP_25, GOSSIP_ACTION_INFO_DEF, message1.str(), BotMgr::GetNpcBotCost(player->GetLevel(), BOT_CLASS_NONE)*24, false);
+                  //  player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_TALK, "Hire 25 bots",
+                  //     HIRE_RAID_GROUP_25, GOSSIP_ACTION_INFO_DEF, message1.str(), BotMgr::GetNpcBotCost(player->GetLevel(), BOT_CLASS_NONE)*24, false);
 
                     AddGossipItemFor(player, GOSSIP_ICON_CHAT, bot_ai::LocalizedNpcText(player, BOT_TEXT_BACK), HIRE, GOSSIP_ACTION_INFO_DEF + 1);
                 }

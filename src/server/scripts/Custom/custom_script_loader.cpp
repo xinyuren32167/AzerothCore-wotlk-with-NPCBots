@@ -59,6 +59,13 @@ void AddSC_spell_dru_frenzied_regeneration();
 void AddSC_spell_dru_rejuvenation();
 void AddSC_go_inconspicuous_chest();
 void AddSC_spell_gorefiends_grasp_damage();
+void AddSC_spell_divine_steed_charges();
+void AddSC_spell_mage_blink();
+void AddSC_spell_arcane_surge();
+void AddSC_encroaching_enfeeblement();
+void AddSC_spell_void_torrent_damage();
+void AddSC_spell_sha_elemental_mastery();
+
 //void AddSC_PlayerTeleportRevive();
 //void AddSC_transform_race_command();
 //void AddSC_boss_the_hidden_watcher();
@@ -110,6 +117,13 @@ void AddCustomScripts()
     AddSC_spell_dru_rejuvenation();
     AddSC_go_inconspicuous_chest();
     AddSC_spell_gorefiends_grasp_damage();
+    AddSC_spell_divine_steed_charges();
+    AddSC_spell_mage_blink();
+    AddSC_spell_arcane_surge();
+    AddSC_encroaching_enfeeblement();
+    AddSC_spell_void_torrent_damage();
+    AddSC_spell_sha_elemental_mastery();
+
     //AddSC_PlayerTeleportRevive();
     //AddSC_transform_race_command();
     //AddSC_boss_the_hidden_watcher();

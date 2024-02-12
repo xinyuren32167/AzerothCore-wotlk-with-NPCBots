@@ -7623,12 +7623,29 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
         menus = true;
     }
 
+    //Dinkle: Darkranger limit
     if (player->GetGUID().GetCounter() != _ownerGuid)
     {
         if (IAmFree() && !IsWanderer())
         {
             uint32 cost = BotMgr::GetNpcBotCost(player->GetLevel(), _botclass);
 
+            if (_botclass == BOT_CLASS_DARK_RANGER)
+            {
+                uint8 darkRangerCount = 0;
+                BotMap const* map = player->GetBotMgr()->GetBotMap();
+                for (BotMap::const_iterator itr = map->begin(); itr != map->end(); ++itr)
+                    if (itr->second->GetBotClass() == BOT_CLASS_DARK_RANGER)
+                        ++darkRangerCount;
+
+                if (darkRangerCount >= BotMgr::GetMaxDarkRangerBots())
+                {
+                    ChatHandler(player->GetSession()).PSendSysMessage("You cannot hire more Dark Rangers due to the limit set in your configuration.");
+                    player->PlayerTalkClass->SendCloseGossip();
+                    return true;
+                }
+            }
+            
             int8 reason = 0;
             if (me->HasAura(BERSERK))
                 reason = -1;
@@ -7640,6 +7657,13 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
                 reason = 3;
             if (!reason && BotMgr::GetMaxClassBots() && BotDataMgr::GetOwnedBotsCount(player->GetGUID(), me->GetClassMask()) >= BotMgr::GetMaxClassBots())
                 reason = 4;
+
+            // Dinkle: Check for Sylvanas quest completion requirement
+            if (me->GetName() == "Sylvanas" && !player->HasAchieved(762))
+            {
+                player->GetSession()->SendNotification("You must earn the achievement 'Ambassador of the Horde' in order to hire Sylvanas.");
+                return false; 
+            }
 
             std::ostringstream message1;
             std::ostringstream message2;
@@ -9169,39 +9193,49 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             ASSERT(einfo, "Trying to send auto-equip for bot with no equip info!");
 
             std::set<uint32> itemList, idsList;
+            bool itemLimitCategory86Equipped = false; // Flag to track if an item with ItemLimitCategory 86 is already equipped or in the process of being equipped
+
+            // Check already equipped items for ItemLimitCategory 86
+            for (uint8 i = BOT_SLOT_MAINHAND; i < BOT_INVENTORY_SIZE; ++i) {
+                if (const Item* equippedItem = _equips[i]) {
+                    if (equippedItem->GetTemplate()->ItemLimitCategory == 86) {
+                        itemLimitCategory86Equipped = true;
+                        break;
+                    }
+                }
+            }
 
             //1: build list
             //1.1: backpack
-            for (uint8 i = INVENTORY_SLOT_ITEM_START; i != INVENTORY_SLOT_ITEM_END; ++i)
-            {
-                if (Item const* pItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
-                {
+            for (uint8 i = INVENTORY_SLOT_ITEM_START; i != INVENTORY_SLOT_ITEM_END; ++i) {
+                if (Item const* pItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i)) {
                     bool standard = false;
-                    for (uint8 j = 0; j != MAX_EQUIPMENT_ITEMS; ++j)
-                    {
-                        if (einfo->ItemEntry[j] == pItem->GetEntry())
-                        {
+                    for (uint8 j = 0; j != MAX_EQUIPMENT_ITEMS; ++j) {
+                        if (einfo->ItemEntry[j] == pItem->GetEntry()) {
                             standard = true;
                             break;
                         }
                     }
-                    if (standard)
+                    if (standard) continue;
+
+                    // Skip items with ItemLimitCategory 86 if one is already equipped or in the process of being equipped
+                    if (pItem->GetTemplate()->ItemLimitCategory == 86 && itemLimitCategory86Equipped) {
                         continue;
+                    }
 
                     bool canEquip = false;
-
-                    for (uint8 k = BOT_SLOT_MAINHAND; k != BOT_INVENTORY_SIZE; ++k)
-                    {
-                        if (_canEquip(pItem->GetTemplate(), k, false, pItem))
-                        {
+                    for (uint8 k = BOT_SLOT_MAINHAND; k != BOT_INVENTORY_SIZE; ++k) {
+                        if (_canEquip(pItem->GetTemplate(), k, false, pItem)) {
+                            // If an item with ItemLimitCategory 86 can be equipped, set the flag to prevent further items of this category from being considered
+                            if (pItem->GetTemplate()->ItemLimitCategory == 86) {
+                                itemLimitCategory86Equipped = true;
+                            }
                             canEquip = true;
                             break;
                         }
                     }
 
-                    if (canEquip &&/* itemList.find(pItem->GetGUID().GetCounter()) == itemList.end() &&*/
-                        (pItem->GetItemRandomPropertyId() == 0 ? idsList.find(pItem->GetEntry()) == idsList.end() : true))
-                    {
+                    if (canEquip && (pItem->GetItemRandomPropertyId() == 0 ? idsList.find(pItem->GetEntry()) == idsList.end() : true)) {
                         itemList.insert(pItem->GetGUID().GetCounter());
                         idsList.insert(pItem->GetEntry());
                     }
@@ -9209,40 +9243,37 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             }
 
             //1.2: other bags
-            for (uint8 i = INVENTORY_SLOT_BAG_START; i != INVENTORY_SLOT_BAG_END; ++i)
-            {
-                if (Bag const* pBag = player->GetBagByPos(i))
-                {
-                    for (uint32 j = 0; j != pBag->GetBagSize(); ++j)
-                    {
-                        if (Item const* pItem = player->GetItemByPos(i, j))
-                        {
+            for (uint8 i = INVENTORY_SLOT_BAG_START; i != INVENTORY_SLOT_BAG_END; ++i) {
+                if (Bag const* pBag = player->GetBagByPos(i)) {
+                    for (uint32 j = 0; j != pBag->GetBagSize(); ++j) {
+                        if (Item const* pItem = player->GetItemByPos(i, j)) {
                             bool standard = false;
-                            for (uint8 k = 0; k != MAX_EQUIPMENT_ITEMS; ++k)
-                            {
-                                if (einfo->ItemEntry[k] == pItem->GetEntry())
-                                {
+                            for (uint8 k = 0; k != MAX_EQUIPMENT_ITEMS; ++k) {
+                                if (einfo->ItemEntry[k] == pItem->GetEntry()) {
                                     standard = true;
                                     break;
                                 }
                             }
-                            if (standard)
+                            if (standard) continue;
+
+                            // Skip items with ItemLimitCategory 86 if one is already equipped or in the process of being equipped
+                            if (pItem->GetTemplate()->ItemLimitCategory == 86 && itemLimitCategory86Equipped) {
                                 continue;
+                            }
 
                             bool canEquip = false;
-
-                            for (uint8 k = BOT_SLOT_MAINHAND; k != BOT_INVENTORY_SIZE; ++k)
-                            {
-                                if (_canEquip(pItem->GetTemplate(), k, false, pItem))
-                                {
+                            for (uint8 k = BOT_SLOT_MAINHAND; k != BOT_INVENTORY_SIZE; ++k) {
+                                if (_canEquip(pItem->GetTemplate(), k, false, pItem)) {
+                                    // If an item with ItemLimitCategory 86 can be equipped, set the flag to prevent further items of this category from being considered
+                                    if (pItem->GetTemplate()->ItemLimitCategory == 86) {
+                                        itemLimitCategory86Equipped = true;
+                                    }
                                     canEquip = true;
                                     break;
                                 }
                             }
 
-                            if (canEquip &&/* itemList.find(pItem->GetGUID().GetCounter()) == itemList.end() &&*/
-                                (pItem->GetItemRandomPropertyId() == 0 ? idsList.find(pItem->GetEntry()) == idsList.end() : true))
-                            {
+                            if (canEquip && (pItem->GetItemRandomPropertyId() == 0 ? idsList.find(pItem->GetEntry()) == idsList.end() : true)) {
                                 itemList.insert(pItem->GetGUID().GetCounter());
                                 idsList.insert(pItem->GetEntry());
                             }
@@ -9263,79 +9294,103 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 uint32 maxcounter = BOT_GOSSIP_MAX_ITEMS - 1; // back
                 Item const* item;
                 //add items as gossip options
-                for (std::set<uint32>::const_iterator itr = itemList.begin(); itr != itemList.end() && counter < maxcounter; ++itr)
-                {
+                for (std::set<uint32>::const_iterator itr = itemList.begin(); itr != itemList.end() && counter < maxcounter; ++itr) {
                     bool found = false;
-                    for (uint8 i = INVENTORY_SLOT_ITEM_START; i != INVENTORY_SLOT_ITEM_END; ++i)
-                    {
+                    for (uint8 i = INVENTORY_SLOT_ITEM_START; i != INVENTORY_SLOT_ITEM_END; ++i) {
                         item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i);
-                        if (item && item->GetGUID().GetCounter() == (*itr))
-                        {
+                        if (item && item->GetGUID().GetCounter() == (*itr)) {
+                            // Dinkle: Check if the item has an ItemLimitCategory of 86
+                            if (item->GetTemplate()->ItemLimitCategory == 86) {
+                                // Loop through equipped items to ensure no other item with the same limit category is equipped
+                                bool categoryAlreadyEquipped = false;
+                                for (uint8 j = BOT_SLOT_MAINHAND; j < BOT_INVENTORY_SIZE; ++j) { // Adjust the loop range according to your inventory slots
+                                    const Item* equippedItem = _equips[j];
+                                    if (equippedItem && equippedItem->GetTemplate()->ItemLimitCategory == 86) {
+                                        categoryAlreadyEquipped = true;
+                                        break;
+                                    }
+                                }
+
+                                // If an item with the same limit category is already equipped, skip this item
+                                if (categoryAlreadyEquipped) {
+                                    continue;
+                                }
+                            }
+
                             uint8 k = 0;
-                            for (; k != BOT_INVENTORY_SIZE; ++k)
-                            {
-                                if (_canEquip(item->GetTemplate(), k, false, item))
-                                {
-                                    //workaround for double slots
-                                    //if first slot is occupied and second slot is vacant use second slot
-                                    if (k == BOT_SLOT_FINGER1 || k == BOT_SLOT_TRINKET1)
-                                        if (_equips[k] != nullptr && _canEquip(item->GetTemplate(), k + 1, false, item))
+                            for (; k != BOT_INVENTORY_SIZE; ++k) {
+                                if (_canEquip(item->GetTemplate(), k, false, item)) {
+                                    // workaround for double slots
+                                    // if first slot is occupied and second slot is vacant, use second slot
+                                    if (k == BOT_SLOT_FINGER1 || k == BOT_SLOT_TRINKET1) {
+                                        if (_equips[k] != nullptr && _canEquip(item->GetTemplate(), k + 1, false, item)) {
                                             ++k;
+                                        }
+                                    }
                                     break;
                                 }
                             }
 
                             std::ostringstream name;
                             _AddItemLink(player, item, name);
-                            if (BotMgr::SendEquipListItems())
+                            if (BotMgr::SendEquipListItems()) {
                                 BotWhisper(name.str(), player);
+                            }
                             AddGossipItemFor(player, GOSSIP_ICON_CHAT, name.str().c_str(), GOSSIP_SENDER_EQUIP_AUTOEQUIP_EQUIP + k, GOSSIP_ACTION_INFO_DEF + item->GetGUID().GetCounter());
                             ++counter;
                             found = true;
                             break;
                         }
                     }
-
+                
                     if (found)
                         continue;
 
-                    for (uint8 i = INVENTORY_SLOT_BAG_START; i != INVENTORY_SLOT_BAG_END; ++i)
-                    {
-                        if (Bag const* pBag = player->GetBagByPos(i))
-                        {
-                            for (uint32 j = 0; j != pBag->GetBagSize(); ++j)
-                            {
+                    for (uint8 i = INVENTORY_SLOT_BAG_START; i != INVENTORY_SLOT_BAG_END; ++i) {
+                        if (Bag const* pBag = player->GetBagByPos(i)) {
+                            for (uint32 j = 0; j != pBag->GetBagSize(); ++j) {
                                 item = player->GetItemByPos(i, j);
-                                if (item && item->GetGUID().GetCounter() == (*itr))
-                                {
+                                if (item && item->GetGUID().GetCounter() == (*itr)) {
+                                    // Skip items with ItemLimitCategory 86 if one is already equipped or in the process of being equipped
+                                    if (item->GetTemplate()->ItemLimitCategory == 86 && itemLimitCategory86Equipped) {
+                                        break; // Exit the inner loop to skip this item
+                                    }
+
                                     uint8 k = 0;
-                                    for (; k != BOT_INVENTORY_SIZE; ++k)
-                                    {
-                                        if (_canEquip(item->GetTemplate(), k, false, item))
-                                        {
-                                            //workaround for double slots
-                                            //if first slot is occupied and second slot is vacant use second slot
-                                            if (k == BOT_SLOT_FINGER1 || k == BOT_SLOT_TRINKET1)
-                                                if (_equips[k] != nullptr && _canEquip(item->GetTemplate(), k + 1, false, item))
+                                    for (; k != BOT_INVENTORY_SIZE; ++k) {
+                                        if (_canEquip(item->GetTemplate(), k, false, item)) {
+                                            // If an item with ItemLimitCategory 86 can be equipped, set the flag to prevent further items of this category from being considered
+                                            if (item->GetTemplate()->ItemLimitCategory == 86) {
+                                                itemLimitCategory86Equipped = true;
+                                            }
+
+                                            // workaround for double slots
+                                            // if first slot is occupied and second slot is vacant, use second slot
+                                            if (k == BOT_SLOT_FINGER1 || k == BOT_SLOT_TRINKET1) {
+                                                if (_equips[k] != nullptr && _canEquip(item->GetTemplate(), k + 1, false, item)) {
                                                     ++k;
+                                                }
+                                            }
                                             break;
                                         }
                                     }
 
                                     std::ostringstream name;
                                     _AddItemLink(player, item, name);
-                                    if (BotMgr::SendEquipListItems())
+                                    if (BotMgr::SendEquipListItems()) {
                                         BotWhisper(name.str(), player);
+                                    }
                                     AddGossipItemFor(player, GOSSIP_ICON_CHAT, name.str().c_str(), GOSSIP_SENDER_EQUIP_AUTOEQUIP_EQUIP + k, GOSSIP_ACTION_INFO_DEF + item->GetGUID().GetCounter());
                                     ++counter;
                                     found = true;
-                                    break;
+                                    break; // Exit the inner loop since the item is found and processed
                                 }
                             }
-                        }
 
-                        if (found)
-                            break;
+                            if (found) {
+                                break; // Exit the outer loop if the item is found and processed
+                            }
+                        }
                     }
 
                     if (found)
@@ -9376,39 +9431,54 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             uint32 guidLow = action - GOSSIP_ACTION_INFO_DEF;
 
             bool found = false;
-            for (uint8 i = INVENTORY_SLOT_ITEM_START; i != INVENTORY_SLOT_ITEM_END; ++i)
-            {
+            // First, search the main bag for the item
+            for (uint8 i = INVENTORY_SLOT_ITEM_START; i != INVENTORY_SLOT_ITEM_END; ++i) {
                 item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i);
-                if (item && item->GetGUID().GetCounter() == guidLow)
-                {
+                if (item && item->GetGUID().GetCounter() == guidLow) {
                     found = true;
                     break;
                 }
             }
 
-            if (!found)
-            {
-                for (uint8 i = INVENTORY_SLOT_BAG_START; i != INVENTORY_SLOT_BAG_END; ++i)
-                {
-                    if (Bag const* pBag = player->GetBagByPos(i))
-                    {
-                        for (uint32 j = 0; j != pBag->GetBagSize(); ++j)
-                        {
+            // If not found in the main bag, search other bags
+            if (!found) {
+                for (uint8 i = INVENTORY_SLOT_BAG_START; i != INVENTORY_SLOT_BAG_END; ++i) {
+                    if (Bag const* pBag = player->GetBagByPos(i)) {
+                        for (uint32 j = 0; j != pBag->GetBagSize(); ++j) {
                             item = player->GetItemByPos(i, j);
-                            if (item && item->GetGUID().GetCounter() == guidLow)
-                            {
+                            if (item && item->GetGUID().GetCounter() == guidLow) {
                                 found = true;
-                                break;
+                                break; // Break if found
                             }
                         }
                     }
 
-                    if (found)
-                        break;
+                    if (found) break; // Break the outer loop if found
                 }
             }
 
-            if (found && _equip(sender - GOSSIP_SENDER_EQUIP, item, player->GetGUID())){}
+            // If the item is found and has ItemLimitCategory of 86, check if another item with the same category is already equipped
+            if (found && item->GetTemplate()->ItemLimitCategory == 86) {
+                bool categoryAlreadyEquipped = false;
+                for (uint8 i = BOT_SLOT_MAINHAND; i < BOT_INVENTORY_SIZE; ++i) {
+                    const Item* equippedItem = _equips[i];
+                    if (equippedItem && equippedItem->GetTemplate()->ItemLimitCategory == 86) {
+                        categoryAlreadyEquipped = true;
+                        break; // Break if another item with the same category is found equipped
+                    }
+                }
+
+                // If another item with the same category is already equipped, do not equip this item
+                if (categoryAlreadyEquipped) {
+                    return OnGossipSelect(player, creature, GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 1);
+                }
+            }
+
+            // Proceed with equipping if the item passes all checks
+            if (found) {
+                _equip(sender - GOSSIP_SENDER_EQUIP, item, player->GetGUID());
+            }
+
             return OnGossipSelect(player, creature, GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 1);
         }
         case GOSSIP_SENDER_EQUIPMENT_BANK_DEPOSIT_ITEM:
@@ -17854,17 +17924,17 @@ void bot_ai::Evade()
         {
             if ((curr_zone == 3522 && me->GetPositionZ() > 290))
             {
-                LOG_ERROR("server.loading", "Bot has invalid height in Blade's Edge! Bot {} id {} class {} level {} map {} TELEPORTING to node {} ('{}') map {}, {}, dist {} yd!",
-                    me->GetName().c_str(), me->GetEntry(), uint32(_botclass), uint32(me->GetLevel()), me->GetMapId(), _travel_node_cur->GetWPId(),
-                    _travel_node_cur->GetName().c_str(), uint32(mapid), pos.ToString().c_str(), me->GetExactDist(pos));
-                LOG_ERROR("server.loading", "Bot Pos: {} {} {}", me->GetPositionX(), me->GetPositionY(), me->GetPositionZ());
+              //  LOG_ERROR("server.loading", "Bot has invalid height in Blade's Edge! Bot {} id {} class {} level {} map {} TELEPORTING to node {} ('{}') map {}, {}, dist {} yd!",
+              //      me->GetName().c_str(), me->GetEntry(), uint32(_botclass), uint32(me->GetLevel()), me->GetMapId(), _travel_node_cur->GetWPId(),
+              //     _travel_node_cur->GetName().c_str(), uint32(mapid), pos.ToString().c_str(), me->GetExactDist(pos));
+              //  LOG_ERROR("server.loading", "Bot Pos: {} {} {}", me->GetPositionX(), me->GetPositionY(), me->GetPositionZ());
             }
             else
             {
                 //LOG_DEBUG("npcbots", "Bot {} id {} class {} level {} map {} TELEPORTING to node {} ('{}') map {}, {}, dist {} yd!",
-                LOG_DEBUG("server.loading", "Bot {} id {} class {} level {} map {} TELEPORTING to node {} ('{}') map {}, {}, dist {} yd!",
-                    me->GetName().c_str(), me->GetEntry(), uint32(_botclass), uint32(me->GetLevel()), me->GetMapId(), _travel_node_cur->GetWPId(),
-                    _travel_node_cur->GetName().c_str(), uint32(mapid), pos.ToString().c_str(), me->GetExactDist(pos));
+                //LOG_DEBUG("server.loading", "Bot {} id {} class {} level {} map {} TELEPORTING to node {} ('{}') map {}, {}, dist {} yd!",
+                //    me->GetName().c_str(), me->GetEntry(), uint32(_botclass), uint32(me->GetLevel()), me->GetMapId(), _travel_node_cur->GetWPId(),
+                //    _travel_node_cur->GetName().c_str(), uint32(mapid), pos.ToString().c_str(), me->GetExactDist(pos));
             }
 
             evadeDelayTimer = 12000;

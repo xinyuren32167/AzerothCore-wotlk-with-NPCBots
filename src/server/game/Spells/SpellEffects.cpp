@@ -69,6 +69,8 @@
 //  see: https://github.com/azerothcore/azerothcore-wotlk/issues/9766
 #include "GridNotifiersImpl.h"
 
+
+
 pEffect SpellEffects[TOTAL_SPELL_EFFECTS] =
 {
     &Spell::EffectNULL,                                     //  0
@@ -236,6 +238,9 @@ pEffect SpellEffects[TOTAL_SPELL_EFFECTS] =
     &Spell::EffectActivateSpec,                             //162 SPELL_EFFECT_TALENT_SPEC_SELECT       activate primary/secondary spec
     &Spell::EffectNULL,                                     //163 unused
     &Spell::EffectRemoveAura,                               //164 SPELL_EFFECT_REMOVE_AURA
+    &Spell::EffectNULL,                                     //165 SPELL_EFFECT_LEARN_TRANSMOG_SET
+    &Spell::EffectNULL,                                     //166 SPELL_EFFECT_CREATE_AREATRIGGER
+    &Spell::EffectJumpCharge,                               //167 SPELL_EFFECT_JUMP_CHARGE
 };
 
 void Spell::EffectNULL(SpellEffIndex /*effIndex*/)
@@ -6416,6 +6421,35 @@ void Spell::EffectRemoveAura(SpellEffIndex effIndex)
         return;
     // there may be need of specifying casterguid of removed auras
     unitTarget->RemoveAurasDueToSpell(m_spellInfo->Effects[effIndex].TriggerSpell);
+}
+
+void Spell::EffectJumpCharge(SpellEffIndex effIndex)
+{
+    if (effectHandleMode != SPELL_EFFECT_HANDLE_LAUNCH)
+        return;
+
+    if (!m_caster)
+        return;
+
+    if (m_caster->IsInFlight())
+        return;
+
+    JumpChargeParams const* params = sObjectMgr->GetJumpChargeParams(m_spellInfo->Effects[effIndex].MiscValue);
+
+    if (!params)
+        return;
+
+    float speed = params->Speed;
+
+    if (params->TreatSpeedAsMoveTimeSeconds)
+        speed = m_caster->GetExactDist(destTarget) / params->MoveTimeInSec;
+
+    m_caster->GetMotionMaster()->MoveJumpWithGravity(*destTarget, speed, params->JumpGravity, 0, ObjectAccessor::GetUnit(*m_caster, m_caster->GetGuidValue(UNIT_FIELD_TARGET)));
+
+    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    {
+        sScriptMgr->AnticheatSetUnderACKmount(m_caster->ToPlayer());
+    }
 }
 
 void Spell::EffectCastButtons(SpellEffIndex effIndex)

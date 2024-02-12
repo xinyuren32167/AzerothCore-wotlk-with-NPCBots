@@ -927,8 +927,14 @@ namespace MMAP
     /**************************************************************************/
     bool MapBuilder::shouldSkipMap(uint32 mapID) const
     {
-        if (m_mapid >= 0)
-            return static_cast<uint32>(m_mapid) != mapID;
+        // List of forced map IDs to always include
+        const std::vector<uint32> forcedMapIDs = { 870, 646, 670, 669 };
+
+        // Check if the mapID is in the forcedMapIDs list and ensure it is not skipped
+        if (std::find(forcedMapIDs.begin(), forcedMapIDs.end(), mapID) != forcedMapIDs.end())
+        {
+            return false; // Do not skip this map
+        }
 
         if (m_skipContinents)
             if (isContinentMap(mapID))
@@ -941,7 +947,7 @@ namespace MMAP
                 case 25:    // ScottTest.wdt
                 case 29:    // Test.wdt
                 case 42:    // Colin.wdt
-                case 169:   // EmeraldDream.wdt (unused, and very large)
+                //case 169:   // EmeraldDream.wdt (unused, and very large)
                 case 451:   // development.wdt
                 case 573:   // ExteriorTest.wdt
                 case 597:   // CraigTest.wdt
@@ -1020,6 +1026,7 @@ namespace MMAP
             case 1:
             case 530:
             case 571:
+            case 870:
                 return true;
             default:
                 return false;

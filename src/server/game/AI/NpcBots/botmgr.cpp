@@ -60,6 +60,8 @@ uint8 _offTankingTargetIconFlags;
 uint8 _dpsTargetIconFlags;
 uint8 _rangedDpsTargetIconFlags;
 uint8 _noDpsTargetIconFlags;
+//Dinkle
+uint8 _maxDarkRangerBots;
 int32 _botInfoPacketsLimit;
 uint32 _npcBotsCost;
 uint32 _npcBotUpdateDelayBase;
@@ -391,7 +393,9 @@ void BotMgr::LoadConfig(bool reload)
     _botRatesClassic                = sConfigMgr->GetFloatDefault("NpcBot.Rate.Classic", 1.0f);
     _botRatesTBC                    = sConfigMgr->GetFloatDefault("NpcBot.Rate.TBC", 1.0f);
     _tankHPModifier                 = sConfigMgr->GetFloatDefault("NpcBot.TankHPModifier", 1.0f);
-
+    //Dinkle
+    _maxDarkRangerBots              = sConfigMgr->GetIntDefault("NpcBot.MaxDarkRangerBots", 1);
+    
     _mult_dmg_levels.clear();
     std::string mult_dps_by_levels = sConfigMgr->GetStringDefault("NpcBot.Mult.Damage.Levels", "1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0");
     std::vector<std::string_view> toks = Acore::Tokenize(mult_dps_by_levels, ',', false);
@@ -837,6 +841,12 @@ uint8 BotMgr::GetNpcBotXpReductionStartingNumber()
 uint8 BotMgr::GetMaxNpcBots()
 {
     return _maxNpcBots <= MAXRAIDSIZE - 1 ? _maxNpcBots : MAXRAIDSIZE - 1;
+}
+
+//Dinke
+uint8 BotMgr::GetMaxDarkRangerBots()
+{
+    return _maxDarkRangerBots;
 }
 
 int32 BotMgr::GetBotInfoPacketsLimit()

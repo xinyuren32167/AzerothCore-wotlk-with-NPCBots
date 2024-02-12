@@ -72,6 +72,10 @@ enum MageBaseSpells
     CONJURE_MANA_GEM_1                  = 759,
     MANA_GEM_1                          = 5405,
     RITUAL_OF_REFRESHMENT_1             = 43987,
+    TIME_WARP_1                         = 832182,
+
+    EXHAUSTION_AURA                     = 57723,
+    SATED_AURA                          = 57724,
 
     SUMMON_WATER_ELEMENTAL_1            = 31687
 };
@@ -159,7 +163,7 @@ static const uint32 Mage_spells_support_arr[] =
 { AMPLIFYMAGIC_1, ARCANEINTELLECT_1, BLINK_1, COMBUSTION_1, DAMPENMAGIC_1, EVOCATION_1, FIRE_WARD_1, FROST_WARD_1,
 FROST_ARMOR_1, FOCUS_MAGIC_1, ICE_BARRIER_1, ICE_BLOCK_1, ICY_VEINS_1, INVISIBILITY_1, ICE_ARMOR_1, MOLTEN_ARMOR_1,
 SLOW_FALL_1, SPELLSTEAL_1, REMOVE_CURSE_1, CONJURE_MANA_GEM_1, RITUAL_OF_REFRESHMENT_1, SUMMON_WATER_ELEMENTAL_1,
-COLD_SNAP_1, PRESENCE_OF_MIND_1, ARCANE_POWER_1 };
+COLD_SNAP_1, PRESENCE_OF_MIND_1, ARCANE_POWER_1, TIME_WARP_1 };
 
 static const std::vector<uint32> Mage_spells_damage(FROM_ARRAY(Mage_spells_damage_arr));
 static const std::vector<uint32> Mage_spells_cc(FROM_ARRAY(Mage_spells_cc_arr));
@@ -223,6 +227,47 @@ public:
             GetInPosition(force, u);
         }
 
+        void CheckTimeWarp(uint32 diff)
+        {
+            // Timer to control how often the bot checks the possibility to cast Time Warp
+            if (TimeWarpCheckTimer > diff)
+            {
+                TimeWarpCheckTimer -= diff;
+                return;
+            }
+
+            // Reset the timer for the next check
+            TimeWarpCheckTimer = 3000; // Check every 3 seconds
+
+            // Conditions to skip casting Time Warp
+            if (!me->IsInCombat() || !master->IsInCombat() || // Both bot and master must be in combat
+                me->GetDistance(master) > 30 || // Ensure the master is within 30 yards
+                me->HasAura(EXHAUSTION_AURA) || master->HasAura(EXHAUSTION_AURA) || // Check for Exhaustion/Sated debuff
+                !(me->GetVictim() || master->GetVictim())) // Either the bot or the master must have a target
+            {
+                return;
+            }
+
+            uint32 TIME_WARP = TIME_WARP_1; 
+
+            // Check if Time Warp is ready to be cast (not on cooldown)
+            if (!IsSpellReady(TIME_WARP, diff))
+                return;
+
+            // Conditions to justify using Time Warp
+            Unit* target = me->GetVictim() ? me->GetVictim() : master->GetVictim();
+            if (target &&
+                (target->GetHealth() > me->GetMaxHealth() * 10 || // Target has significantly more health than the bot
+                    target->GetTypeId() == TYPEID_PLAYER || // Target is a player
+                    target->ToCreature() && (target->ToCreature()->IsDungeonBoss() || target->ToCreature()->isWorldBoss()) || // Target is a boss
+                    me->getAttackers().size() + master->getAttackers().size() >= 5)) // There are multiple attackers
+            {
+                me->InterruptNonMeleeSpells(true); // Interrupt any ongoing casts
+                if (doCast(me, TIME_WARP)) // Attempt to cast Time Warp
+                    return; // If successful, exit the function
+            }
+        }
+        
         void Counter(uint32 diff)
         {
             //skip if evocation, blizzard
@@ -268,12 +313,37 @@ public:
 
         void CheckSpellSteal(uint32 diff)
         {
-            if (!IsSpellReady(SPELLSTEAL_1, diff) || IsCasting() || Rand() > 15)
+            if (!IsSpellReady(SPELLSTEAL_1, diff))
+                return;
+            // Dinkle: High King Maulgar fight. Identify Krosh Firehand and check for the Spell Shield
+            Unit* kroshFirehand = nullptr;
+            std::list<Unit*> targets;
+            GetNearbyTargetsList(targets, CalcSpellMaxRange(SPELLSTEAL_1), 0); // No special handling for CC'd targets
+            for (Unit* target : targets)
+            {
+                if (target->GetEntry() == 18832) // Krosh Firehand's entry ID
+                {
+                    kroshFirehand = target;
+                    break;
+                }
+            }
+
+            // Attempt to steal from Krosh regardless of current casting state or random chance
+            if (kroshFirehand && kroshFirehand->HasAura(33054)) // Spell Shield ID
+            {
+                // Temporarily ignore the casting check for Krosh's Spell Shield
+                if (doCast(kroshFirehand, GetSpell(SPELLSTEAL_1)))
+                    return; // Successfully cast Spell Steal on Krosh's Spell Shield
+            }
+
+            // For other targets, retain the original casting and random chance checks
+            if (IsCasting() || Rand() > 15)
                 return;
 
+            // Continue with normal logic for other targets
             Unit* target = FindHostileDispelTarget(CalcSpellMaxRange(SPELLSTEAL_1), true);
             if (target && doCast(target, GetSpell(SPELLSTEAL_1)))
-                return;
+                return; // Successfully cast Spell Steal on another target
         }
 
         void DoNonCombatActions(uint32 diff)
@@ -365,6 +435,7 @@ public:
 
             CheckRacials(diff);
 
+            CheckTimeWarp(diff);
             CheckShield(diff);
             CureGroup(GetSpell(REMOVE_CURSE_1), diff);
             CheckWard(diff);
@@ -1623,6 +1694,7 @@ public:
             shieldCheckTimer = 0;
             arcaneBlastStack = 0;
             manaGemCharges = 0;
+            TimeWarpCheckTimer = 5000;
 
             poly = false;
             shielded = false;
@@ -1637,6 +1709,8 @@ public:
             if (fmCheckTimer > diff)                fmCheckTimer -= diff;
             if (iceblockCheckTimer > diff)          iceblockCheckTimer -= diff;
             if (shieldCheckTimer > diff)            shieldCheckTimer -= diff;
+            if (TimeWarpCheckTimer > diff)          TimeWarpCheckTimer -= diff;
+
         }
 
         void InitPowers() override
@@ -1682,6 +1756,8 @@ public:
             //InitSpellMap(FROST_WARD_1);
             //InitSpellMap(FIRE_WARD_1);
             InitSpellMap(MIRROR_IMAGE_1);
+            InitSpellMap(TIME_WARP_1);
+
 
  /*Special*/InitSpellMap(CONJURE_MANA_GEM_1);
  /*Special*/InitSpellMap(MANA_GEM_1);
@@ -1783,6 +1859,7 @@ public:
                 case ICE_ARMOR_1:
                 case ICE_BARRIER_1:
                 case COMBUSTION_1:
+                case TIME_WARP_1:
                 case ICY_VEINS_1:
                 case BLAST_WAVE_1:
                 case FLAMESTRIKE_1:
@@ -1826,7 +1903,7 @@ public:
         //Spells
 /*frst*/uint32 FROSTFIREBOLT;
         //Timers
-/*exc.*/uint32 polyCheckTimer, fmCheckTimer, iceblockCheckTimer, shieldCheckTimer;
+/*exc.*/uint32 polyCheckTimer, fmCheckTimer, iceblockCheckTimer, TimeWarpCheckTimer, shieldCheckTimer;
         //Counters
 /*exc.*/uint8 arcaneBlastStack;
 /*exc.*/uint8 manaGemCharges;
