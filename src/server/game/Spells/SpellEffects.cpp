@@ -1526,7 +1526,7 @@ void Spell::EffectPowerDrain(SpellEffIndex effIndex)
 
     Powers PowerType = Powers(m_spellInfo->Effects[effIndex].MiscValue);
 
-    if (!unitTarget || !unitTarget->IsAlive() || unitTarget->getPowerType() != PowerType || damage < 0)
+    if (!unitTarget || !unitTarget->IsAlive() || !unitTarget->HasActivePowerType(PowerType) || damage < 0)
         return;
 
     // add spell damage bonus
@@ -1610,7 +1610,7 @@ void Spell::EffectPowerBurn(SpellEffIndex effIndex)
 
     Powers PowerType = Powers(m_spellInfo->Effects[effIndex].MiscValue);
 
-    if (!unitTarget || !unitTarget->IsAlive() || unitTarget->getPowerType() != PowerType || damage < 0)
+    if (!unitTarget || !unitTarget->IsAlive() || !unitTarget->HasActivePowerType(PowerType) || damage < 0)
         return;
 
     // burn x% of target's mana, up to maximum of 2x% of caster's mana (Mana Burn)
@@ -2063,7 +2063,7 @@ void Spell::EffectEnergize(SpellEffIndex effIndex)
 
     Powers power = Powers(m_spellInfo->Effects[effIndex].MiscValue);
 
-    if (unitTarget->GetTypeId() == TYPEID_PLAYER && unitTarget->getPowerType() != power && m_spellInfo->SpellFamilyName != SPELLFAMILY_POTION
+    if (unitTarget->GetTypeId() == TYPEID_PLAYER && !unitTarget->HasActivePowerType(power) && m_spellInfo->SpellFamilyName != SPELLFAMILY_POTION
             && !m_spellInfo->HasAttribute(SPELL_ATTR7_ONLY_IN_SPELLBOOK_UNTIL_LEARNED))
         return;
 
@@ -2168,7 +2168,7 @@ void Spell::EffectEnergizePct(SpellEffIndex effIndex)
 
     Powers power = Powers(m_spellInfo->Effects[effIndex].MiscValue);
 
-    if (unitTarget->GetTypeId() == TYPEID_PLAYER && unitTarget->getPowerType() != power && !m_spellInfo->HasAttribute(SPELL_ATTR7_ONLY_IN_SPELLBOOK_UNTIL_LEARNED))
+    if (unitTarget->GetTypeId() == TYPEID_PLAYER && !unitTarget->HasActivePowerType(power) && !m_spellInfo->HasAttribute(SPELL_ATTR7_ONLY_IN_SPELLBOOK_UNTIL_LEARNED))
         return;
 
     uint32 maxPower = unitTarget->GetMaxPower(power);
