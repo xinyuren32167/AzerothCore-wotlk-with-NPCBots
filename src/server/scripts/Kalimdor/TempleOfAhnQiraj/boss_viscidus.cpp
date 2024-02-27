@@ -402,7 +402,7 @@ struct npc_toxic_slime : public ScriptedAI
 
     void InitializeAI() override
     {
-        SetCombatMovement(false);
+        me->SetCombatMovement(false);
         DoCastSelf(SPELL_TOXIN);
 
         InstanceScript* instance = me->GetInstanceScript();
