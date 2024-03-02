@@ -506,7 +506,7 @@ void SmartAI::UpdateAI(uint32 diff)
     UpdatePath(diff);
     UpdateDespawn(diff);
 
-    //TODO move to void
+    // Additional logic for following a target when out of casting range or silenced
     if (mFollowGuid)
     {
         if (mFollowArrivedTimer < diff)
@@ -539,8 +539,21 @@ void SmartAI::UpdateAI(uint32 diff)
     if (!hasVictim)
         return;
 
-    if (mCanAutoAttack)
-        DoMeleeAttackIfReady();
+    // Dinkle: Check if the mob is silenced or the target is out of casting range
+    Unit* target = me->GetVictim();
+    float castingRange = 30.0f; // need to adjust this
+    bool isSilenced = me->HasAuraType(SPELL_AURA_MOD_SILENCE) || me->HasAuraType(SPELL_AURA_MOD_PACIFY_SILENCE);
+
+    if (target && (me->GetDistance(target) > castingRange || isSilenced))
+    {
+        me->GetMotionMaster()->MoveChase(target);
+    }
+    else
+    {
+        if (mCanAutoAttack)
+            DoMeleeAttackIfReady();
+    }
+    // end Dinkle
 }
 
 bool SmartAI::IsEscortInvokerInRange()
