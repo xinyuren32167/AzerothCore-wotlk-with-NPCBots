@@ -77,7 +77,8 @@ enum MageBaseSpells
     EXHAUSTION_AURA                     = 57723,
     SATED_AURA                          = 57724,
 
-    SUMMON_WATER_ELEMENTAL_1            = 31687
+    SUMMON_WATER_ELEMENTAL_1            = 31687,
+    SPELL_ID_THORIUM_GRENADE            = 19769
 };
 
 enum MagePassives
@@ -150,6 +151,8 @@ enum MageSpecial
     WINTERS_CHILL_TRIGGERED             = 12579,
     IGNITE_TRIGGERED                    = 12654
 };
+
+const uint32 THORIUM_GRENADE_SPELL_ID = 19769;
 
 static const uint32 Mage_spells_damage_arr[] =
 { ARCANEMISSILES_1, ARCANE_BLAST_1, BLAST_WAVE_1, BLIZZARD_1, CONE_OF_COLD_1, DEEP_FREEZE_1, DRAGON_BREATH_1, FIREBALL_1,
@@ -248,7 +251,7 @@ public:
                 return;
             }
 
-            uint32 TIME_WARP = TIME_WARP_1; 
+            uint32 TIME_WARP = TIME_WARP_1;
 
             // Check if Time Warp is ready to be cast (not on cooldown)
             if (!IsSpellReady(TIME_WARP, diff))
@@ -257,32 +260,76 @@ public:
             // Conditions to justify using Time Warp
             Unit* target = me->GetVictim() ? me->GetVictim() : master->GetVictim();
             if (target &&
-                (target->GetHealth() > me->GetMaxHealth() * 10 || // Target has significantly more health than the bot
-                    target->GetTypeId() == TYPEID_PLAYER || // Target is a player
-                    target->ToCreature() && (target->ToCreature()->IsDungeonBoss() || target->ToCreature()->isWorldBoss()) || // Target is a boss
-                    me->getAttackers().size() + master->getAttackers().size() >= 5)) // There are multiple attackers
+                (target->GetHealth() > me->GetMaxHealth() * 10 ||
+                    target->GetTypeId() == TYPEID_PLAYER ||
+                    target->ToCreature() && (target->ToCreature()->IsDungeonBoss() || target->ToCreature()->isWorldBoss()) ||
+                    me->getAttackers().size() + master->getAttackers().size() >= 5))
             {
-                me->InterruptNonMeleeSpells(true); // Interrupt any ongoing casts
-                if (doCast(me, TIME_WARP)) // Attempt to cast Time Warp
-                    return; // If successful, exit the function
+                me->InterruptNonMeleeSpells(true);
+                if (doCast(me, TIME_WARP))
+                {
+                    if (!IsWanderer()) 
+                    {
+                        const char* timeWarpMessages[] = {
+                            "|cFFFFFFFFLet's do the Time Warp again!|r",
+                            "|cFFFFFFFFIt's just a jump to the left... Time Warp!|r",
+                            "|cFFFFFFFFAnd then a step to the right! Time's bending!|r",
+                            "|cFFFFFFFFWith your hands on your hips, you bring your knees in tight... Time Warp!|r",
+                            "|cFFFFFFFFCasting Time Warp!|r",
+                            "|cFFFFFFFFBut it's the pelvic thrust that really drives you insane! Time Warp!|r",
+                        };
+
+                        int randomIndex = urand(0, sizeof(timeWarpMessages) / sizeof(char*) - 1);
+                        const char* selectedMessage = timeWarpMessages[randomIndex];
+
+                        char messageBuffer[256];
+                        snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage);
+
+                        me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                    }
+                    return;
+                }
             }
         }
         
         void Counter(uint32 diff)
         {
-            //skip if evocation, blizzard
+            // Skip if evocation, blizzard
             if (IsChanneling() || Rand() > 30)
                 return;
 
+            // Dinkle
             if (IsSpellReady(COUNTERSPELL_1, diff, false))
             {
                 if (Unit* target = FindCastingTarget(CalcSpellMaxRange(COUNTERSPELL_1), 0, COUNTERSPELL_1))
                 {
                     me->InterruptNonMeleeSpells(false);
                     if (doCast(target, GetSpell(COUNTERSPELL_1)))
+                    {
+                        if (!IsWanderer()) 
+                        {
+                            const char* counterspellMessages[] = {
+                                "|cFFFFFFFFSilenced %s! No casting for you.|r",
+                                "|cFFFFFFFF%s's spell has been countered!|r",
+                                "|cFFFFFFFFCutting %s off mid-cast! Counterspell for the win.|r",
+                                "|cFFFFFFFF%s, your magic is denied!|r",
+                                "|cFFFFFFFF%s's spell interrupted! Keep the pressure on.|r",
+                            };
+
+                            int randomIndex = urand(0, sizeof(counterspellMessages) / sizeof(char*) - 1);
+                            const char* selectedMessage = counterspellMessages[randomIndex];
+
+                            char messageBuffer[256];
+                            snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                            me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                        }
                         return;
+                    }
                 }
             }
+            // End Dinkle
+
             if (IsSpellReady(DEEP_FREEZE_1, diff) && me->HasAuraType(SPELL_AURA_ABILITY_IGNORE_AURASTATE))
             {
                 if (Unit* target = FindCastingTarget(CalcSpellMaxRange(DEEP_FREEZE_1), 0, DEEP_FREEZE_1))
@@ -306,7 +353,27 @@ public:
                 if (Unit* target = FindCastingTarget(CalcSpellMaxRange(POLYMORPH_1), 0, POLYMORPH_1, 75))
                 {
                     if (doCast(target, GetSpell(POLYMORPH_1)))
+                    {
+                        if (!IsWanderer()) 
+                        {
+                            const char* polymorphMessages[] = {
+                                "|cFFFFFFFFTurned %s into a harmless critter! Focus on the others.|r",
+                                "|cFFFFFFFF%s is now a little fluffy! Let's not hit them for a bit.|r",
+                                "|cFFFFFFFFGot %s on a timeout! They're a critter now.|r",
+                                "|cFFFFFFFF%s has been polymorphed! They're out of the game for now.|r",
+                                "|cFFFFFFFFCasting Polymorph on %s!|r",
+                            };
+
+                            int randomIndex = urand(0, sizeof(polymorphMessages) / sizeof(char*) - 1);
+                            const char* selectedMessage = polymorphMessages[randomIndex];
+
+                            char messageBuffer[256];
+                            snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                            me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                        }
                         return;
+                    }
                 }
             }
         }
@@ -315,7 +382,8 @@ public:
         {
             if (!IsSpellReady(SPELLSTEAL_1, diff))
                 return;
-            // Dinkle: High King Maulgar fight. Identify Krosh Firehand and check for the Spell Shield
+
+            // Special handling for Krosh Firehand in the High King Maulgar fight
             Unit* kroshFirehand = nullptr;
             std::list<Unit*> targets;
             GetNearbyTargetsList(targets, CalcSpellMaxRange(SPELLSTEAL_1), 0); // No special handling for CC'd targets
@@ -328,22 +396,47 @@ public:
                 }
             }
 
-            // Attempt to steal from Krosh regardless of current casting state or random chance
             if (kroshFirehand && kroshFirehand->HasAura(33054)) // Spell Shield ID
             {
-                // Temporarily ignore the casting check for Krosh's Spell Shield
                 if (doCast(kroshFirehand, GetSpell(SPELLSTEAL_1)))
-                    return; // Successfully cast Spell Steal on Krosh's Spell Shield
+                {
+                    NotifySpellSteal(kroshFirehand);
+                    return; 
+                }
             }
 
             // For other targets, retain the original casting and random chance checks
             if (IsCasting() || Rand() > 15)
                 return;
 
-            // Continue with normal logic for other targets
             Unit* target = FindHostileDispelTarget(CalcSpellMaxRange(SPELLSTEAL_1), true);
             if (target && doCast(target, GetSpell(SPELLSTEAL_1)))
-                return; // Successfully cast Spell Steal on another target
+            {
+                NotifySpellSteal(target);
+                return; 
+            }
+        }
+
+        void NotifySpellSteal(Unit* target)
+        {
+            if (!IsWanderer()) 
+            {
+                const char* spellStealMessages[] = {
+                    "|cFFFFFFFFSnatched a spell from %s! What's yours is mine now.|r",
+                    "|cFFFFFFFF%s's buff? I'll take that, thank you!|r",
+                    "|cFFFFFFFFJust borrowed a little something from %s.|r",
+                    "|cFFFFFFFFYoink! That spell from %s looks better on me.|r",
+                    "|cFFFFFFFFWhat a nice spell you had, %s. I'll be holding onto that.|r",
+                };
+
+                int randomIndex = urand(0, sizeof(spellStealMessages) / sizeof(char*) - 1);
+                const char* selectedMessage = spellStealMessages[randomIndex];
+
+                char messageBuffer[256];
+                snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+            }
         }
 
         void DoNonCombatActions(uint32 diff)
@@ -351,7 +444,8 @@ public:
             if (GC_Timer > diff || me->IsMounted() || Feasting() || Rand() > 25)
                 return;
 
-            //slow fall
+            // Slow Fall
+            // Dinkle
             if (GetSpell(SLOW_FALL_1) && !IAmFree())
             {
                 Player* fPlayer = nullptr;
@@ -372,10 +466,32 @@ public:
                 }
                 else if (master->IsAlive() && master->GetDistance(me) < 30 && master->IsFalling() &&
                     master->m_movementInfo.fallTime > 1000 && !master->HasAuraType(SPELL_AURA_FEATHER_FALL))
+                {
                     fPlayer = master;
+                }
 
                 if (fPlayer && doCast(fPlayer, GetSpell(SLOW_FALL_1)))
+                {
+                    if (!IsWanderer()) 
+                    {
+                        const char* slowFallMessages[] = {
+                            "|cFFFFFFFFGiving %s a soft landing with Slow Fall.|r",
+                            "|cFFFFFFFFNo need to fear falling, %s, Slow Fall's got you covered!|r",
+                            "|cFFFFFFFF%s, enjoy the gentle descent with Slow Fall.|r",
+                            "|cFFFFFFFFEnsuring %s doesn't go splat with a bit of Slow Fall magic!|r",
+                            "|cFFFFFFFF%s's fall is now as gentle as a feather, thanks to Slow Fall.|r",
+                        };
+
+                        int randomIndex = urand(0, sizeof(slowFallMessages) / sizeof(char*) - 1);
+                        const char* selectedMessage = slowFallMessages[randomIndex];
+
+                        char messageBuffer[256];
+                        snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, fPlayer->GetName().c_str());
+
+                        me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                    }
                     return;
+                }
             }
 
             //ARMOR
@@ -473,6 +589,25 @@ public:
             CheckUsableItems(diff);
 
             DoNormalAttack(diff);
+
+            if (IsSpellReady(THORIUM_GRENADE_SPELL_ID, diff))
+            {
+                std::list<Creature*> targets;
+                me->GetCreaturesWithEntryInRange(targets, 35.0f, 15555);
+
+                for (Creature* target : targets)
+                {
+                    if (!target->IsAlive() || me->IsFriendlyTo(target))
+                        continue;
+
+                    if (me->IsWithinDistInMap(target, 35.0f)) 
+                    {
+                        me->CastSpell(target, THORIUM_GRENADE_SPELL_ID, true);
+                        SetSpellCooldown(THORIUM_GRENADE_SPELL_ID, 3000);
+                        break; 
+                    }
+                }
+            }
         }
 
         void DoNormalAttack(uint32 diff)
@@ -730,7 +865,7 @@ public:
                 polyCheckTimer = 2000;
             }
         }
-
+        
         void CheckPolymorph(uint32 diff)
         {
             if (poly == false && IsSpellReady(POLYMORPH_1, diff) && !IsCasting())
@@ -738,7 +873,27 @@ public:
                 if (Unit* target = FindPolyTarget(CalcSpellMaxRange(POLYMORPH_1)))
                 {
                     if (doCast(target, GetSpell(POLYMORPH_1)))
+                    {
+                        if (!IsWanderer()) // Check if not a wanderer before speaking
+                        {
+                            const char* polymorphMessages[] = {
+                                "|cFFFFFFFF%s is now a fluffy sheep, let's not wake them up.|r",
+                                "|cFFFFFFFFTurned %s into something less threatening. Polymorph for the win!|r",
+                                "|cFFFFFFFF%s just got a woolly makeover! Keep them sheepish.|r",
+                                "|cFFFFFFFFEveryone, meet the newest sheep in town, %s!|r",
+                                "|cFFFFFFFFBaa, baa, %s! Enjoy being a sheep.|r",
+                            };
+
+                            int randomIndex = urand(0, sizeof(polymorphMessages) / sizeof(char*) - 1);
+                            const char* selectedMessage = polymorphMessages[randomIndex];
+
+                            char messageBuffer[256];
+                            snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                            me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                        }
                         return;
+                    }
                 }
             }
         }
@@ -915,7 +1070,27 @@ public:
                 (CCed(me, true) || me->getAttackers().size() > 2 || GetHealthPCT(me) < 40))
             {
                 if (doCast(me, GetSpell(ICE_BLOCK_1)))
+                {
+                    if (!IsWanderer()) 
+                    {
+                        const char* iceBlockMessages[] = {
+                            "|cFFFFFFFFTime for a little chill out in my Ice Block!|r",
+                            "|cFFFFFFFFPhew! Ice Block just in time! Keep the fight going, team!|r",
+                            "|cFFFFFFFFA frosty retreat in my Ice Block. Cover me!|r",
+                            "|cFFFFFFFFCooling off in my Ice Block. I'll be back in the fray soon!|r",
+                            "|cFFFFFFFFBrb, encased in ice. Keep them off me!|r",
+                        };
+
+                        int randomIndex = urand(0, sizeof(iceBlockMessages) / sizeof(char*) - 1);
+                        const char* selectedMessage = iceBlockMessages[randomIndex];
+
+                        char messageBuffer[256];
+                        snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, me->GetName().c_str());
+
+                        me->Say(messageBuffer, LANG_UNIVERSAL);
+                    }
                     return;
+                }
             }
         }
 
@@ -1839,7 +2014,7 @@ public:
             RefreshAura(GLYPG_REMOVE_CURSE, level >= 18 ? 1 : 0);
             RefreshAura(GLYPH_ICY_VEINS, level >= 20 ? 1 : 0);
             RefreshAura(GLYPH_LIVING_BOMB, level >= 60 ? 1 : 0);
-            RefreshAura(GLYPH_ICE_LANCE, level >= 66 ? 1 : 0);
+            RefreshAura(GLYPH_ICE_LANCE, level >= 60 ? 1 : 0);
             RefreshAura(ARCANE_FOCUS);
 
         }

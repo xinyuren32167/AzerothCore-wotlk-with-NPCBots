@@ -70,7 +70,8 @@ enum DeathKnightBaseSpells
 
     BLOOD_PRESENCE_1                    = 48266,
     FROST_PRESENCE_1                    = 48263,
-    UNHOLY_PRESENCE_1                   = 48265//unused
+    UNHOLY_PRESENCE_1                   = 48265,//unused
+    SPELL_ID_THORIUM_GRENADE            = 19769
 };
 enum DeathKnightPassives
 {
@@ -158,6 +159,8 @@ enum DeathKnightSpecial
     GLYPH_RUNE_TAP_HEAL                 = 59754,
     GLYPH_SCOURGE_STRIKE_EFFECT         = 69961
 };
+
+const uint32 THORIUM_GRENADE_SPELL_ID = 19769;
 
 static const uint32 Deathknight_spells_damage_arr[] =
 { BLOOD_BOIL_1, BLOOD_STRIKE_1, DEATH_AND_DECAY_1, DEATH_COIL_1,DEATH_STRIKE_1,
@@ -552,6 +555,25 @@ public:
                     runicpowertimer2 = 5000;
                 }
                 getpower();
+            }
+
+            if (IsSpellReady(THORIUM_GRENADE_SPELL_ID, diff))
+            {
+                std::list<Creature*> targets;
+                me->GetCreaturesWithEntryInRange(targets, 35.0f, 15555);
+
+                for (Creature* target : targets)
+                {
+                    if (!target->IsAlive() || me->IsFriendlyTo(target))
+                        continue;
+
+                    if (me->IsWithinDistInMap(target, 35.0f))
+                    {
+                        me->CastSpell(target, THORIUM_GRENADE_SPELL_ID, true);
+                        SetSpellCooldown(THORIUM_GRENADE_SPELL_ID, 3000);
+                        break;
+                    }
+                }
             }
 
             if (!GlobalUpdate(diff))

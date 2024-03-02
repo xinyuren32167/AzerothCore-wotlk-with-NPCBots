@@ -42,6 +42,10 @@ EndContentData */
 
 #include "GridNotifiersImpl.h"
 
+// Dinkle
+#include "../../Custom/Timewalking/10Man.h"
+// end Dinkle
+
 /*######
 ## npc_sergeant_bly
 ######*/
@@ -710,6 +714,24 @@ public:
                 _shadowBoltTimer -= diff;
             }
         }
+
+        // Dinkle
+        void JustDied(Unit* /*killer*/) override
+        {
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            if (players.begin() != players.end())
+            {
+                uint32 baseRewardLevel = 1;
+                bool isDungeon = me->GetMap()->IsDungeon();
+
+                Player* player = players.begin()->GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
+                }
+            }
+        }
+        // end Dinkle
 
     private:
         uint32 _shadowBoltTimer;

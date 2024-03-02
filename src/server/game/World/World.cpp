@@ -589,6 +589,9 @@ void World::LoadConfigSettings(bool reload)
         LOG_ERROR("server.loading", "Rate.Talent.Pet ({}) must be > 0. Using 1 instead.", _rate_values[RATE_TALENT_PET]);
         _rate_values[RATE_TALENT_PET] = 1.0f;
     }
+    // Dinkle
+    _bonusPetTalentPoints = sConfigMgr->GetOption<uint32>("Bonus.Pet.TalentPoints", 0); 
+    // end Dinkle
     _rate_values[RATE_MOVESPEED] = sConfigMgr->GetOption<float>("Rate.MoveSpeed", 1.0f);
     if (_rate_values[RATE_MOVESPEED] < 0)
     {
@@ -3286,6 +3289,12 @@ void World::DoForAllOnlinePlayers(std::function<void(Player*)> exec)
             exec(player);
         }
     }
+}
+
+//Dinkle
+uint32 World::GetBonusPetTalentPoints() const
+{
+    return _bonusPetTalentPoints; 
 }
 
 bool World::IsPvPRealm() const

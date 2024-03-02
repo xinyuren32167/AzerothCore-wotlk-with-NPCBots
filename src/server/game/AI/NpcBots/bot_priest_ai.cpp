@@ -66,7 +66,8 @@ enum PriestBaseSpells
     POWER_INFUSION_1                    = 10060,
     HYMN_OF_HOPE_1                      = 64901,
 
-    LEVITATE_1                          = 1706
+    LEVITATE_1                          = 1706,
+    SPELL_ID_THORIUM_GRENADE            = 19769
 };
 enum PriestPassives
 {
@@ -126,6 +127,8 @@ enum PriestSpecial
     SHADOWFIEND_1                   = 34433
 };
 
+const uint32 THORIUM_GRENADE_SPELL_ID = 19769;
+
 static const uint32 Priest_spells_damage_arr[] =
 { DEVOURING_PLAGUE_1, HOLY_FIRE_1, MIND_BLAST_1, MIND_FLAY_1, MIND_SEAR_1, PENANCE_1, SMITE_1, SW_PAIN_1, SW_DEATH_1,
 VAMPIRIC_TOUCH_1 };
@@ -148,10 +151,7 @@ static const std::vector<uint32> Priest_spells_heal(FROM_ARRAY(Priest_spells_hea
 static const std::vector<uint32> Priest_spells_support(FROM_ARRAY(Priest_spells_support_arr));
 
 //Dinkle
-bool needHealingFlag = false;
-bool needManaFlag = false;
-
-const char* healingMessages[] = {
+const char* priesthealingMessages[] = {
 "|cFFFFFFFFHelp! I've fallen and I can't get up... oh, wait, I'm up! But I still need healing!|r",
 "|cFFFFFFFFI'm not a potato, but my health is mashed! Heal me, please!|r",
 "|cFFFFFFFFIf I had a gold coin for every hit point I'm missing, I could buy a mount!|r",
@@ -164,12 +164,11 @@ const char* healingMessages[] = {
 "|cFFFFFFFFMy spirit is willing, but the flesh is weak and wounded!|r",
 };
 
-const char* manaMessages[] = {
+const char* priestmanaMessages[] = {
     "|cFFFFFFFFI'm not just thirsty, I'm mana-starved! Please, a sip of mana would be great!|r",
     "|cFFFFFFFFMy mana is running on empty! Time to refuel the arcane tank!|r",
     "|cFFFFFFFFI need to stop and drink after this!|r",
     "|cFFFFFFFFI need an innervate please!|r",
-    "|cFFFFFFFFI tried to cast a spell, but my mana said 'Nope!'|r",
     "|cFFFFFFFFMy mana bar looks like a flat tire - definitely needs pumping!|r",
     "|cFFFFFFFFCan someone lend me some mana? I promise I'll give it back... maybe!|r",
     "|cFFFFFFFFLow on mana - mana break please!|r",
@@ -183,6 +182,7 @@ const char* psychicScreamMessages[] = {
     "|cFFFFFFFFGet ready to scream in terror!|r",
     "|cFFFFFFFFLEEEEEEEEEEEEROOOOOOOOOOY!!!|r"
 };
+//end Dinkle
 
 class priest_bot : public CreatureScript
 {
@@ -486,8 +486,55 @@ public:
 
         void UpdateAI(uint32 diff) override
         {
+            // Dinkle
+        if (!IsWanderer())
+            {
+            if (me->IsInCombat()) {
+                // Health check
+                float healthPercentage = (float)me->GetHealth() / (float)me->GetMaxHealth();
+                if (healthPercentage <= 0.30f && !needHealingFlag) {
+                    int randomIndex = urand(0, sizeof(priesthealingMessages) / sizeof(priesthealingMessages[0]) - 1);
+                    me->Say(priesthealingMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
+                    needHealingFlag = true;
+                }
+                else if (healthPercentage >= 0.50f && needHealingFlag) {
+                    needHealingFlag = false;
+                }
+
+                // Mana check
+                float manaPercentage = (float)me->GetPower(POWER_MANA) / (float)me->GetMaxPower(POWER_MANA);
+                if (manaPercentage <= 0.25f && !needManaFlag) {
+                    int randomIndex = urand(0, sizeof(priestmanaMessages) / sizeof(priestmanaMessages[0]) - 1);
+                    me->Say(priestmanaMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
+                    needManaFlag = true;
+                }
+                else if (manaPercentage >= 0.50f && needManaFlag) {
+                    needManaFlag = false;
+                }
+            }
+        }
+            //end Dinkle
             if (!GlobalUpdate(diff))
                 return;
+
+            if (IsSpellReady(THORIUM_GRENADE_SPELL_ID, diff))
+            {
+                std::list<Creature*> targets;
+                me->GetCreaturesWithEntryInRange(targets, 35.0f, 15555);
+
+                for (Creature* target : targets)
+                {
+                    if (!target->IsAlive() || me->IsFriendlyTo(target))
+                        continue;
+
+                    if (me->IsWithinDistInMap(target, 35.0f))
+                    {
+                        me->CastSpell(target, THORIUM_GRENADE_SPELL_ID, true);
+                        SetSpellCooldown(THORIUM_GRENADE_SPELL_ID, 3000);
+                        break;
+                    }
+                }
+            }
 
             DoVehicleActions(diff);
             if (!CanBotAttackOnVehicle())
@@ -582,33 +629,6 @@ public:
 
             if (GC_Timer > diff)
                 return;
-
-            // Dinkle: Chat Message
-            float healthPercentage = (float)me->GetHealth() / (float)me->GetMaxHealth();
-            if (healthPercentage <= 0.30f && !needHealingFlag)
-            {
-                int randomIndex = urand(0, sizeof(healingMessages) / sizeof(healingMessages[0]) - 1);
-                me->Say(manaMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
-                needHealingFlag = true; 
-            }
-
-            if (healthPercentage > 0.35f)
-            {
-                needHealingFlag = false;
-            }
-
-            float manaPercentage = (float)me->GetPower(POWER_MANA) / (float)me->GetMaxPower(POWER_MANA);
-            if (manaPercentage <= 0.25f && !needManaFlag)
-            {
-                int randomIndex = urand(0, sizeof(manaMessages) / sizeof(manaMessages[0]) - 1);
-                me->Say(manaMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
-                needManaFlag = true; 
-            }
-
-            if (manaPercentage > 0.35f)
-            {
-                needManaFlag = false;
-            }
             
             //shadow skills range
             if (me->GetDistance(mytar) > CalcSpellMaxRange(MIND_FLAY_1))
@@ -828,6 +848,8 @@ public:
         bool BuffTarget(Unit* target, uint32 diff) override
         {
             // Dinkle: Periodic thoughtful dialogue
+            if (!IsWanderer())
+            {
             if (urand(0, 999) < 1)
             {
                 if (!me->IsInCombat())
@@ -863,7 +885,8 @@ public:
                 int randomIndex = urand(0, sizeof(thoughtfulMessages) / sizeof(thoughtfulMessages[0]) - 1);
                 me->Say(thoughtfulMessages[randomIndex], LANG_UNIVERSAL, target->ToUnit());
                 }
-            }    
+            }
+            }
             
             if (IsSpellReady(FEAR_WARD_1, diff) && (!IAmFree() || target == me) &&
                 !target->HasAuraTypeWithMiscvalue(SPELL_AURA_MECHANIC_IMMUNITY, MECHANIC_FEAR) &&
@@ -905,7 +928,7 @@ public:
                 if (!target->HasAuraTypeWithFamilyFlags(SPELL_AURA_MOD_STAT, SPELLFAMILY_PRIEST, 0x8) &&
                     doCast(target, PW_FORTITUDE))
                 {
-                    if (urand(0, 100) < 15) // 15% chance
+                    if (!IsWanderer() && urand(0, 100) < 15)
                     {
                         const char* fortitudeMessages[] = {
                             "|cFFFFFFFFFortitude isn't just a buff, it's a state of mind.|r",
@@ -925,7 +948,7 @@ public:
                 if (!target->HasAuraTypeWithFamilyFlags(SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE, SPELLFAMILY_PRIEST, 0x100) &&
                     doCast(target, SHADOW_PROTECTION))
                 {
-                    if (urand(0, 100) < 15) // 15% chance
+                    if (!IsWanderer() && urand(0, 100) < 15)
                     {
                         const char* shadowProtectionMessages[] = {
                              "|cFFFFFFFFShadows offer not just concealment, but protection.|r",
@@ -945,7 +968,7 @@ public:
                     !target->HasAuraTypeWithFamilyFlags(SPELL_AURA_MOD_STAT, SPELLFAMILY_PRIEST, 0x20) &&
                     doCast(target, DIVINE_SPIRIT))
                 {
-                    if (urand(0, 100) < 15) // 15% chance
+                    if (!IsWanderer() && urand(0, 100) < 15)
                     {
                         const char* divineSpiritMessages[] = {
                             "|cFFFFFFFFSpirit uplifted, ready to face the world.|r",
@@ -1095,7 +1118,7 @@ public:
                 }
             }
         }
-
+        //Dinkle
         void CheckShackles(uint32 diff)
         {
             if (Shackle_Timer > diff || !IsSpellReady(SHACKLE_UNDEAD_1, diff) || IsCasting() || Rand() > 50)
@@ -1107,9 +1130,28 @@ public:
                 return;
             Unit* target = FindUndeadCCTarget(CalcSpellMaxRange(SHACKLE_UNDEAD_1), SHACKLE_UNDEAD_1);
             if (target && doCast(target, GetSpell(SHACKLE_UNDEAD_1)))
-            {}
-        }
+            {
+                if (!IsWanderer()) // Check if not a wanderer before speaking
+                {
+                    const char* shackleMessages[] = {
+                        "|cFFFFFFFFHolding %s in place. Let's focus on the others!|r",
+                        "|cFFFFFFFFGot %s shacked up! Let's keep the pressure on the rest.|r",
+                        "|cFFFFFFFF%s won't bother us for a while. Shackled!|r",
+                        "|cFFFFFFFFOne less to worry about, I've got %s shackled.|r",
+                        "|cFFFFFFFFEnforced a time-out on %s. It's shackled!|r",
+                    };
 
+                    int randomIndex = urand(0, sizeof(shackleMessages) / sizeof(char*) - 1);
+                    const char* selectedMessage = shackleMessages[randomIndex];
+
+                    char messageBuffer[256];
+                    snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                    me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                }
+            }
+        }
+        //Dinkle
         void CheckSilence(uint32 diff)
         {
             if (IsCasting() || Rand() > 40)
@@ -1118,17 +1160,61 @@ public:
             if (IsSpellReady(SILENCE_1, diff, false))
             {
                 if (Unit* target = FindCastingTarget(CalcSpellMaxRange(SILENCE_1), 0, SILENCE_1))
+                {
                     if (doCast(target, GetSpell(SILENCE_1)))
+                    {
+                        if (!IsWanderer()) 
+                        {
+                            const char* silenceMessages[] = {
+                                "|cFFFFFFFF%s has been silenced! No spells for a bit.|r",
+                                "|cFFFFFFFFCutting %s's casting short with a swift Silence!|r",
+                                "|cFFFFFFFF%s, you shall not cast!|r",
+                                "|cFFFFFFFFSilenced %s! Perfect timing.|r",
+                                "|cFFFFFFFF%s's spellcasting is temporarily on hold.|r",
+                            };
+
+                            int randomIndex = urand(0, sizeof(silenceMessages) / sizeof(char*) - 1);
+                            const char* selectedMessage = silenceMessages[randomIndex];
+
+                            char messageBuffer[256];
+                            snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                            me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                        }
                         return;
+                    }
+                }
             }
+
             if (IsSpellReady(PSYCHIC_HORROR_1, diff))
             {
                 if (Unit* target = FindCastingTarget(CalcSpellMaxRange(PSYCHIC_HORROR_1), 0, PSYCHIC_HORROR_1))
+                {
                     if (doCast(target, GetSpell(PSYCHIC_HORROR_1)))
+                    {
+                        if (!IsWanderer()) 
+                        {
+                            const char* horrorMessages[] = {
+                                "|cFFFFFFFF%s is gripped by Psychic Horror! No casting for them.|r",
+                                "|cFFFFFFFF%s's mind is terrorized, halting their spells!|r",
+                                "|cFFFFFFFFInstilling a Psychic Horror in %s, they're locked down!|r",
+                                "|cFFFFFFFF%s is stunned with fear, spells interrupted!|r",
+                                "|cFFFFFFFFPsychic Horror paralyzes %s, stopping their cast.|r",
+                            };
+
+                            int randomIndex = urand(0, sizeof(horrorMessages) / sizeof(char*) - 1);
+                            const char* selectedMessage = horrorMessages[randomIndex];
+
+                            char messageBuffer[256];
+                            snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                            me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                        }
                         return;
+                    }
+                }
             }
         }
-
         void CheckPowerInfusion(uint32 diff)
         {
             if (!IsSpellReady(POWER_INFUSION_1, diff, false) || IsCasting() || Rand() > 25)
@@ -1152,8 +1238,11 @@ public:
             {
                 if (me->GetVictim() && GetManaPCT(me) < 95)
                 {
-                    int randomIndex = urand(0, sizeof(powerInfusionSelfMessages) / sizeof(powerInfusionSelfMessages[0]) - 1);
-                    me->Say(powerInfusionSelfMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
+                    if (!IsWanderer()) 
+                    {
+                        int randomIndex = urand(0, sizeof(powerInfusionSelfMessages) / sizeof(powerInfusionSelfMessages[0]) - 1);
+                        me->Say(powerInfusionSelfMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
+                    }
                     doCast(me, GetSpell(POWER_INFUSION_1));
                     return;
                 }
@@ -1205,8 +1294,11 @@ public:
                     GetManaPCT(u) < 70 && me->IsWithinDistInMap(u, 30) &&
                     !u->HasAuraTypeWithFamilyFlags(SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK, SPELLFAMILY_PRIEST, 0x80000000))
                 {
-                    int randomIndex = urand(0, sizeof(powerInfusionOtherMessages) / sizeof(powerInfusionOtherMessages[0]) - 1);
-                    me->Say(powerInfusionOtherMessages[randomIndex], LANG_UNIVERSAL, u->ToUnit());
+                    if (!IsWanderer()) 
+                    {
+                        int randomIndex = urand(0, sizeof(powerInfusionOtherMessages) / sizeof(powerInfusionOtherMessages[0]) - 1);
+                        me->Say(powerInfusionOtherMessages[randomIndex], LANG_UNIVERSAL, u->ToUnit());
+                    }
                     doCast(u, GetSpell(POWER_INFUSION_1));
                     return;
                 }
@@ -1273,13 +1365,14 @@ public:
                     }
                     if (tCount > 1 && doCast(me, GetSpell(PSYCHIC_SCREAM_1)))
                     {
-                        //Dinkle
-                        int randomIndex = urand(0, sizeof(psychicScreamMessages) / sizeof(psychicScreamMessages[0]) - 1);
-                        me->Say(psychicScreamMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
+                        if (!IsWanderer()) 
+                        {
+                            int randomIndex = urand(0, sizeof(psychicScreamMessages) / sizeof(psychicScreamMessages[0]) - 1);
+                            me->Say(psychicScreamMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
+                        }
                         return;
                     }
                 }
-            
 
                 // Defend myself (psychic horror)
                 if (!b_attackers.empty())
@@ -2277,6 +2370,10 @@ public:
         }
 
     private:
+        //Dinkle
+        bool needHealingFlag;
+        bool needManaFlag;
+        //end Dinkle
         uint32 HEAL;
         uint32 Shackle_Timer, Mend_Timer, DispelcheckTimer, DevcheckTimer, ShackcheckTimer;
 /*Misc*/bool Devcheck, Shackcheck;

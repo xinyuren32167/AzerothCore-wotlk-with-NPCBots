@@ -61,7 +61,7 @@ struct boss_kurinnaxx : public BossAI
                     {
                         target->CastSpell(target, SPELL_SAND_TRAP, true, nullptr, nullptr, me->GetGUID());
                     }
-                    context.Repeat(5s, 15s);
+                    context.Repeat(10s, 21s);
                 }).Schedule(10s, 15s, [this](TaskContext context)
                     {
                         DoCastSelf(SPELL_WIDE_SLASH);

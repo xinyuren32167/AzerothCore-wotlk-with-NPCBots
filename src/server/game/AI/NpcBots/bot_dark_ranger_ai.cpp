@@ -31,7 +31,8 @@ enum DarkRangerBaseSpells
     AUTO_SHOT_1                         = 75,
     BLACK_ARROW_1                       = SPELL_BLACK_ARROW,
     DRAIN_LIFE_1                        = SPELL_DRAIN_LIFE,
-    SILENCE_1                           = SPELL_SILENCE
+    SILENCE_1                           = SPELL_SILENCE,
+    SPELL_ID_THORIUM_GRENADE            = 19769
 };
 enum DarkRangerPassives
 {
@@ -47,6 +48,8 @@ enum DarkRangerSpecial
 
     MODEL_BLOODY_BONES                  = 25538
 };
+
+const uint32 THORIUM_GRENADE_SPELL_ID = 19769;
 
 static const uint32 Darkranger_spells_damage_arr[] =
 { BLACK_ARROW_1, DRAIN_LIFE_1 };
@@ -160,6 +163,24 @@ public:
         {
             if (!GlobalUpdate(diff))
                 return;
+            if (IsSpellReady(THORIUM_GRENADE_SPELL_ID, diff))
+            {
+                std::list<Creature*> targets;
+                me->GetCreaturesWithEntryInRange(targets, 35.0f, 15555);
+
+                for (Creature* target : targets)
+                {
+                    if (!target->IsAlive() || me->IsFriendlyTo(target))
+                        continue;
+
+                    if (me->IsWithinDistInMap(target, 35.0f))
+                    {
+                        me->CastSpell(target, THORIUM_GRENADE_SPELL_ID, true);
+                        SetSpellCooldown(THORIUM_GRENADE_SPELL_ID, 3000);
+                        break;
+                    }
+                }
+            }
 
             DoVehicleActions(diff);
             if (!CanBotAttackOnVehicle())

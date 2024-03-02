@@ -149,10 +149,39 @@ public:
     {
         PrepareSpellScript(spell_uldaman_sub_boss_agro_keepers_SpellScript);
 
-        void HandleSendEvent(SpellEffIndex  /*effIndex*/)
+        void HandleSendEvent(SpellEffIndex /*effIndex*/)
         {
             if (Creature* keeper = GetCaster()->FindNearestCreature(NPC_STONE_KEEPER, 100.0f, true))
+            {
                 keeper->AI()->SetData(1, 1);
+
+                // Find nearest player or NPC bot
+                std::list<Unit*> targets;
+                Acore::AnyUnitInObjectRangeCheck checker(keeper, 100.0f);
+                Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(keeper, targets, checker);
+                Cell::VisitAllObjects(keeper, searcher, 100.0f); 
+
+                Unit* nearestTarget = nullptr;
+                float nearestDist = std::numeric_limits<float>::max();
+
+                for (Unit* target : targets)
+                {
+                    if (target->GetTypeId() == TYPEID_PLAYER || (target->GetTypeId() == TYPEID_UNIT && target->ToCreature()->IsNPCBot())) 
+                    {
+                        float dist = keeper->GetDistance(target);
+                        if (dist < nearestDist)
+                        {
+                            nearestTarget = target;
+                            nearestDist = dist;
+                        }
+                    }
+                }
+
+                if (nearestTarget)
+                {
+                    keeper->AI()->AttackStart(nearestTarget);
+                }
+            }
         }
 
         void Register() override
@@ -222,7 +251,7 @@ public:
     {
         PrepareSpellScript(spell_uldaman_boss_agro_archaedas_SpellScript);
 
-        void HandleSendEvent(SpellEffIndex  /*effIndex*/)
+        void HandleSendEvent(SpellEffIndex /*effIndex*/)
         {
             InstanceScript* instance = GetCaster()->GetInstanceScript();
 
@@ -231,7 +260,41 @@ public:
 
             instance->SetData(DATA_ARCHAEDAS, IN_PROGRESS);
             if (Creature* archaedas = GetCaster()->FindNearestCreature(NPC_ARCHAEDAS, 100.0f, true))
+            {
                 archaedas->AI()->SetData(1, 1);
+                archaedas->SetFaction(415);
+
+                if (Creature* npc = GetCaster()->FindNearestCreature(2748, 100.0f, true))
+                {
+                    npc->RemoveAurasDueToSpell(10255);
+                }
+
+                std::list<Unit*> targets;
+                Acore::AnyUnitInObjectRangeCheck checker(archaedas, 100.0f);
+                Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(archaedas, targets, checker);
+                Cell::VisitAllObjects(archaedas, searcher, 100.0f); 
+
+                Unit* nearestTarget = nullptr;
+                float nearestDist = std::numeric_limits<float>::max();
+
+                for (Unit* target : targets)
+                {
+                    if (target->GetTypeId() == TYPEID_PLAYER || (target->GetTypeId() == TYPEID_UNIT && target->ToCreature()->IsNPCBot())) 
+                    {
+                        float dist = archaedas->GetDistance(target);
+                        if (dist < nearestDist)
+                        {
+                            nearestTarget = target;
+                            nearestDist = dist;
+                        }
+                    }
+                }
+
+                if (nearestTarget)
+                {
+                    archaedas->AI()->AttackStart(nearestTarget);
+                }
+            }
         }
 
         void Register() override

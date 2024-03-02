@@ -65,6 +65,9 @@ void AddSC_spell_arcane_surge();
 void AddSC_encroaching_enfeeblement();
 void AddSC_spell_void_torrent_damage();
 void AddSC_spell_sha_elemental_mastery();
+void AddSC_npc_murky();
+void AddSC_gobject_corn_kennels();
+void AddSC_custom_player_murky_scripts();
 
 //void AddSC_PlayerTeleportRevive();
 //void AddSC_transform_race_command();
@@ -123,6 +126,9 @@ void AddCustomScripts()
     AddSC_encroaching_enfeeblement();
     AddSC_spell_void_torrent_damage();
     AddSC_spell_sha_elemental_mastery();
+    AddSC_npc_murky();
+    AddSC_gobject_corn_kennels();
+    AddSC_custom_player_murky_scripts();
 
     //AddSC_PlayerTeleportRevive();
     //AddSC_transform_race_command();

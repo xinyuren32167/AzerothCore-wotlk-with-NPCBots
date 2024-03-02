@@ -2246,7 +2246,9 @@ uint8 Pet::GetMaxTalentPointsForLevel(uint8 level)
     // Mod points from owner SPELL_AURA_MOD_PET_TALENT_POINTS
     if (Unit* owner = GetOwner())
         points += owner->GetTotalAuraModifier(SPELL_AURA_MOD_PET_TALENT_POINTS);
-
+    //Dinkle
+    points += sWorld->GetBonusPetTalentPoints(); 
+    //end Dinkle
     sScriptMgr->OnCalculateMaxTalentPointsForLevel(this, level, points);
 
     return uint8(points * sWorld->getRate(RATE_TALENT_PET));

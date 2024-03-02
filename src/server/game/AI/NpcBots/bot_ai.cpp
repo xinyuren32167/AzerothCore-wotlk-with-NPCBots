@@ -6454,6 +6454,50 @@ Unit* bot_ai::FindAOETarget(float dist, WorldObject const* src) const
         }
     }
 
+    if (unitList.size() >= 8 && urand(0, 100) < 50)  // 50% chance to vocalize a big group dialogue
+    {
+        const char* bigGroupMessages[] = {
+         "|cFFFFFFFFLooks like we've got company, a whole lot of it! Time to roll out the welcome wagon... of pain.|r",
+         "|cFFFFFFFFParty's getting big, let's not disappoint our guests! Drinks on them, right?|r",
+         "|cFFFFFFFFWhoa, look at that crowd! If this were a concert, we'd be headliners for sure.|r",
+         "|cFFFFFFFFThis many? Guess it's time to show off our group handling skills! And by 'handling,' I mean wildly flailing.|r",
+         "|cFFFFFFFFNow THAT is a big boi pull. Did someone mistake the 'pull' button for the 'panic' button?|r",
+         "|cFFFFFFFFAlright, that's a lot of faces. Everyone, on your toes! And maybe on your heels, just to be safe.|r",
+         "|cFFFFFFFFNow that's what I call a gathering! Perfect time for my 'disappearing' act, right? No? Fine...|r",
+         "|cFFFFFFFFHeads up, we're about to be the life of the party! And by 'life,' I mean the ones running for our lives.|r",
+         "|cFFFFFFFFI've seen parties smaller than this crowd! Brace yourselves, and remember: dance like nobody's swinging.|r",
+         "|cFFFFFFFFGather 'round, everyone! Looks like we're the main attraction. Time to autograph... with swords.|r",
+         "|cFFFFFFFFDo we get group rates for this many opponents? Asking for a friend.|r",
+         "|cFFFFFFFFWow, that's a crowd! Hope they don't mind a bit of AOE-ing to spice up the party.|r",
+         "|cFFFFFFFFBig pull, folks! Remember, it's not about the size of the group but how you use your cooldowns.|r",
+         "|cFFFFFFFFSo many targets, so little time. This is going to be... 'interesting.'|r",
+         "|cFFFFFFFFIs this a fight or a flash mob? Either way, I'm ready to drop the beat... and some enemies.|r",
+         "|cFFFFFFFFA gathering like this? I should've brought my AOE party pants.|r",
+         "|cFFFFFFFFHope you all brought your crowd control A-game. Because I brought snacks! Wait, that's not right...|r",
+         "|cFFFFFFFFLooks like we're outnumbered. But in a cool, dramatic 'final stand' kind of way, right?|r",
+         "|cFFFFFFFFThis is either going to be our finest hour or a spectacular mess. Can't wait to find out which!|r",
+         "|cFFFFFFFFThey say there's strength in numbers. Good thing we have quality... and a slight penchant for chaos.|r",
+         "|cFFFFFFFFI hope you guys brought your brown pants...|r",
+         "|cFFFFFFFFOh look, a conga line of cannon fodder! My favorite!|r",
+         "|cFFFFFFFFJust when I thought I'd have a boring day, you all showed up. How thoughtful!|r",
+         "|cFFFFFFFFBigger crowd means more fun. It's like a buffet, but I'm the only one eating!|r",
+         "|cFFFFFFFFSo many enemies, so few witty comebacks. Nah, who am I kidding? I've got plenty!|r",
+         "|cFFFFFFFFOh, great, a party! And here I forgot to bring my 'excited to see you' face.|r",
+         "|cFFFFFFFFWow, look at all these volunteers for my target practice! How generous.|r",
+         "|cFFFFFFFFThis many? Hope they like group discounts on beatdowns.|r",
+         "|cFFFFFFFFSo we're doing the 'everyone attack at once' cliché? Original.|r",
+         "|cFFFFFFFFJust when I thought I'd get a quiet day, the fan club shows up en masse.|r",
+         "|cFFFFFFFFLet me guess, group discount on resurrection services today?|r",
+         "|cFFFFFFFFI hope you've all made peace with your respawn point.|r",
+         "|cFFFFFFFFThis looks like a 'the more, the messier' kind of situation.|r",
+        };
+
+        int randomIndex = urand(0, sizeof(bigGroupMessages) / sizeof(char*) - 1);
+        const char* selectedMessage = bigGroupMessages[randomIndex];
+
+        me->Say(selectedMessage, LANG_UNIVERSAL);  // Assuming 'me' refers to the bot character
+    }
+
     return unit;
 }
 // Finds secondary target for spells like Cleave, Swipe, etc.
@@ -11510,6 +11554,31 @@ void bot_ai::_autoLootCreatureGold(Creature* creature) const
         data << uint32(loot->gold);
         data << uint8(1);   // "You loot..."
         master->GetSession()->SendPacket(&data);
+
+        if (urand(0, 100) < 7)
+        {
+            const char* lootMessages[] = {
+                "Sweet, jackpot!",
+                "Nice, this will come in handy.",
+                "Ka-ching! That's what I'm talking about.",
+                "Looted some gold. Today's my lucky day!",
+                "Every coin counts, right?",
+                "Whoa, did someone just drop their entire piggy bank here?",
+                "Gold! Now I can finally buy that fancy hat I've been eyeing.",
+                "Cha-ching! That's the sweet sound of payday, baby!",
+                "This much gold? Must be my birthday... or is it Christmas already?",
+                "Looks like my luck's finally turning around! Or maybe it's just beginner's luck... again.",
+                "Aha! This will pay for at least three of my repair bills.",
+                "All this shiny gold and no pockets... figures.",
+                "Now, where's that vendor that sells the luxury yachts?",
+                "If I had a copper for every time I looted gold... Oh wait, I do!",
+                "Gold rush! Too bad it's not enough to retire on.",
+                "This could be the start of a beautiful hoard.",
+                "In the world of loot, I am but a humble collector of mysteries.",
+            };
+            int randomIndex = urand(0, sizeof(lootMessages) / sizeof(char*) - 1);
+            me->Say(lootMessages[randomIndex], LANG_UNIVERSAL);
+        }
     }
     else
     {
@@ -11533,13 +11602,49 @@ void bot_ai::_autoLootCreatureGold(Creature* creature) const
             data << uint8(players.size() <= 1); // Controls the text displayed in chat. 0 is "Your share is..." and 1 is "You loot..."
             (*i)->SendDirectMessage(&data);
         }
+
+        if (urand(0, 100) < 7)
+        {
+            const char* groupLootMessages[] = {
+                "|cFFFFFFFFEveryone gets a piece, nice!|r",
+                "|cFFFFFFFFGood haul, team. Let's keep it up.|r",
+                "|cFFFFFFFFDivide and conquer, even the loot!|r",
+                "|cFFFFFFFFSharing is caring, right? Good job, everyone.|r",
+                "|cFFFFFFFFTeamwork makes the dream work, especially with loot like this.|r",
+                "|cFFFFFFFFLoot for everyone! Don't spend it all in one place... or do, I'm not your mom.|r",
+                "|cFFFFFFFFTeam loot! Remember, sharing is caring, but looting is soothing.|r",
+                "|cFFFFFFFFGold split time! It's like dividing treasure, but without the pirates.|r",
+                "|cFFFFFFFFGood job, team! Drinks are on me... provided you all chip in with the loot we just got.|r",
+                "|cFFFFFFFFThis haul's not too shabby! Now, who's good at math for the split?|r",
+                "|cFFFFFFFFTeamwork makes the dream work, and apparently, it also makes the gold work!|r",
+                "|cFFFFFFFFRiches for all! Just remember who your favorite teammate is when spending it.|r",
+                "|cFFFFFFFFLook at us, being all cooperative! Let's not fight over who gets the shiny bits, okay?|r",
+                "|cFFFFFFFFDividing the loot: because nothing tests friendships like money.|r",
+                "|cFFFFFFFFLooks like we've all earned a share of the... um, spoils? Sure, let's go with that.|r",
+                "|cFFFFFFFFSharing is caring, and today we care about... whatever this stuff is.|r",
+                "|cFFFFFFFFTogether, we've uncovered something! Valuable? Questionable. Memorable? Definitely.|r",
+                "|cFFFFFFFFA job well done! Now, for the grand unveiling of our collective loot. Drumroll, please...|r",
+                "|cFFFFFFFFAs a team, we've looted far and wide. Now, to decipher what we've actually found.|r",
+                "|cFFFFFFFFWhat a haul! Now, how do I subtly convince everyone that I deserve the biggest share?|r",
+                "|cFFFFFFFFGreat job, team! Remember, finders keepers, and I'm pretty sure I saw it first.|r",
+                "|cFFFFFFFFSharing is caring, but let's be honest, I carried us. So, about that extra loot...|r",
+                "|cFFFFFFFFNice teamwork! Now, which of these shiny things looks most 'accidentally' pocketable?|r",
+                "|cFFFFFFFFEveryone gets a piece, but as the unofficial MVP, I propose a slightly larger piece for me.|r",
+                "|cFFFFFFFFDivide and conquer, folks! Just make sure my pile 'accidentally' ends up a bit taller.|r",
+                "|cFFFFFFFFA job well done, team! Now, let's not count too closely when splitting this up, agreed?|r",
+                "|cFFFFFFFFLook at all this loot! I'll help divide it, you know, for efficiency. No need to double-check.|r",
+                "|cFFFFFFFFTeam effort, team reward! But if something were to slip into my pocket, who would notice?|r",
+                "|cFFFFFFFFEverything's better when shared, right? But maybe some can be 'more shared' my way?|r",
+            };
+            int randomIndex = urand(0, sizeof(groupLootMessages) / sizeof(char*) - 1);
+            me->Say(groupLootMessages[randomIndex], LANG_UNIVERSAL);
+        }
     }
 
     loot->gold = 0;
 
     if (loot->isLooted())
     {
-        //TC_LOG_ERROR("scripts", "creature gold is looted, releasing");
         creature->AllLootRemovedFromCorpse();
         creature->RemoveDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
         loot->clear();
@@ -11751,6 +11856,10 @@ bool bot_ai::_canUseRelic() const
 
 bool bot_ai::_canEquip(ItemTemplate const* newProto, uint8 slot, bool ignoreItemLevel, Item const* newItem) const
 {
+    // Dinkle: Prevent equipping Pocket Hand Cannon
+    if (newProto->ItemId == 60131)
+        return false;
+    
     EquipmentInfo const* einfo = BotDataMgr::GetBotEquipmentInfo(me->GetEntry());
 
     if (Item const* oldItem = _equips[slot])
@@ -12549,6 +12658,47 @@ bool bot_ai::_equip(uint8 slot, Item* newItem, ObjectGuid receiver)
     }
 
     _updateEquips(slot, newItem);
+    //Dinkle: Equip dialogue
+    if (urand(0, 100) < 33) 
+    {
+        const char* equipMessages[] = {
+            "|cFFFFFFFFLookin' sharp! This will definitely leave a mark.|r",
+            "|cFFFFFFFFOh, this new piece? Yeah, it's going to make a statement.|r",
+            "|cFFFFFFFFJust when I thought I couldn't get any more dashing.|r",
+            "|cFFFFFFFFThis? Oh, just a little something I picked up on my adventures.|r",
+            "|cFFFFFFFFCan't wait to see this in action. Things are about to get interesting!|r",
+            "|cFFFFFFFFThey say clothes make the bot. Well, behold the new me!|r",
+            "|cFFFFFFFFI feel more powerful already. Or is that just the new item smell?|r",
+            "|cFFFFFFFFThis is going to go great with my 'intimidating hero' look.|r",
+            "|cFFFFFFFFI can already hear the enemies quaking in their boots.|r",
+            "|cFFFFFFFFUpgrade time! Goodbye old gear, hello new possibilities!|r",
+            "|cFFFFFFFFThanks for the upgrade! I'll put this to good use.|r",
+            "|cFFFFFFFFWow, this is great! Thanks for thinking of me.|r",
+            "|cFFFFFFFFYou're the best! This will definitely help on our adventures.|r",
+            "|cFFFFFFFFI'm feeling stronger already! Thanks for the gear.|r",
+            "|cFFFFFFFFThis is exactly what I needed. You have my gratitude.|r",
+            "|cFFFFFFFFCheers for the new equipment! I won't let you down.|r",
+            "|cFFFFFFFFI can't wait to try this out. Thanks for the upgrade!|r",
+            "|cFFFFFFFFYou spoil me! Thanks for this fantastic piece of gear.|r",
+            "|cFFFFFFFFMuch appreciated! This will aid us greatly in battle.|r",
+            "|cFFFFFFFFWith gear like this, we're unstoppable. Thank you!|r",
+            "|cFFFFFFFFLook at me now! I might just start a new fashion trend in dungeons, thanks to you!|r",
+            "|cFFFFFFFFIs this what being spoiled feels like? Keep it coming! I promise to smash more skulls in style.|r",
+            "|cFFFFFFFFI feel so fancy I might just start dodging attacks with a pirouette. Thanks for the gear upgrade!|r",
+            "|cFFFFFFFFThis gear makes me feel invincible! Or at least good-looking enough to distract the enemy. Thanks!|r",
+            "|cFFFFFFFFWow, with this new gear, I might just retire and become a model. Just kidding, let's go loot some more!|r",
+            "|cFFFFFFFFYou've outdone yourself! I'll try not to get any monster goo on it... no promises, though.|r",
+            "|cFFFFFFFFThanks! I was getting tired of patching up the old gear with duct tape and hope.|r",
+            "|cFFFFFFFFI'm not saying this new gear makes me a better fighter, but I'm definitely at least 20% cooler. Thanks!|r",
+            "|cFFFFFFFFGear this nice could make even a murloc look good. Thanks for entrusting it to me!|r",
+            "|cFFFFFFFFWith gear like this, who needs talent? Thanks for the upgrade, let's go show it off!|r",
+        };
+
+        int randomIndex = urand(0, sizeof(equipMessages) / sizeof(char*) - 1);
+        const char* selectedMessage = equipMessages[randomIndex];
+
+        me->Say(selectedMessage, LANG_UNIVERSAL);  // Assuming 'me' refers to the bot character
+    }
 
     //only for non-standard items
     if (slot > BOT_SLOT_RANGED || einfo->ItemEntry[slot] != newItemId)
@@ -17455,20 +17605,26 @@ bool bot_ai::GlobalUpdate(uint32 diff)
                 //TC_LOG_ERROR("spells", "bot_ai:UpdateEx: processing %s", wo->GetName().c_str());
                 if (me->GetDistance(wo) <= INTERACTION_DISTANCE * 0.5f && me->HasInArc(float(M_PI), wo))
                 {
-                    //cosmetic
-                    //CastSpellExtraArgs args(TRIGGERED_FULL_MASK);
-                    //me->CastSpell(wo->GetTypeId() == TYPEID_UNIT ? wo->ToUnit() : me, SPELL_COMBAT_SPECIAL_2H_ATTACK, args);
                     me->CastSpell(wo->GetTypeId() == TYPEID_UNIT ? wo->ToUnit() : me, SPELL_COMBAT_SPECIAL_2H_ATTACK, true);
 
                     if (wo->GetTypeId() == TYPEID_UNIT)
+                    {
+                        std::string creatureName = wo->ToUnit()->GetName();
+                        std::string skinningMessage = "Skinnning " + creatureName + "...";
+
+                        me->Say(skinningMessage, LANG_UNIVERSAL);
+
                         wo->ToUnit()->SetDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
+                    }
 
                     master->SendLoot(wo->GetGUID(), LOOT_SKINNING);
 
                     if (wo->GetTypeId() == TYPEID_UNIT)
+                    {
                         wo->ToUnit()->RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
+                    }
 
-                    _updateTimerEx1 = urand(1500, 2100);
+                    _updateTimerEx1 = urand(1200, 2100);
                 }
                 else
                 {
@@ -17496,7 +17652,7 @@ bool bot_ai::GlobalUpdate(uint32 diff)
                     else
                     {
                         me->SetFacingTo(me->GetAbsoluteAngle(wo));
-                        _updateTimerEx1 = urand(1500, 1800);
+                        _updateTimerEx1 = urand(1200, 2100);
                     }
                 }
             }

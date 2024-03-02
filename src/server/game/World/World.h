@@ -353,7 +353,8 @@ public:
     static float globalRespawnMultiplier;
     static float dungeonRespawnMultiplier;
     static float raidRespawnMultiplier;
-    
+    uint32 GetBonusPetTalentPoints() const override; 
+    // end Dinkle
     void DoForAllOnlinePlayers(std::function<void(Player*)> exec) override;
 
 protected:
@@ -374,6 +375,7 @@ protected:
     void CalendarDeleteOldEvents();
     void ResetGuildCap();
 private:
+    uint32 _bonusPetTalentPoints;
     static std::atomic_long _stopEvent;
     static uint8 _exitCode;
     uint32 _shutdownTimer;

@@ -21,6 +21,11 @@
 #include "ScriptedGossip.h"
 #include "SmartAI.h"
 #include "scarletmonastery.h"
+#include "Player.h"
+
+// Dinkle
+#include "../../Custom/Timewalking/10Man.h"
+// end Dinkle
 
 enum AshbringerEventMisc
 {
@@ -265,7 +270,9 @@ enum WhitemaneEvents
 {
     EVENT_SPELL_HOLY_SMITE          =   1,
     EVENT_SPELL_POWER_WORLD_SHIELD  =   2,
-    EVENT_SPELL_HEAL                =   3
+    EVENT_SPELL_HEAL                =   3,
+    //Dinkle
+    EVENT_SPELL_HOLY_FIRE           =   4,
 };
 
 enum Spells
@@ -283,7 +290,9 @@ enum Spells
     SPELL_DOMINATE_MIND             =   14515,
     SPELL_HOLY_SMITE                =   9481,
     SPELL_HEAL                      =   12039,
-    SPELL_POWER_WORD_SHIELD         =   22187
+    SPELL_POWER_WORD_SHIELD         =   22187,
+    //Dinkle
+    SPELL_HOLY_FIRE                 =   15265
 };
 
 enum Says
@@ -426,7 +435,7 @@ public:
             Talk(SAY_MO_AGGRO);
             me->CastSpell(me, SPELL_RETRIBUTION_AURA, true);
             events.ScheduleEvent(EVENT_PULL_CATHEDRAL, 1s); // Has to be done via event, otherwise mob aggroing Mograine DOES NOT aggro the room
-            events.ScheduleEvent(EVENT_SPELL_CRUSADER_STRIKE, 1s, 5s);
+            events.ScheduleEvent(EVENT_SPELL_CRUSADER_STRIKE, 1s, 4s);
             events.ScheduleEvent(EVENT_SPELL_HAMMER_OF_JUSTICE, 6s, 11s);
         }
 
@@ -584,6 +593,9 @@ public:
             events.ScheduleEvent(EVENT_SPELL_HOLY_SMITE, 1s, 3s);
             events.ScheduleEvent(EVENT_SPELL_POWER_WORLD_SHIELD, 6s);
             events.ScheduleEvent(EVENT_SPELL_HEAL, 9s);
+            // Dinkle
+            events.ScheduleEvent(EVENT_SPELL_HOLY_FIRE, 8s);
+
         }
 
         void DamageTaken(Unit* /*doneBy*/, uint32& damage, DamageEffectType, SpellSchoolMask) override
@@ -596,6 +608,24 @@ public:
         {
             Talk(SAY_WH_KILL);
         }
+        
+        // Dinkle
+        void JustDied(Unit* /*killer*/) override
+        {
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            if (players.begin() != players.end())
+            {
+                uint32 baseRewardLevel = 1; 
+                bool isDungeon = me->GetMap()->IsDungeon();
+
+                Player* player = players.begin()->GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
+                }
+            }
+        }
+        // end Dinkle
 
         void UpdateAI(uint32 diff) override
         {
@@ -668,11 +698,16 @@ public:
                         events.ScheduleEvent(EVENT_SPELL_POWER_WORLD_SHIELD, 15s);
                         break;
                     case EVENT_SPELL_HOLY_SMITE:
-                        me->CastSpell(me->GetVictim(), SPELL_HOLY_SMITE, false);
+                        me->CastSpell(me->GetVictim(), SPELL_HOLY_SMITE, true);
                         events.ScheduleEvent(EVENT_SPELL_HOLY_SMITE, 6s);
                         break;
                     case EVENT_SPELL_HEAL:
                         me->CastSpell(me, SPELL_HEAL, false);
+                        break;
+                    // Dinkle
+                    case EVENT_SPELL_HOLY_FIRE:
+                        me->CastSpell(me->GetVictim(), SPELL_HOLY_FIRE, true);
+                        events.ScheduleEvent(EVENT_SPELL_HOLY_FIRE, 8s);
                         break;
                 }
             }

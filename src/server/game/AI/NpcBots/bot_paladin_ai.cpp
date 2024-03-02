@@ -80,7 +80,8 @@ enum PaladinBaseSpells// all orignals
     DIVINE_PROTECTION_1                 = 498,
     DIVINE_SHIELD_1                     = 642,
 
-    PURIFY_1                            = 1152
+    PURIFY_1                            = 1152,
+    SPELL_ID_THORIUM_GRENADE            = 19769
 };
 enum PaladinPassives
 {
@@ -203,6 +204,8 @@ enum PaladinSpecial
     IMPROVED_DEVOTION_AURA_SPELL        = 63514
 };
 
+const uint32 THORIUM_GRENADE_SPELL_ID = 19769;
+
 static const uint32 Paladin_spells_damage_arr[] =
 { AVENGERS_SHIELD_1, CONSECRATION_1, CRUSADER_STRIKE_1, DIVINE_STORM_1, EXORCISM_1, JUDGEMENT_OF_LIGHT_1,
 JUDGEMENT_OF_WISDOM_1, JUDGEMENT_OF_JUSTICE_1, HAMMER_OF_THE_RIGHTEOUS_1, HAMMER_OF_WRATH_1, HOLY_SHIELD_1,
@@ -227,6 +230,27 @@ static const std::vector<uint32> Paladin_spells_damage(FROM_ARRAY(Paladin_spells
 static const std::vector<uint32> Paladin_spells_cc(FROM_ARRAY(Paladin_spells_cc_arr));
 static const std::vector<uint32> Paladin_spells_heal(FROM_ARRAY(Paladin_spells_heal_arr));
 static const std::vector<uint32> Paladin_spells_support(FROM_ARRAY(Paladin_spells_support_arr));
+
+const char* healingMessages[] = {
+    "Taking hits here! Can someone patch me up before I start seeing ghosts?",
+    "Is it just me or is the world spinning? Oh, it's the blood loss... Heals, anyone?",
+    "I've seen healthier looking ghouls. Mind tossing a heal my way?",
+    "Praying for some heals... and I'm not even that religious!",
+    "Remember me as I was, not this health-bar-challenged version. Heal, please?",
+    "My health bar's playing hide and seek, and it's really good at hiding. Little help?",
+    "Hold up, team! My epic moment's on pause until I get a heal.",
+    "About to take a dirt nap here, folks. How about we skip that part with some heals?",
+};
+
+const char* manaMessages[] = {
+    "Low on mana!",
+    "My mana's so low it's starting to look like my bank account. Refill, maybe?",
+    "Anyone got a mana potion? Because I'm out of juice over here.",
+    "Mana's hitting rock bottom, and I'm not ready for that commitment. Help?",
+    "If mana were food, I'd be starving. Pass the blue stuff, please?",
+    "I could really use a mana miracle right about now. Any volunteers?",
+    "Mana drought 2024, starring me. Accepting donations in the form of blue bars.",
+};
 
 class paladin_bot : public CreatureScript
 {
@@ -319,7 +343,13 @@ public:
                     !master->GetAuraEffect(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, SPELLFAMILY_PALADIN, 3837, EFFECT_0))
                 {
                     if (doCast(me, GetSpell(DIVINE_SACRIFICE_1)))
+                    {
+                        if (!IsWanderer()) // Check if not a wanderer before speaking
+                        {
+                            me->Say("|cFFFFFFFFCasting Divine Sacrifice!|r", LANG_UNIVERSAL, me->ToUnit());
+                        }
                         return;
+                    }
                 }
             }
             else
@@ -337,10 +367,16 @@ public:
                     }
                 }
                 if (attacked > 3 && doCast(me, GetSpell(DIVINE_SACRIFICE_1)))
+                {
+                    if (!IsWanderer()) // Check if not a wanderer before speaking
+                    {
+                        me->Say("|cFFFFFFFFCasting Divine Sacrifice!|r", LANG_UNIVERSAL, me->ToUnit());
+                    }
                     return;
+                }
             }
 
-            SetSpellCooldown(DIVINE_SACRIFICE_1, 1000); //fail
+            SetSpellCooldown(DIVINE_SACRIFICE_1, 1000);
         }
 
         void CheckHandOfSacrifice(uint32 diff)
@@ -357,7 +393,10 @@ public:
                     !master->GetAuraEffect(SPELL_AURA_SPLIT_DAMAGE_PCT, SPELLFAMILY_PALADIN, 0x2000, 0x0, 0x0))
                 {
                     if (doCast(master, GetSpell(HAND_OF_SACRIFICE_1)))
+                    {
+                        me->Say("Casting Hand of Sacrifice on " + std::string(master->GetName()) + "!", LANG_UNIVERSAL, me->ToUnit());
                         return;
+                    }
                 }
             }
             else
@@ -376,10 +415,13 @@ public:
                 }
 
                 if (u && doCast(u, GetSpell(HAND_OF_SACRIFICE_1)))
+                {
+                    me->Say("Casting Hand of Sacrifice on " + std::string(u->GetName()) + "!", LANG_UNIVERSAL, me->ToUnit());
                     return;
+                }
             }
 
-            SetSpellCooldown(HAND_OF_SACRIFICE_1, 2000); //fail
+            SetSpellCooldown(HAND_OF_SACRIFICE_1, 2000); // Set a fail cooldown
         }
 
         void ShieldGroup(uint32 diff)
@@ -627,23 +669,53 @@ public:
                         member->HasAuraTypeWithFamilyFlags(SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE, SPELLFAMILY_PALADIN, 0x100))
                         continue;
                     if (HOSTarget(member))
+                    {
+                        // Notify the group about Hand of Salvation
+                        AnnounceHandOfSalvation(member);
                         return;
+                    }
                 }
             }
         }
 
         bool HOSTarget(Unit* target)
         {
-            for (Unit* attacker : target->getAttackers())
+            // Dinkle: Check if the target is not the Paladin itself
+            if (target != me)
             {
-                if (attacker->CanHaveThreatList() && attacker->getAttackers().size() >= 3 && target->GetDistance(attacker) < 15)
+                for (Unit* attacker : target->getAttackers())
                 {
-                    if (doCast(target, GetSpell(HAND_OF_SALVATION_1)))
-                        return true;
-                    break; //do not try more than once on the same target
+                    if (attacker->CanHaveThreatList() && attacker->getAttackers().size() >= 3 && target->GetDistance(attacker) < 15)
+                    {
+                        if (doCast(target, GetSpell(HAND_OF_SALVATION_1)))
+                            return true;
+                        break; 
+                    }
                 }
             }
             return false;
+        }
+
+        void AnnounceHandOfSalvation(Unit* target)
+        {
+            if (!IsWanderer()) 
+            {
+                const char* hosMessages[] = {
+                    "|cFFFFFFFF%s's threat is being reduced with Hand of Salvation!|r",
+                    "|cFFFFFFFFGranting a breather to %s with Hand of Salvation.|r",
+                    "|cFFFFFFFF%s, you're getting too much attention! Hand of Salvation incoming.|r",
+                    "|cFFFFFFFFEasing the pressure on %s with Hand of Salvation.|r",
+                    "|cFFFFFFFF%s's threat is being dialed down. Hand of Salvation applied!|r",
+                };
+
+                int randomIndex = urand(0, sizeof(hosMessages) / sizeof(char*) - 1);
+                const char* selectedMessage = hosMessages[randomIndex];
+
+                char messageBuffer[256];
+                snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                me->Say(messageBuffer, LANG_UNIVERSAL);
+            }
         }
 
         bool HealTarget(Unit* target, uint32 diff) override
@@ -758,6 +830,59 @@ public:
 
         void UpdateAI(uint32 diff) override
         {
+            if (!IsWanderer())
+            {
+                // Dinkle
+                if (me->IsInCombat())
+                {
+                    // Health check
+                    float healthPercentage = static_cast<float>(me->GetHealth()) / static_cast<float>(me->GetMaxHealth());
+                    if (healthPercentage <= 0.15f && !needHealingFlag)
+                    {
+                        int randomIndex = urand(0, sizeof(healingMessages) / sizeof(healingMessages[0]) - 1);
+                        me->Say(healingMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
+                        needHealingFlag = true;
+                    }
+                    else if (healthPercentage >= 0.30f && needHealingFlag)
+                    {
+                        needHealingFlag = false;
+                    }
+
+                    // Mana check
+                    float manaPercentage = static_cast<float>(me->GetPower(POWER_MANA)) / static_cast<float>(me->GetMaxPower(POWER_MANA));
+                    if (manaPercentage <= 0.25f && !needManaFlag)
+                    {
+                        int randomIndex = urand(0, sizeof(manaMessages) / sizeof(manaMessages[0]) - 1);
+                        me->Say(manaMessages[randomIndex], LANG_UNIVERSAL, me->ToUnit());
+                        needManaFlag = true;
+                    }
+                    else if (manaPercentage >= 0.50f && needManaFlag)
+                    {
+                        needManaFlag = false;
+                    }
+                }
+                // End Dinkle
+            }
+
+            if (IsSpellReady(THORIUM_GRENADE_SPELL_ID, diff))
+            {
+                std::list<Creature*> targets;
+                me->GetCreaturesWithEntryInRange(targets, 35.0f, 15555);
+
+                for (Creature* target : targets)
+                {
+                    if (!target->IsAlive() || me->IsFriendlyTo(target))
+                        continue;
+
+                    if (me->IsWithinDistInMap(target, 35.0f))
+                    {
+                        me->CastSpell(target, THORIUM_GRENADE_SPELL_ID, true);
+                        SetSpellCooldown(THORIUM_GRENADE_SPELL_ID, 3000);
+                        break;
+                    }
+                }
+            }
+
             if (!GlobalUpdate(diff))
                 return;
 
@@ -2431,6 +2556,9 @@ public:
         }
 
     private:
+        //Dinkle
+        bool needHealingFlag;
+        bool needManaFlag;
         //Spells
         uint32 CLEANSE;
         //Timers

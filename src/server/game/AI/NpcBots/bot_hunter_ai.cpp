@@ -71,7 +71,8 @@ enum HunterBaseSpells
     ASPECT_OF_THE_BEAST_1               = 13161,//NIY
     ASPECT_OF_THE_PACK_1                = 13159,
     ASPECT_OF_THE_WILD_1                = 20043,
-    ASPECT_OF_THE_DRAGONHAWK_1          = 61846
+    ASPECT_OF_THE_DRAGONHAWK_1          = 61846,
+    SPELL_ID_THORIUM_GRENADE            = 19769
 };
 
 enum HunterPassives
@@ -170,6 +171,8 @@ enum HunterSpecial
     FRENZY_BUFF                         = 19615
 };
 //talent tiers 20-32-44-56-68-80
+
+const uint32 THORIUM_GRENADE_SPELL_ID = 19769;
 
 static const uint32 Hunter_spells_damage_arr[] =
 { AIMED_SHOT_1, ARCANE_SHOT_1, BLACK_ARROW_1, COUNTERATTACK_1, CHIMERA_SHOT_1, EXPLOSIVE_SHOT_1, EXPLOSIVE_TRAP_1,
@@ -418,7 +421,25 @@ public:
             {
                 target = FindCastingTarget(CalcSpellMaxRange(SILENCING_SHOT_1), 5, SILENCING_SHOT_1);
                 if (target && doCast(target, GetSpell(SILENCING_SHOT_1)))
+                {
+                    if (!IsWanderer()) // Check if not a wanderer before speaking
+                    {
+                        const char* silencingShotMessages[] = {
+                            "|cFFFFFFFF%s has been silenced by my shot! No casting for you.|r",
+                            "|cFFFFFFFF%s's spellcasting is interrupted by my Silencing Shot!|r",
+                            "|cFFFFFFFFCaught %s mid-cast with Silencing Shot, they're silenced!|r",
+                        };
+
+                        int randomIndex = urand(0, sizeof(silencingShotMessages) / sizeof(char*) - 1);
+                        const char* selectedMessage = silencingShotMessages[randomIndex];
+
+                        char messageBuffer[256];
+                        snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                        me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                    }
                     return;
+                }
             }
         }
 
@@ -460,14 +481,31 @@ public:
 
         void CheckFreezingArrow(uint32 diff)
         {
-            //Freezing Trap shares cooldown with frosty traps
+            // Check if Freezing Arrow is ready and random chance
             if (!IsSpellReady(FREEZING_ARROW_1, diff) || Rand() > 35)
                 return;
 
             if (Unit* target = FindStunTarget(25))
             {
                 if (doCast(target, GetSpell(FREEZING_ARROW_1)))
+                {
+                    if (!IsWanderer()) 
+                    {
+                        const char* freezingArrowMessages[] = {
+                            "|cFFFFFFFFCasting Freezing Arrow on %s!|r",
+                            "|cFFFFFFFF%s's been iced by my arrow!|r",
+                        };
+
+                        int randomIndex = urand(0, sizeof(freezingArrowMessages) / sizeof(char*) - 1);
+                        const char* selectedMessage = freezingArrowMessages[randomIndex];
+
+                        char messageBuffer[256];
+                        snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                        me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                    }
                     return;
+                }
             }
         }
 
@@ -507,7 +545,23 @@ public:
                 master->GetAuraEffect(SPELL_AURA_MOD_RESISTANCE_PCT, SPELLFAMILY_GENERIC, 255, 2))
             {
                 if (doCast(me, GetSpell(FREEZING_TRAP_1)))
+                {
+                    if (!IsWanderer()) 
+                    {
+                        const char* freezingTrapMessages[] = {
+                            "|cFFFFFFFFSetting a Freezing Trap here! Watch your step and lure them in.|r",
+                            "|cFFFFFFFFTrap is set! Lead enemies right into this icy snare.|r",
+                            "|cFFFFFFFFA chilly surprise awaits our foes. Freezing Trap ready!|r",
+                            "|cFFFFFFFFFreezing Trap down!|r",
+                        };
+
+                        int randomIndex = urand(0, sizeof(freezingTrapMessages) / sizeof(char*) - 1);
+                        const char* selectedMessage = freezingTrapMessages[randomIndex];
+
+                        me->Say(selectedMessage, LANG_UNIVERSAL, me->ToUnit());
+                    }
                     return;
+                }
             }
             //black arrow, immolation trap, explosive trap: cat 1250
             if (IsSpellReady(EXPLOSIVE_TRAP_1, diff) && HasRole(BOT_ROLE_DPS))
@@ -617,7 +671,7 @@ public:
             if (!IsSpellReady(TRANQ_SHOT_1, diff) || Rand() > 20)
                 return;
 
-            //First check current target
+            // First check current target
             for (Unit* mtar : { opponent, disttarget })
             {
                 if (mtar && me->GetDistance(mtar) > 5 && me->GetDistance(mtar) < CalcSpellMaxRange(TRANQ_SHOT_1) &&
@@ -626,17 +680,33 @@ public:
                     AuraApplication const* aurApp;
                     SpellInfo const* spellInfo;
                     Unit::AuraMap const& auras = mtar->GetOwnedAuras();
-                    for (Unit::AuraMap::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
+                    for (auto itr = auras.begin(); itr != auras.end(); ++itr)
                     {
                         spellInfo = itr->second->GetSpellInfo();
                         if (spellInfo->Dispel != DISPEL_MAGIC && spellInfo->Dispel != DISPEL_ENRAGE) continue;
                         if (spellInfo->Attributes & (SPELL_ATTR0_PASSIVE | SPELL_ATTR0_DO_NOT_DISPLAY)) continue;
-                        //if (spellInfo->AttributesEx & SPELL_ATTR1_NO_AURA_ICON) continue;
                         aurApp = itr->second->GetApplicationOfTarget(mtar->GetGUID());
                         if (aurApp && aurApp->IsPositive())
                         {
                             if (doCast(mtar, GetSpell(TRANQ_SHOT_1)))
+                            {
+                                if (!IsWanderer()) 
+                                {
+                                    const char* tranquilMessages[] = {
+                                        "|cFFFFFFFFCasting Tranq Shot on %s!|r",
+                                        "|cFFFFFFFF%s has been tranquilized!|r",
+                                    };
+
+                                    int randomIndex = urand(0, sizeof(tranquilMessages) / sizeof(char*) - 1);
+                                    const char* selectedMessage = tranquilMessages[randomIndex];
+
+                                    char messageBuffer[256];
+                                    snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, mtar->GetName().c_str());
+
+                                    me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                                }
                                 return;
+                            }
                         }
                     }
                 }
@@ -644,7 +714,24 @@ public:
 
             Unit* target = FindTranquilTarget(5, CalcSpellMaxRange(TRANQ_SHOT_1));
             if (target && doCast(target, GetSpell(TRANQ_SHOT_1)))
+            {
+                if (!IsWanderer()) 
+                {
+                    const char* tranquilMessages[] = {
+                        "|cFFFFFFFFCasting Tranq Shot on %s!|r",
+                        "|cFFFFFFFF%s has been tranquilized!|r",
+                    };
+
+                    int randomIndex = urand(0, sizeof(tranquilMessages) / sizeof(char*) - 1);
+                    const char* selectedMessage = tranquilMessages[randomIndex];
+
+                    char messageBuffer[256];
+                    snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                    me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                }
                 return;
+            }
         }
 
         void CheckMisdirect(uint32 diff)
@@ -655,8 +742,7 @@ public:
 
             misdirectionTimer = urand(3000, 6000);
 
-            //find tank
-            //stacks
+            // Find tank
             std::list<Unit*> tanks;
             for (Unit* member : BotMgr::GetAllGroupMembers(master))
             {
@@ -672,11 +758,49 @@ public:
 
             Unit* target = tanks.size() == 1 ? *tanks.begin() : Acore::Containers::SelectRandomContainerElement(tanks);
             if (doCast(target, GetSpell(MISDIRECTION_1)))
+            {
+                if (!IsWanderer()) 
+                {
+                    const char* misdirectMessages[] = {
+                        "|cFFFFFFFFMisdirecting threat to %s! Go wild, DPS!|r",
+                        "|cFFFFFFFFRedirecting aggro to our tank %s! Let 'em have it!|r",
+                        "|cFFFFFFFFCasting Misdirection on %s!|r",
+                        "|cFFFFFFFFLet's keep %s busy! Misdirection up!|r",
+                    };
+
+                    int randomIndex = urand(0, sizeof(misdirectMessages) / sizeof(char*) - 1);
+                    const char* selectedMessage = misdirectMessages[randomIndex];
+
+                    char messageBuffer[256];
+                    snprintf(messageBuffer, sizeof(messageBuffer), selectedMessage, target->GetName().c_str());
+
+                    me->Say(messageBuffer, LANG_UNIVERSAL, me->ToUnit());
+                }
                 return;
+            }
         }
 
         void UpdateAI(uint32 diff) override
         {
+            if (IsSpellReady(THORIUM_GRENADE_SPELL_ID, diff))
+            {
+                std::list<Creature*> targets;
+                me->GetCreaturesWithEntryInRange(targets, 35.0f, 15555);
+
+                for (Creature* target : targets)
+                {
+                    if (!target->IsAlive() || me->IsFriendlyTo(target))
+                        continue;
+
+                    if (me->IsWithinDistInMap(target, 35.0f))
+                    {
+                        me->CastSpell(target, THORIUM_GRENADE_SPELL_ID, true);
+                        SetSpellCooldown(THORIUM_GRENADE_SPELL_ID, 3000);
+                        break;
+                    }
+                }
+            }
+            
             if (!GlobalUpdate(diff))
                 return;
 
