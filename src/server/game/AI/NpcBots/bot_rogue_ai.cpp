@@ -838,7 +838,7 @@ public:
 
             if (needChooseOHEnchant && ohReady)
                 ohEnchant = (GetSpec() == BOT_SPEC_ROGUE_ASSASINATION && GetSpell(ENVENOM_1)) ? DEADLY_POISON_1 :
-                    lvl >= 68 ? ANESTHETIC_POISON_1 :
+                    lvl >= 60 ? ANESTHETIC_POISON_1 :
                     lvl >= 40 ? INSTANT_POISON_1 :
                     lvl >= 20 ? CRIPPLING_POISON_1 : 0;
 

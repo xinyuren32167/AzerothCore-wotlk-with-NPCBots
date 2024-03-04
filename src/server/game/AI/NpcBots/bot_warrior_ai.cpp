@@ -745,7 +745,6 @@ public:
 
             MoveBehind(mytar);
             //SHIELD BASH - shared cd with pummel
-// SHIELD BASH - shared cd with pummel
             if (IsSpellReady(SHIELD_BASH_1, diff, false) && can_do_normal && CanBlock() && Rand() < 80 &&
                 (_inStance(4) || stancetimer <= diff) &&
                 dist < 5 && rage >= rcost(SHIELD_BASH_1) && mytar->IsNonMeleeSpellCast(false, false, true))

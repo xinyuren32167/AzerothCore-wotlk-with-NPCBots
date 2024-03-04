@@ -230,7 +230,7 @@ public:
 
     bool OnCastItemCombatSpell(Player* /*player*/, Unit* /*victim*/, SpellInfo const* /*spellInfo*/, Item* /*item*/) override
     {
-        // Always allow the proc, regardless of victim's level
+        // Dinkle Always allow the proc, regardless of victim's level
         return true;
     }
 };

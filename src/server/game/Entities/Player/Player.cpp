@@ -7535,13 +7535,19 @@ void Player::CastItemCombatSpell(Unit* target, WeaponAttackType attType, uint32 
             if (!item->IsBroken())
                 if (ItemTemplate const* proto = item->GetTemplate())
                 {
-                    // Additional check for weapons
-                    if (proto->Class == ITEM_CLASS_WEAPON)
+                    // Dinkle: Check if the item is a weapon or armor. Allows spelltrigger 2 on any equipment piece
+                    bool isAllowedClass = (proto->Class == ITEM_CLASS_WEAPON) ||
+                        (proto->Class == ITEM_CLASS_ARMOR);
+
+                    if (isAllowedClass)
                     {
-                        // offhand item cannot proc from main hand hit etc
-                        EquipmentSlots slot;
-                        switch (attType)
+                        // Additional check for weapons
+                        if (proto->Class == ITEM_CLASS_WEAPON)
                         {
+                            // offhand item cannot proc from main hand hit etc
+                            EquipmentSlots slot;
+                            switch (attType)
+                            {
                             case BASE_ATTACK:
                                 slot = EQUIPMENT_SLOT_MAINHAND;
                                 break;
@@ -7554,12 +7560,13 @@ void Player::CastItemCombatSpell(Unit* target, WeaponAttackType attType, uint32 
                             default:
                                 slot = EQUIPMENT_SLOT_END;
                                 break;
+                            }
+                            if (slot != i)
+                                continue;
                         }
-                        if (slot != i)
-                            continue;
-                    }
 
-                    CastItemCombatSpell(target, attType, procVictim, procEx, item, proto);
+                        CastItemCombatSpell(target, attType, procVictim, procEx, item, proto);
+                    }
                 }
     }
 }
