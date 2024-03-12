@@ -265,25 +265,25 @@ public:
 
         handler->PSendSysMessage("%s", GitRevision::GetFullVersion());
         if (!queuedSessionCount)
-            handler->PSendSysMessage("Connected players: %u. Characters in world: %u.", activeSessionCount, playerCount);
+             handler->PSendSysMessage("Connected players: %u. Characters in world: %u.", activeSessionCount, playerCount);
         else
-            handler->PSendSysMessage("Connected players: %u. Characters in world: %u. Queue: %u.", activeSessionCount, playerCount, queuedSessionCount);
+             handler->PSendSysMessage("Connected players: %u. Characters in world: %u. Queue: %u.", activeSessionCount, playerCount, queuedSessionCount);
 
-        handler->PSendSysMessage("Connection peak: %u.", connPeak);
-        handler->PSendSysMessage(LANG_UPTIME, secsToTimeString(GameTime::GetUptime().count()).c_str());
-        handler->PSendSysMessage("Update time diff: %ums. Last %d diffs summary:", sWorldUpdateTime.GetLastUpdateTime(), sWorldUpdateTime.GetDatasetSize());
-        handler->PSendSysMessage("- Mean: %ums", sWorldUpdateTime.GetAverageUpdateTime());
-        handler->PSendSysMessage("- Median: %ums", sWorldUpdateTime.GetPercentile(50));
-        handler->PSendSysMessage("- Percentiles (95, 99, max): %ums, %ums, %ums",
-                                 sWorldUpdateTime.GetPercentile(95),
-                                 sWorldUpdateTime.GetPercentile(99),
-                                 sWorldUpdateTime.GetPercentile(100));
+        // handler->PSendSysMessage("Connection peak: %u.", connPeak);
+        // handler->PSendSysMessage(LANG_UPTIME, secsToTimeString(GameTime::GetUptime().count()).c_str());
+        // handler->PSendSysMessage("Update time diff: %ums. Last %d diffs summary:", sWorldUpdateTime.GetLastUpdateTime(), sWorldUpdateTime.GetDatasetSize());
+        // handler->PSendSysMessage("- Mean: %ums", sWorldUpdateTime.GetAverageUpdateTime());
+        // handler->PSendSysMessage("- Median: %ums", sWorldUpdateTime.GetPercentile(50));
+        // handler->PSendSysMessage("- Percentiles (95, 99, max): %ums, %ums, %ums",
+        //                          sWorldUpdateTime.GetPercentile(95),
+        //                          sWorldUpdateTime.GetPercentile(99),
+        //                          sWorldUpdateTime.GetPercentile(100));
 
         //! Can't use sWorld->ShutdownMsg here in case of console command
-        if (sWorld->IsShuttingDown())
-            handler->PSendSysMessage(LANG_SHUTDOWN_TIMELEFT, secsToTimeString(sWorld->GetShutDownTimeLeft()).append(".").c_str());
+            if (sWorld->IsShuttingDown())
+                handler->PSendSysMessage(LANG_SHUTDOWN_TIMELEFT, secsToTimeString(sWorld->GetShutDownTimeLeft()).append(".").c_str());
 
-        return true;
+                return true;
     }
     // Display the 'Message of the day' for the realm
     static bool HandleServerMotdCommand(ChatHandler* handler)

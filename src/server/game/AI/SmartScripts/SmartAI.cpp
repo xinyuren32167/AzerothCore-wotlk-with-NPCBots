@@ -786,15 +786,24 @@ void SmartAI::JustReachedHome()
 
     mJustReset = false;
 }
-
+//Dinkle: Fix annoying af casting while moving/wandering
 void SmartAI::JustEngagedWith(Unit* enemy)
 {
     // Xinef: Interrupt channeled spells
     if (IsAIControlled())
+    {
         me->InterruptSpell(CURRENT_CHANNELED_SPELL, true, true);
+
+        if (mCanCombatMove && mCanAutoAttack)  
+        {
+            // Initiate combat movement towards the enemy
+            me->GetMotionMaster()->MoveChase(enemy);
+        }
+    }
+
     GetScript()->ProcessEventsFor(SMART_EVENT_AGGRO, enemy);
 }
-
+//end Dinkle
 void SmartAI::JustDied(Unit* killer)
 {
     GetScript()->ProcessEventsFor(SMART_EVENT_DEATH, killer);

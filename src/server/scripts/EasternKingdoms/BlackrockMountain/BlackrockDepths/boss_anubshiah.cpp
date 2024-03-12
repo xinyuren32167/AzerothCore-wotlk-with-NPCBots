@@ -31,10 +31,10 @@ enum Spells
 enum Timers
 {
     TIMER_SHADOWBOLT = 7000,
-    TIMER_CURSE_TONGUES = 24000,
-    TIMER_CURSE_WEAKNESS = 12000,
+    TIMER_CURSE_TONGUES = 22000,
+    TIMER_CURSE_WEAKNESS = 10000,
     TIMER_DEMON_ARMOR = 3000, // virtually only cast once
-    TIMER_ENVELOPING_WEB = 16000
+    TIMER_ENVELOPING_WEB = 15000
 };
 
 class boss_anubshiah : public CreatureScript

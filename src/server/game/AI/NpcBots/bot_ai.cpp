@@ -6935,7 +6935,7 @@ void bot_ai::_OnHealthUpdate() const
     if (me->GetMap()->IsRaid())
         m_totalhp *= BotMgr::GetBotHPRaidMod();
 
-    //IndividualProgression
+    //Dinkle IndividualProgression
     if (!me->GetMap()->IsBattlegroundOrArena())
     {
         MapEntry const* mapEntry = sMapStore.LookupEntry(me->GetMapId());
@@ -9518,10 +9518,17 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 }
             }
 
-            // Proceed with equipping if the item passes all checks
+            // Dinkle: Proceed with equipping if the item passes all checks
             if (found) {
+                // Check if the item's quality is uncommon or higher before setting it to Bind on Pickup
+                if (item->GetTemplate()->Quality >= ITEM_QUALITY_UNCOMMON) { 
+                    item->SetBinding(true); // Set the item to Bind on Pickup only if the quality check passes
+                }
+
+                // Proceed to equip the item
                 _equip(sender - GOSSIP_SENDER_EQUIP, item, player->GetGUID());
             }
+            //end Dinkle
 
             return OnGossipSelect(player, creature, GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 1);
         }
@@ -12592,9 +12599,9 @@ bool bot_ai::_equip(uint8 slot, Item* newItem, ObjectGuid receiver)
             master->GetName().c_str(), master->GetGUID().ToString().c_str(), me->GetName().c_str(), me->GetEntry(), proto->Name1.c_str(), proto->ItemId, newItem->GetGUID().ToString().c_str());
         return false;
     }
-
+    //Dinkle set bop
     uint32 newItemId = newItem->GetEntry();
-
+    //end Dinkle
     if (Item const* oldItem = _equips[slot])
     {
         //same id
@@ -12607,7 +12614,12 @@ bool bot_ai::_equip(uint8 slot, Item* newItem, ObjectGuid receiver)
         //BotWhisper("You have no space for my current item", master);
         return false;
     }
-
+    //Dinkle Set BoP after equip
+    if (newItem->GetTemplate()->Quality >= ITEM_QUALITY_UNCOMMON) 
+    {
+        newItem->SetBinding(true);
+    }
+    //end Dinkle
     if (receiver && (slot > BOT_SLOT_RANGED || einfo->ItemEntry[slot] != newItemId))
     {
         ASSERT(receiver == master->GetGUID());

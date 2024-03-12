@@ -20,6 +20,8 @@
 #include "SpellScriptLoader.h"
 #include "TemporarySummon.h"
 #include "shadowfang_keep.h"
+#include "SpellScript.h"
+#include "ScriptMgr.h"
 
 enum Spells
 {
@@ -229,10 +231,45 @@ public:
     }
 };
 
+//Dinkle
+class spell_abercrombie_unlock : public SpellScriptLoader
+{
+public:
+    spell_abercrombie_unlock() : SpellScriptLoader("spell_abercrombie_unlock") { }
+
+    class spell_abercrombie_unlock_SpellScript : public SpellScript
+    {
+        PrepareSpellScript(spell_abercrombie_unlock_SpellScript);
+
+        void HandleDummy(SpellEffIndex /*effIndex*/)
+        {
+            if (Unit* caster = GetCaster())
+            {
+                GameObject* courtyardDoor = caster->FindNearestGameObject(18895, 10.0f); 
+                if (courtyardDoor)
+                {
+                    courtyardDoor->SetGoState(GO_STATE_ACTIVE);
+                }
+            }
+        }
+
+        void Register() override
+        {
+            OnEffectHit += SpellEffectFn(spell_abercrombie_unlock_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_abercrombie_unlock_SpellScript();
+    }
+};
+
 void AddSC_instance_shadowfang_keep()
 {
     new instance_shadowfang_keep();
     new spell_shadowfang_keep_haunting_spirits();
     new spell_shadowfang_keep_forsaken_skills();
+    new spell_abercrombie_unlock();
 }
 
