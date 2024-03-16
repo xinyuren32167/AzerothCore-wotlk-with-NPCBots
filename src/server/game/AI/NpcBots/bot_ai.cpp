@@ -261,6 +261,8 @@ bot_ai::bot_ai(Creature* creature) : CreatureAI(creature)
     _lastAreaId = 0;
     _lastWMOAreaId = 0;
 
+    _selfrez_spell_id = 0;
+
     _wmoAreaUpdateTimer = 0;
 
     _contestedPvPTimer = 0;
@@ -2340,7 +2342,7 @@ void bot_ai::SetStats(bool force)
             uint8 mapmaxlevel = BotDataMgr::GetMaxLevelForMapId(me->GetMap()->GetEntry()->MapID);
             mapmaxlevel += BotDataMgr::GetLevelBonusForBotRank(me->GetCreatureTemplate()->rank);
             //TODO: experience system for levelups
-            mylevel = std::max<uint8>(mylevel, std::min<uint8>(_baseLevel + uint8(_killsCount / (mylevel * 20)), mapmaxlevel));
+            mylevel = std::max<uint8>(mylevel, std::min<uint8>(_baseLevel + uint8(uint32(float(_killsCount) * BotMgr::GetBotWandererXPGainMod()) / (mylevel * 20)), mapmaxlevel));
         }
     }
     else
@@ -6324,6 +6326,9 @@ Unit* bot_ai::FindPolyTarget(float dist) const
         return nullptr;
     if (unitList.size() == 1)
         return *unitList.begin();
+    decltype(unitList)::const_iterator it = std::find_if(unitList.cbegin(), unitList.cend(), [this](Unit const* u) { return IsPointedNoDPSTarget(u); });
+    if (it != unitList.cend())
+        return *it;
 
     return Acore::Containers::SelectRandomContainerElement(unitList);
 }
@@ -6341,6 +6346,9 @@ Unit* bot_ai::FindFearTarget(float dist) const
         return nullptr;
     if (unitList.size() == 1)
         return *unitList.begin();
+    decltype(unitList)::const_iterator it = std::find_if(unitList.cbegin(), unitList.cend(), [this](Unit const* u) { return IsPointedNoDPSTarget(u); });
+    if (it != unitList.cend())
+        return *it;
 
     return Acore::Containers::SelectRandomContainerElement(unitList);
 }
@@ -6358,6 +6366,9 @@ Unit* bot_ai::FindStunTarget(float dist) const
         return nullptr;
     if (unitList.size() == 1)
         return *unitList.begin();
+    decltype(unitList)::const_iterator it = std::find_if(unitList.cbegin(), unitList.cend(), [this](Unit const* u) { return IsPointedNoDPSTarget(u); });
+    if (it != unitList.cend())
+        return *it;
 
     return Acore::Containers::SelectRandomContainerElement(unitList);
 }
@@ -6378,6 +6389,9 @@ Unit* bot_ai::FindUndeadCCTarget(float dist, uint32 spellId, bool unattacked) co
         return nullptr;
     if (unitList.size() == 1)
         return *unitList.begin();
+    decltype(unitList)::const_iterator it = std::find_if(unitList.cbegin(), unitList.cend(), [this](Unit const* u) { return IsPointedNoDPSTarget(u); });
+    if (it != unitList.cend())
+        return *it;
 
     return Acore::Containers::SelectRandomContainerElement(unitList);
 }
@@ -6398,6 +6412,9 @@ Unit* bot_ai::FindRootTarget(float dist, uint32 spellId) const
         return nullptr;
     if (unitList.size() == 1)
         return *unitList.begin();
+    decltype(unitList)::const_iterator it = std::find_if(unitList.cbegin(), unitList.cend(), [this](Unit const* u) { return IsPointedNoDPSTarget(u); });
+    if (it != unitList.cend())
+        return *it;
 
     return Acore::Containers::SelectRandomContainerElement(unitList);
 }
@@ -6416,6 +6433,9 @@ Unit* bot_ai::FindCastingTarget(float maxdist, float mindist, uint32 spellId, ui
         return nullptr;
     if (unitList.size() == 1)
         return *unitList.begin();
+    decltype(unitList)::const_iterator it = std::find_if(unitList.cbegin(), unitList.cend(), [this](Unit const* u) { return IsPointedNoDPSTarget(u); });
+    if (it != unitList.cend())
+        return *it;
 
     return Acore::Containers::SelectRandomContainerElement(unitList);
 }
@@ -7248,6 +7268,14 @@ void bot_ai::_OnAreaUpdate(uint32 areaId)
                 if (botPet && !botPet->HasAura(itr->second->spellId))
                     botPet->CastSpell(botPet, itr->second->spellId, true);
             }
+        }
+
+        for (uint8 slot = BOT_SLOT_MAINHAND; slot != BOT_SLOT_RANGED; ++slot)
+        {
+            if (Item const* item = _equips[slot])
+                if (item->IsLimitedToAnotherMapOrZone(me->GetMapId(), areaId))
+                    if (_resetEquipment(slot, ObjectGuid::Empty))
+                        continue;
         }
     }
 
@@ -9717,6 +9745,21 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 ++counter;
                 std::ostringstream name;
                 _AddItemLink(player, item, name);
+                ItemTemplate const* proto = item->GetTemplate();
+                uint8 slot = BOT_SLOT_BODY;
+                if (GetBotClass() == BOT_CLASS_HUNTER)
+                {
+                    if (_canEquip(proto, BOT_SLOT_RANGED, true))
+                        slot = BOT_SLOT_RANGED;
+                    else if (_canEquip(proto, BOT_SLOT_MAINHAND, true))
+                        slot = BOT_SLOT_MAINHAND;
+                    else if (_canEquip(proto, BOT_SLOT_OFFHAND, true))
+                        slot = BOT_SLOT_OFFHAND;
+                }
+                else if (GetBotClass() == BOT_CLASS_WARRIOR && _canEquip(proto, BOT_SLOT_MAINHAND, true))
+                    slot = BOT_SLOT_MAINHAND;
+
+                name << " GS: " << uint32(CalculateItemGearScore(me->GetEntry(), me->GetLevel(), GetBotClass(), GetSpec(), slot, proto));
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT, name.str(), GOSSIP_SENDER_EQUIPMENT_BANK_WITHDRAW_ITEM, GOSSIP_ACTION_INFO_DEF + item->GetGUID().GetCounter());
             }
 
@@ -13030,13 +13073,10 @@ void bot_ai::ApplyItemEnchantment(Item* item, EnchantmentSlot eslot, uint8 slot)
                         }
                     }
                     // Cast custom spell vs all equal basepoints got from enchant_amount
-                    //CastSpellExtraArgs args(item);
-                    //if (basepoints)
-                    //{
-                    //    args.AddSpellBP0(basepoints);
-                    //}
-                    //me->CastSpell(me, enchant_spell_id, args);
-                    me->CastCustomSpell(me, enchant_spell_id, &basepoints, nullptr, nullptr, false, item);
+                    if (basepoints)
+                        me->CastCustomSpell(me, enchant_spell_id, &basepoints, &basepoints, &basepoints, false, item);
+                    else
+                        me->CastSpell(me, enchant_spell_id, false, item);
                 }
                 break;
             case ITEM_ENCHANTMENT_TYPE_RESISTANCE:
@@ -13298,13 +13338,10 @@ void bot_ai::ApplyItemEquipEnchantmentSpells(Item* item)
                         }
                     }
                     // Cast custom spell vs all equal basepoints got from enchant_amount
-                    //CastSpellExtraArgs args(item);
-                    //if (basepoints)
-                    //{
-                    //    args.AddSpellBP0(basepoints);
-                    //}
-                    //me->CastSpell(me, enchant_spell_id, args);
-                    me->CastCustomSpell(me, enchant_spell_id, &basepoints, nullptr, nullptr, false, item);
+                    if (basepoints)
+                        me->CastCustomSpell(me, enchant_spell_id, &basepoints, &basepoints, &basepoints, false, item);
+                    else
+                        me->CastSpell(me, enchant_spell_id, false, item);
                     break;
                 }
                 default:
@@ -15828,6 +15865,29 @@ void bot_ai::JustDied(Unit* u)
 
     ++_deathsCount;
 }
+//This is triggered before SetDeathState(JUST_DIED) call
+//attacker may be NULL
+void bot_ai::OnDeath([[maybe_unused]] Unit* attacker/* = nullptr*/)
+{
+    if (AuraEffect const* sstone = me->GetDummyAuraEffect(SPELLFAMILY_GENERIC, 92, 0))
+    {
+        uint32 spell_id;
+        switch (sstone->GetBase()->GetId())
+        {
+            case 20707: spell_id = 3026;  break;        // rank 1
+            case 20762: spell_id = 20758; break;        // rank 2
+            case 20763: spell_id = 20759; break;        // rank 3
+            case 20764: spell_id = 20760; break;        // rank 4
+            case 20765: spell_id = 20761; break;        // rank 5
+            case 27239: spell_id = 27240; break;        // rank 6
+            case 47883: spell_id = 47882; break;        // rank 7
+            default:    spell_id = 0;     break;
+        }
+        _selfrez_spell_id = spell_id;
+    }
+    else
+        _selfrez_spell_id = 0;
+}
 
 void bot_ai::KilledUnit(Unit* u)
 {
@@ -15912,7 +15972,7 @@ void bot_ai::DamageDealt(Unit* victim, uint32& damage, DamageEffectType /*damage
 
             //controlled case is handled in Unit::DealDamage
             if (IAmFree())
-                cre->LowerPlayerDamageReq(cre->GetHealth() < damage ?  cre->GetHealth() : damage);
+                cre->LowerPlayerDamageReq(std::min<uint32>(cre->GetHealth(), damage) / (IsWanderer() ? 4 : 2));
         }
     }
 
@@ -15959,6 +16019,8 @@ void bot_ai::OnBotSpellGo(Spell const* spell, bool ok)
                 StartPotionTimer();
             if (curInfo->Id == ACTIVATE_SPEC)
                 SetSpec(_newspec);
+            if (curInfo->Id == _selfrez_spell_id)
+                OnSpellHit(me, curInfo);
 
             OnClassSpellGo(curInfo);
         }
@@ -17268,6 +17330,10 @@ void bot_ai::UpdateDeadAI(uint32 diff)
     // group update
     if (_groupUpdateTimer <= diff)
         SendUpdateToOutOfRangeBotGroupMembers();
+
+    // soulstone
+    if (_selfrez_spell_id && (IAmFree() || !master->GetBotMgr()->IsPartyInCombat()) && Rand() < 15)
+        me->CastSpell(me, _selfrez_spell_id);
 }
 //opponent unsafe
 bool bot_ai::GlobalUpdate(uint32 diff)

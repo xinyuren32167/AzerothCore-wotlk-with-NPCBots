@@ -327,6 +327,8 @@ private:
             //force level range for bgs
             bot_template.minlevel = std::min<uint32>(bracketEntry->minLevel, max_level);
             bot_template.maxlevel = std::min<uint32>(bracketEntry->maxLevel, max_level);
+            if (sWorld->getBoolConfig(CONFIG_BG_XP_FOR_KILL))
+                bot_template.flags_extra &= ~(CREATURE_FLAG_EXTRA_NO_XP);
         }
         else
         {
@@ -1516,6 +1518,7 @@ bool BotDataMgr::GenerateBattlegroundBots(Player const* groupLeader, [[maybe_unu
         sBattlegroundMgr->ScheduleQueueUpdate(ammr, atype, bgqTypeId, bgTypeId, bracketId);
         }, Seconds(2));
 
+    uint8 maxlevel = BotMgr::IsBotLevelCappedByConfigBGFirstPlayer() ? groupLeader->GetLevel() : 0;
     for (NpcBotRegistry const* registry3 : { &spawned_bots_a, &spawned_bots_h })
     {
         uint32 seconds_delay = 5;
@@ -1525,6 +1528,8 @@ bool BotDataMgr::GenerateBattlegroundBots(Player const* groupLeader, [[maybe_unu
             bot->GetBotAI()->canUpdate = false;
 
             const_cast<Creature*>(bot)->SetPvP(true);
+            if (maxlevel && bot->GetLevel() > maxlevel)
+                const_cast<Creature*>(bot)->SetLevel(maxlevel);
             queue->AddBotAsGroup(bot->GetGUID(), GetTeamIdForFaction(bot->GetFaction()),
                 bgTypeId, bracketEntry, atype, false, gqinfo->ArenaTeamRating, ammr);
 
@@ -2017,7 +2022,7 @@ void BotDataMgr::CreateWanderingBotsSortedGear()
                 {
                     uint32 minlvl = std::max<uint32>(lstep * ITEM_SORTING_LEVEL_STEP, 1);
                     uint32 maxlvl = (lstep + 1) * ITEM_SORTING_LEVEL_STEP - 1;
-                    LOG_WARN("server.loading", "No items for class {} slot {} at levels {}-{}!", c, s, minlvl, maxlvl);
+                    LOG_DEBUG("npcbots", "No items for class {} slot {} at levels {}-{}!", c, s, minlvl, maxlvl);
                 }
             }
         }

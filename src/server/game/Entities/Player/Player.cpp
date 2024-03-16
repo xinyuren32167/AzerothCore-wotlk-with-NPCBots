@@ -2470,6 +2470,9 @@ void Player::GiveXP(uint32 xp, Unit* victim, float group_rate, bool isLFGReward)
 
     if (victim && victim->GetTypeId() == TYPEID_UNIT && !victim->ToCreature()->hasLootRecipient())
     {
+    //npcbot
+        if (!(victim->IsNPCBot() && victim->FindMap() && victim->GetMap()->IsBattleground()))
+    //end npcbot
         return;
     }
 

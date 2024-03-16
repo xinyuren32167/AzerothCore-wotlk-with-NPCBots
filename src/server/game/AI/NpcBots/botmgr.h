@@ -117,6 +117,7 @@ class AC_GAME_API BotMgr
         static bool FilterRaces();
         static bool IsBotGenerationEnabledBGs();
         static bool IsBotLevelCappedByConfigBG();
+        static bool IsBotLevelCappedByConfigBGFirstPlayer();
         static bool IsBotGenerationEnabledWorldMapId(uint32 mapId);
         static bool IsBotHKEnabled();
         static bool IsBotHKMessageEnabled();
@@ -153,6 +154,7 @@ class AC_GAME_API BotMgr
         static float GetBotRatesTBC();
         static float GetTankHPModifier();
         static float GetBotWandererSpeedMod();
+        static float GetBotWandererXPGainMod();
         static BotBrackets GetBotWandererLevelBrackets();
         static float GetBotDamageModByClass(uint8 botclass);
         static float GetBotDamageModByLevel(uint8 botlevel);
@@ -165,6 +167,7 @@ class AC_GAME_API BotMgr
         //onEvent hooks
         static void OnBotWandererKilled(Creature const* bot, Player* looter);
         static void OnBotWandererKilled(GameObject* go);
+        static void OnBotKilled(Creature const* bot, Unit* attacker = nullptr);
         static void OnBotSpellInterrupt(Unit const* caster, CurrentSpellTypes spellType);
         static void OnBotSpellGo(Unit const* caster, Spell const* spell, bool ok = true);
         static void OnBotOwnerSpellGo(Unit const* caster, Spell const* spell, bool ok = true);
