@@ -1468,7 +1468,10 @@ class spell_dk_death_gate : public SpellScript
 
     SpellCastResult CheckClass()
     {
-        if (!GetCaster()->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+        if (!GetCaster()->IsPlayer())
+            return SPELL_FAILED_DONT_REPORT;
+
+        if (!GetCaster()->ToPlayer()->IsClass(CLASS_DEATH_KNIGHT))
         {
             SetCustomCastResultMessage(SPELL_CUSTOM_ERROR_MUST_BE_DEATH_KNIGHT);
             return SPELL_FAILED_CUSTOM_ERROR;
@@ -1479,9 +1482,21 @@ class spell_dk_death_gate : public SpellScript
 
     void HandleScript(SpellEffIndex effIndex)
     {
+        //Dinkle
         PreventHitDefaultEffect(effIndex);
-        if (Unit* target = GetHitUnit())
-            target->CastSpell(target, GetEffectValue(), false);
+        if (Player* player = GetHitPlayer())
+        {
+            if (player->HasQuest(13165))
+            {
+                player->TeleportTo(0, 2353.5300292969f, -5665.8198242188f, 382.24899291992f, 0.59600001573563f);
+                player->SetPhaseMask(448, true);
+            }
+            else
+        //end Dinkle
+            {
+                player->CastSpell(player, GetEffectValue(), false);
+            }
+        }
     }
 
     void Register() override

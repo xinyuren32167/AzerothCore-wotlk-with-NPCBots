@@ -79,7 +79,7 @@ public:
                 switch (eventId)
                 {
                 case SPELL_SHADOWBOLT:
-                    DoCastVictim(SPELL_SHADOWBOLT);
+                    DoCastVictim(SPELL_SHADOWBOLT, true);
                     events.ScheduleEvent(SPELL_SHADOWBOLT, urand(TIMER_SHADOWBOLT - 2000, TIMER_SHADOWBOLT + 2000));
                     break;
                 case SPELL_CURSE_TONGUES:
