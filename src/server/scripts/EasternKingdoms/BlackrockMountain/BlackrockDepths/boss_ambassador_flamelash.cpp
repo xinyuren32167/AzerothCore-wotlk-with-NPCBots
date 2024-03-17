@@ -25,6 +25,7 @@ enum Spells
     // Old fireblast value 15573
     SPELL_FIREBLAST         = 13342,
     SPELL_BURNING_SPIRIT    = 14744,
+    SPELL_FIREBOLT_VOLLEY   = 15243,
 };
 
 enum AmbassadorEvents
@@ -32,7 +33,8 @@ enum AmbassadorEvents
     AGGRO_TEXT              = 0,
     EVENT_SPELL_FIREBLAST   = 1,
     EVENT_SUMMON_SPIRITS    = 2,
-    EVENT_KILL_SPIRIT       = 3
+    EVENT_KILL_SPIRIT = 3,
+    EVENT_FIREBOLT_VOLLEY = 4
 };
 
 const uint32 NPC_FIRE_SPIRIT = 9178;
@@ -65,9 +67,8 @@ public:
         boss_ambassador_flamelashAI(Creature* creature) : BossAI(creature, BOSS_AMBASSADOR_FLAMELASH), summons(me) { }
 
         EventMap _events;
-
-        // This will help reseting the boss
         SummonList summons;
+        Position spawnPosition;
 
         // This will allow to find a valid position to spawn them
         std::vector<int> validPosition;
@@ -106,6 +107,7 @@ public:
 
         void JustEngagedWith(Unit* /*who*/) override
         {
+            spawnPosition = me->GetPosition();
             _events.ScheduleEvent(EVENT_SPELL_FIREBLAST, 2s);
 
             // Spawn 7 Embers initially
@@ -116,6 +118,8 @@ public:
             TurnRunes(true);
 
             Talk(AGGRO_TEXT);
+
+            _events.ScheduleEvent(EVENT_FIREBOLT_VOLLEY, 12s); 
         }
 
         void JustDied(Unit* /*killer*/) override
@@ -188,14 +192,22 @@ public:
 
         void UpdateAI(uint32 diff) override
         {
-            //Return since we have no target
             if (!UpdateVictim())
                 return;
 
+            // Check if the boss has moved more than 32 yards from his spawn position
+            if (me->GetDistance(spawnPosition) > 32.0f)
+            {
+                EnterEvadeMode(EVADE_REASON_OTHER); // Trigger a reset if the boss is too far from the spawn
+                return; // Skip the rest of the update
+            }
+
             _events.Update(diff);
 
-            switch(_events.ExecuteEvent())
+            while (uint32 eventId = _events.ExecuteEvent())
             {
+                switch (eventId)
+                {
                 case EVENT_SPELL_FIREBLAST:
                     DoCastVictim(SPELL_FIREBLAST);
                     _events.ScheduleEvent(EVENT_SPELL_FIREBLAST, 7s);
@@ -203,6 +215,11 @@ public:
                 case EVENT_SUMMON_SPIRITS:
                     SummonSpirits();
                     break;
+                case EVENT_FIREBOLT_VOLLEY:
+                    DoCast(SPELL_FIREBOLT_VOLLEY);
+                    _events.ScheduleEvent(EVENT_FIREBOLT_VOLLEY, 12s);
+                    break;
+                }
             }
 
             DoMeleeAttackIfReady();
@@ -217,7 +234,7 @@ public:
 
     struct npc_burning_spiritAI : public ScriptedAI
     {
-        npc_burning_spiritAI(Creature* creature) : ScriptedAI(creature) {}
+        npc_burning_spiritAI(Creature* creature) : ScriptedAI(creature), _moveCheckTimer(1000) {}
 
         void IsSummonedBy(WorldObject* summoner) override
         {
@@ -227,31 +244,52 @@ public:
             }
 
             _flamelasherGUID = summoner->GetGUID();
-            me->GetMotionMaster()->MoveFollow(summoner->ToCreature(), 0.f, 0.f);
+            me->SetReactState(REACT_PASSIVE);
         }
 
-        void EnterEvadeMode(EvadeReason /*why*/) override
+        void UpdateAI(uint32 diff) override
         {
-            if (Creature* flamelasher = ObjectAccessor::GetCreature(*me, _flamelasherGUID))
+            if (_moveCheckTimer <= diff)
             {
-                me->GetMotionMaster()->MoveFollow(flamelasher, 5.f, 0.f);
+                if (Creature* flamelasher = ObjectAccessor::GetCreature(*me, _flamelasherGUID))
+                {
+                    me->GetMotionMaster()->MovePoint(1, flamelasher->GetPosition());
+                }
+                _moveCheckTimer = 1000; // Check every second
+            }
+            else
+            {
+                _moveCheckTimer -= diff;
             }
         }
 
-        void MovementInform(uint32 type, uint32 /*id*/) override
+        void MovementInform(uint32 type, uint32 id) override
         {
-            if (type != FOLLOW_MOTION_TYPE)
-                return;
-
-            if (Creature* flamelasher = ObjectAccessor::GetCreature(*me, _flamelasherGUID))
+            if (type == POINT_MOTION_TYPE && id == 1)
             {
-                flamelasher->CastSpell(flamelasher, SPELL_BURNING_SPIRIT);
-                Unit::Kill(flamelasher, me);
+                if (Creature* flamelasher = ObjectAccessor::GetCreature(*me, _flamelasherGUID))
+                {
+                    if (Aura* aura = flamelasher->GetAura(SPELL_BURNING_SPIRIT))
+                    {
+                        aura->ModStackAmount(1);
+                    }
+                    else
+                    {
+                        flamelasher->AddAura(SPELL_BURNING_SPIRIT, flamelasher);
+                    }
+
+                    int32 healAmount = CalculatePct(flamelasher->GetMaxHealth(), 3);
+
+                    flamelasher->ModifyHealth(healAmount);
+
+                    me->DespawnOrUnsummon();
+                }
             }
         }
+
 
     private:
-        EventMap   _events;
+        uint32 _moveCheckTimer; 
         ObjectGuid _flamelasherGUID;
     };
 
@@ -260,6 +298,7 @@ public:
         return GetBlackrockDepthsAI<npc_burning_spiritAI>(creature);
     }
 };
+
 
 void AddSC_boss_ambassador_flamelash()
 {

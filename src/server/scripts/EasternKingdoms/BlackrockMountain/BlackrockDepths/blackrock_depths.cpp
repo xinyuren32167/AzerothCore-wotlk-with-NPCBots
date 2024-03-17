@@ -703,6 +703,66 @@ public:
     };
 };
 
+class npc_wandering_flame_custom : public CreatureScript
+{
+public:
+    npc_wandering_flame_custom() : CreatureScript("npc_wandering_flame_custom") {}
+
+    struct npc_wandering_flame_customAI : public ScriptedAI
+    {
+        float center_x, center_y, radius;
+        uint32 moveTimer;
+
+        npc_wandering_flame_customAI(Creature* creature) : ScriptedAI(creature)
+        {
+            me->SetReactState(REACT_PASSIVE);
+            me->SetCanFly(true);
+            me->SetDisableGravity(true);
+
+            center_x = me->GetPositionX();
+            center_y = me->GetPositionY();
+            radius = 15.0f;
+
+            moveTimer = 1;
+        }
+
+        void MoveToNextPoint()
+        {
+            float angle = frand(0, 2 * M_PI);
+            float x = center_x + cos(angle) * radius;
+            float y = center_y + sin(angle) * radius;
+
+            me->GetMotionMaster()->MovePoint(1, x, y, me->GetPositionZ(), true);
+        }
+
+        void MovementInform(uint32 type, uint32 pointId) override
+        {
+            if (type == POINT_MOTION_TYPE && pointId == 1)
+            {
+                moveTimer = 1;
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (moveTimer <= diff)
+            {
+                MoveToNextPoint();
+                moveTimer = 1000;
+            }
+            else
+            {
+                moveTimer -= diff;
+            }
+        }
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_wandering_flame_customAI(creature);
+    }
+};
+
 void AddSC_blackrock_depths()
 {
     new go_shadowforge_brazier();
@@ -712,4 +772,5 @@ void AddSC_blackrock_depths()
     new npc_lokhtos_darkbargainer();
     new npc_rocknot();
     new ironhand_guardian();
+    new npc_wandering_flame_custom();
 }

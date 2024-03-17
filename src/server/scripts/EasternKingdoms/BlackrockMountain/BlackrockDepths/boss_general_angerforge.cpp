@@ -26,6 +26,13 @@ enum Spells
     SPELL_CLEAVE                                           = 20691
 };
 
+const Position anvilrageSpawnPositions[] = {
+    {675.304199f, 40.174721f, -58.529747f, 3.095478f},
+    {675.293152f, 34.244930f, -55.226852f, 3.095478f},
+    {675.084961f, 29.733681f, -51.742348f, 3.095478f},
+    {675.317749f, 22.587074f, -50.623539f, 3.095478f}
+};
+
 class boss_general_angerforge : public CreatureScript
 {
 public:
@@ -55,8 +62,21 @@ public:
             Medics = false;
         }
 
-        void JustEngagedWith(Unit* /*who*/) override { }
-
+        void JustEngagedWith(Unit* /*who*/) override
+        {
+            me->Yell("Reservists! Get these interlopers out of here!", LANG_UNIVERSAL);
+            for (const Position& pos : anvilrageSpawnPositions)
+            {
+                if (Creature* reservist = me->SummonCreature(8901, pos, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 69000))
+                {
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, false))
+                    {
+                        reservist->AI()->AttackStart(target);
+                    }
+                }
+            }
+        }
+        
         void SummonAdds(Unit* victim)
         {
             if (Creature* SummonedAdd = DoSpawnCreature(8901, float(irand(-14, 14)), float(irand(-14, 14)), 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 120000))

@@ -904,16 +904,29 @@ public:
                 if (doCast(mytar, GetSpell(DEVASTATE_1)))
                     return;
             }
-            //SUNDER ARMOR
-            if (IsSpellReady(SUNDER_ARMOR_1, diff) && can_do_normal && dist < 5 && Rand() < 45 &&
-                (IsTank() ? (mytar->GetHealth() > me->GetMaxHealth()) : (Rand() < 25 && mytar->GetHealth() > me->GetMaxHealth() * 2)) &&
-                (!HasRole(BOT_ROLE_DPS) || !CanBlock() || !GetSpell(DEVASTATE_1)) &&
-                (IsTank() || master->GetBotMgr()->HasBotWithSpec(BOT_SPEC_WARRIOR_PROTECTION, false)) && rage >= rcost(SUNDER_ARMOR_1))
+            //SUNDER ARMOR 
+            if (IsSpellReady(SUNDER_ARMOR_1, diff) && can_do_normal && dist < 5 && rage >= rcost(SUNDER_ARMOR_1))
             {
-                AuraEffect const* sunder = mytar->GetAuraEffect(SUNDER_ARMOR_DEBUFF, 0);
-                if ((!sunder || sunder->GetBase()->GetStackAmount() < 5 || sunder->GetBase()->GetDuration() < 20000) &&
-                    doCast(mytar, GetSpell(SUNDER_ARMOR_1)))
-                    return;
+                bool shouldCastSunder = false;
+
+                if (IsTank() && !GetSpell(DEVASTATE_1) && mytar->GetHealth() > me->GetMaxHealth() && Rand() < 55)
+                {
+                    shouldCastSunder = true;
+                }
+                else if ((!IsTank() && (isFury || isArms)) && Rand() < 30)
+                {
+                    shouldCastSunder = true;
+                }
+
+                if (shouldCastSunder)
+                {
+                    AuraEffect const* sunder = mytar->GetAuraEffect(SUNDER_ARMOR_DEBUFF, 0);
+                    if ((!sunder || sunder->GetBase()->GetStackAmount() < 5 || sunder->GetBase()->GetDuration() < 20000) &&
+                        doCast(mytar, GetSpell(SUNDER_ARMOR_1)))
+                    {
+                        return;
+                    }
+                }
             }
             //SWEEPING STRIKES //no GCD
             if (IsSpellReady(SWEEPING_STRIKES_1, diff, false) && HasRole(BOT_ROLE_DPS) && !IsTank() && Rand() < 65 &&
