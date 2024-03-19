@@ -28,7 +28,7 @@
 //Dinkle
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
-#include "../../Custom/Timewalking/10Man.h"
+#include "../scripts/Custom/Timewalking/10Man.h"
 #include <random>
 
 enum EranikusSpells

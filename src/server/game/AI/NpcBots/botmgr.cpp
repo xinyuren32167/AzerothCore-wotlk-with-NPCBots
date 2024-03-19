@@ -165,6 +165,7 @@ float _botRatesTBC;
 float _tankHPModifier;
 std::vector<float> _mult_dmg_levels;
 BotBrackets _botwanderer_pct_level_brackets;
+std::vector<uint32> _disabled_instance_maps;
 std::vector<uint32> _enabled_wander_node_maps;
 
 bool __firstload = true;
@@ -457,6 +458,27 @@ void BotMgr::LoadConfig(bool reload)
     {
         LOG_ERROR("server.loading", "NpcBot.WanderingBots.Continents.Maps does not provide any valid maps! Wandering bots will not be spawned!");
         _desiredWanderingBotsCount = 0;
+    }
+
+    _disabled_instance_maps.clear();
+    std::string disabled_instance_maps = sConfigMgr->GetStringDefault("NpcBot.DisableInstances", "");
+    std::vector<std::string_view> toks4 = Acore::Tokenize(disabled_instance_maps, ',', false);
+    for (decltype(toks4)::size_type i = 0; i != toks4.size(); ++i)
+    {
+        Optional<uint32> val = Acore::StringTo<uint32>(toks4[i]);
+        if (val == std::nullopt)
+        {
+            LOG_ERROR("server.loading", "NpcBot.DisableInstances contains invalid uint32 value '{}', skipped", toks4[i]);
+            continue;
+        }
+        uint32 uval = val.value_or(uint32(0));
+        MapEntry const* mapEntry = sMapStore.LookupEntry(uval);
+        if (!mapEntry || !mapEntry->IsDungeon())
+        {
+            LOG_ERROR("server.loading", "NpcBot.DisableInstances contains invalid instance map id '{}', skipped", uval);
+            continue;
+        }
+        _disabled_instance_maps.push_back(uval);
     }
 
     //limits
@@ -993,6 +1015,20 @@ void BotMgr::Update(uint32 diff)
     }
 }
 
+bool BotMgr::IsMapAllowedForBots(Map const* map) const
+{
+    if ((!_enableNpcBotsBGs && map->IsBattleground()) ||
+        (!_enableNpcBotsArenas && map->IsBattleArena()) ||
+        (!_enableNpcBotsDungeons && map->IsNonRaidDungeon()) ||
+        (!_enableNpcBotsRaids && map->IsRaid()))
+        return false;
+
+    if (map->IsDungeon() && !_disabled_instance_maps.empty() && std::find(_disabled_instance_maps.cbegin(), _disabled_instance_maps.cend(), map->GetId()) != _disabled_instance_maps.cend())
+        return false;
+
+    return true;
+}
+
 bool BotMgr::RestrictBots(Creature const* bot, bool add) const
 {
     if (!_owner->FindMap())
@@ -1006,10 +1042,7 @@ bool BotMgr::RestrictBots(Creature const* bot, bool add) const
 
     Map const* currMap = _owner->GetMap();
 
-    if ((!_enableNpcBotsBGs && currMap->IsBattleground()) ||
-        (!_enableNpcBotsArenas && currMap->IsBattleArena()) ||
-        (!_enableNpcBotsDungeons && currMap->IsNonRaidDungeon()) ||
-        (!_enableNpcBotsRaids && currMap->IsRaid()))
+    if (!IsMapAllowedForBots(currMap))
         return true;
 
     if (LimitBots(currMap))
@@ -1289,7 +1322,6 @@ void BotMgr::OnTeleportFar(uint32 mapId, float x, float y, float z, float ori)
     for (BotMap::const_iterator itr = _bots.begin(); itr != _bots.end(); ++itr)
     {
         bot = itr->second;
-        ASSERT(bot, "BotMgr::OnTeleportFar(): bot does not exist!!!");
 
         if (bot->IsTempBot())
             continue;

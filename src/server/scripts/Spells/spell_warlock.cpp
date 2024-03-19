@@ -1320,7 +1320,28 @@ class spell_warl_glyph_of_voidwalker : public AuraScript
         OnEffectRemove += AuraEffectRemoveFn(spell_warl_glyph_of_voidwalker::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
+//Dinkle
+class spell_lock_chaos_bolt : public SpellScript
+{
+    PrepareSpellScript(spell_lock_chaos_bolt);
 
+    void RecalculateDamage(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* target = GetHitUnit())
+        {
+            if (target->GetHealthPct() <= 35.0f)
+            {
+                SetHitDamage(GetHitDamage() * 1.75);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_lock_chaos_bolt::RecalculateDamage, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+    }
+};
+// endDinkle
 void AddSC_warlock_spell_scripts()
 {
     RegisterSpellScript(spell_warl_eye_of_kilrogg);
@@ -1354,5 +1375,6 @@ void AddSC_warlock_spell_scripts()
     RegisterSpellScript(spell_warl_shadowburn);
     RegisterSpellScript(spell_warl_glyph_of_felguard);
     RegisterSpellScript(spell_warl_glyph_of_voidwalker);
+    RegisterSpellScript(spell_lock_chaos_bolt);
 }
 
