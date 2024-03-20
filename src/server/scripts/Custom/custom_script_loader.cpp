@@ -68,6 +68,8 @@ void AddSC_spell_sha_elemental_mastery();
 void AddSC_npc_murky();
 void AddSC_gobject_corn_kennels();
 void AddSC_custom_player_murky_scripts();
+void AddSC_boss_lethtendris();
+
 
 //void AddSC_PlayerTeleportRevive();
 //void AddSC_transform_race_command();
@@ -129,6 +131,7 @@ void AddCustomScripts()
     AddSC_npc_murky();
     AddSC_gobject_corn_kennels();
     AddSC_custom_player_murky_scripts();
+    AddSC_boss_lethtendris();
 
     //AddSC_PlayerTeleportRevive();
     //AddSC_transform_race_command();

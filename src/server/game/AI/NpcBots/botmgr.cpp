@@ -50,10 +50,11 @@ static std::list<BotMgr::delayed_teleport_callback_type> delayed_bot_teleports;
 
 //config
 uint8 _basefollowdist;
-uint8 _maxNpcBots;
 uint8 _maxClassNpcBots;
 uint8 _xpReductionAmount;
 uint8 _xpReductionStartingNumber;
+uint8 _mountLevel60;
+uint8 _mountLevel100;
 uint8 _healTargetIconFlags;
 uint8 _tankingTargetIconFlags;
 uint8 _offTankingTargetIconFlags;
@@ -164,7 +165,8 @@ float _botRatesClassic;
 float _botRatesTBC;
 float _tankHPModifier;
 std::vector<float> _mult_dmg_levels;
-BotBrackets _botwanderer_pct_level_brackets;
+LvlBrackets _max_npcbots;
+PctBrackets _botwanderer_pct_level_brackets;
 std::vector<uint32> _disabled_instance_maps;
 std::vector<uint32> _enabled_wander_node_maps;
 
@@ -291,12 +293,13 @@ void BotMgr::LoadConfig(bool reload)
         return;
 
     _enableNpcBots                  = sConfigMgr->GetBoolDefault("NpcBot.Enable", true);
-    _maxNpcBots                     = sConfigMgr->GetIntDefault("NpcBot.MaxBots", 1);
     _maxClassNpcBots                = sConfigMgr->GetIntDefault("NpcBot.MaxBotsPerClass", 1);
     _filterRaces                    = sConfigMgr->GetBoolDefault("NpcBot.Botgiver.FilterRaces", false);
     _basefollowdist                 = sConfigMgr->GetIntDefault("NpcBot.BaseFollowDistance", 30);
     _xpReductionAmount              = sConfigMgr->GetIntDefault("NpcBot.XpReduction.Amount", 0);
     _xpReductionStartingNumber      = sConfigMgr->GetIntDefault("NpcBot.XpReduction.StartingNumber", 2);
+    _mountLevel60                   = sConfigMgr->GetIntDefault("NpcBot.MountLevel.60", 20);
+    _mountLevel100                  = sConfigMgr->GetIntDefault("NpcBot.MountLevel.100", 40);
     _healTargetIconFlags            = sConfigMgr->GetIntDefault("NpcBot.HealTargetIconMask", 0);
     _tankingTargetIconFlags         = sConfigMgr->GetIntDefault("NpcBot.TankTargetIconMask", 0);
     _offTankingTargetIconFlags      = sConfigMgr->GetIntDefault("NpcBot.OffTankTargetIconMask", 0);
@@ -404,15 +407,43 @@ void BotMgr::LoadConfig(bool reload)
     //Dinkle
     _maxDarkRangerBots              = sConfigMgr->GetIntDefault("NpcBot.MaxDarkRangerBots", 1);
     
+
+    _max_npcbots = {};
+    std::string max_npcbots_by_levels = sConfigMgr->GetStringDefault("NpcBot.MaxBots", "1,1,1,1,1,1,1,1,1");
+    std::vector<std::string_view> toks0 = Acore::Tokenize(max_npcbots_by_levels, ',', false);
+    ASSERT(toks0.size() == BracketsCount, "NpcBot.MaxBots must have exactly %u values", uint32(BracketsCount));
+    for (decltype(toks0)::size_type i = 0; i != toks0.size(); ++i)
+    {
+        Optional<uint8> val = Acore::StringTo<uint8>(toks0[i]);
+        if (val == std::nullopt)
+            LOG_ERROR("server.loading", "NpcBot.MaxBots contains invalid uint8 value '{}', set to default", toks0[i]);
+        uint8 uval = val.value_or(uint8(0));
+        if (i > 0)
+        {
+            uint8 prev = _max_npcbots[i - 1];
+            if (prev > uval)
+            {
+                LOG_WARN("server.loading", "NpcBot.MaxBots value at offset {} is {} which is lower than previous value {}!", uint32(i), uint32(uval), uint32(prev));
+                //uval = prev;
+            }
+            if (uval >= MAXRAIDSIZE)
+            {
+                LOG_ERROR("server.loading", "NpcBot.MaxBots value at offset {} is {} > 39, enforcing max value!", uint32(i), uint32(uval));
+                uval = uint8(MAXRAIDSIZE - 1);
+            }
+        }
+        _max_npcbots[i] = uval;
+    }
+
     _mult_dmg_levels.clear();
     std::string mult_dps_by_levels = sConfigMgr->GetStringDefault("NpcBot.Mult.Damage.Levels", "1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0");
-    std::vector<std::string_view> toks = Acore::Tokenize(mult_dps_by_levels, ',', false);
-    ASSERT(toks.size() >= BracketsCount, "NpcBot.Mult.Damage.Levels must have at least %u values", BracketsCount);
-    for (decltype(toks)::size_type i = 0; i != toks.size(); ++i)
+    std::vector<std::string_view> toks1 = Acore::Tokenize(mult_dps_by_levels, ',', false);
+    ASSERT(toks1.size() >= BracketsCount, "NpcBot.Mult.Damage.Levels must have at least %u values", uint32(BracketsCount));
+    for (decltype(toks1)::size_type i = 0; i != toks1.size(); ++i)
     {
-        Optional<float> val = Acore::StringTo<float>(toks[i]);
+        Optional<float> val = Acore::StringTo<float>(toks1[i]);
         if (val == std::nullopt)
-            LOG_ERROR("server.loading", "NpcBot.Mult.Damage.Levels contains invalid float value '{}', set to default", std::string(toks[i]).c_str());
+            LOG_ERROR("server.loading", "NpcBot.Mult.Damage.Levels contains invalid float value '{}', set to default", toks1[i]);
         float fval = val.value_or(1.0f);
         RoundToInterval(fval, 0.1f, 10.f);
         _mult_dmg_levels.push_back(fval);
@@ -421,7 +452,7 @@ void BotMgr::LoadConfig(bool reload)
     _botwanderer_pct_level_brackets = {};
     std::string wanderers_by_levels = sConfigMgr->GetStringDefault("NpcBot.WanderingBots.Continents.Levels", "20,15,15,10,10,15,15,0,0");
     std::vector<std::string_view> toks2 = Acore::Tokenize(wanderers_by_levels, ',', false);
-    ASSERT(toks2.size() >= BracketsCount, "NpcBot.WanderingBots.Continents.Levels must have at least %u values", BracketsCount);
+    ASSERT(toks2.size() == BracketsCount, "NpcBot.WanderingBots.Continents.Levels must have exactly %u values", uint32(BracketsCount));
     uint32 total_pct = 0;
     for (decltype(toks2)::size_type i = 0; i != toks2.size(); ++i)
     {
@@ -482,6 +513,7 @@ void BotMgr::LoadConfig(bool reload)
     }
 
     //limits
+    _mountLevel100 = std::max<uint8>(_mountLevel100, _mountLevel60);
     RoundToInterval(_mult_dmg_physical, 0.1f, 10.f);
     RoundToInterval(_mult_dmg_spell, 0.1f, 10.f);
     RoundToInterval(_mult_healing, 0.1f, 10.f);
@@ -876,9 +908,18 @@ uint8 BotMgr::GetNpcBotXpReductionStartingNumber()
     return _xpReductionStartingNumber;
 }
 
-uint8 BotMgr::GetMaxNpcBots()
+uint8 BotMgr::GetNpcBotMountLevel60()
 {
-    return _maxNpcBots <= MAXRAIDSIZE - 1 ? _maxNpcBots : MAXRAIDSIZE - 1;
+    return _mountLevel60;
+}
+uint8 BotMgr::GetNpcBotMountLevel100()
+{
+    return _mountLevel100;
+}
+
+uint8 BotMgr::GetMaxNpcBots(uint8 level)
+{
+    return _max_npcbots[std::min<size_t>(BracketsCount - 1, level / 10)];
 }
 
 //Dinke
@@ -1625,10 +1666,10 @@ BotAddResult BotMgr::AddBot(Creature* bot, bool costMoney)
         ch.PSendSysMessage(bot_ai::LocalizedNpcText(GetOwner(), BOT_TEXT_BOTADDFAIL_TELEPORTED).c_str(), bot->GetName().c_str());
         return BOT_ADD_BUSY;
     }
-    if (!owned && owned_count >= GetMaxNpcBots())
+    if (!owned && owned_count >= GetMaxNpcBots(_owner->GetLevel()))
     {
         ChatHandler ch(_owner->GetSession());
-        ch.PSendSysMessage(bot_ai::LocalizedNpcText(GetOwner(), BOT_TEXT_HIREFAIL_MAXBOTS).c_str(), GetMaxNpcBots());
+        ch.PSendSysMessage(bot_ai::LocalizedNpcText(GetOwner(), BOT_TEXT_HIREFAIL_MAXBOTS).c_str(), GetMaxNpcBots(_owner->GetLevel()));
         return BOT_ADD_MAX_EXCEED;
     }
     if (!owned && _maxClassNpcBots && class_count >= _maxClassNpcBots)
@@ -1801,7 +1842,7 @@ uint32 BotMgr::GetNpcBotCost(uint8 level, uint8 botclass)
         level < 20 ? _npcBotsCost / 100 :  //1 gold
         level < 30 ? _npcBotsCost / 20 :   //5 gold
         level < 40 ? _npcBotsCost / 5 :    //20 gold
-        (_npcBotsCost * level) / DEFAULT_MAX_LEVEL; //50 - 100 gold
+        (_npcBotsCost * (level - (level % 10))) / DEFAULT_MAX_LEVEL; //50 - 100 gold
 
     switch (botclass)
     {
@@ -3099,7 +3140,7 @@ float BotMgr::GetBotWandererXPGainMod()
 {
     return _mult_xpgain_wanderer;
 }
-BotBrackets BotMgr::GetBotWandererLevelBrackets()
+PctBrackets BotMgr::GetBotWandererLevelBrackets()
 {
     return _botwanderer_pct_level_brackets;
 }

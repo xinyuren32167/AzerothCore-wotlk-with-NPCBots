@@ -3922,6 +3922,7 @@ std::tuple<Unit*, Unit*> bot_ai::_getTargets(bool byspell, bool ranged, bool &re
     //Immediate targets
     if (!IAmFree() && me->GetMap()->GetEntry() && !me->GetMap()->GetEntry()->IsWorldMap())
     {
+        static const std::array WMOAreaGroupLashlayer = { 29476u }; // Halls of Strife
         static const std::array WMOAreaGroupMarrowgar = { 47833u }; // The Spire
         static const std::array WMOAreaGroupSindragosa = { 48066u }; // Frost Queen's Lair
         static const std::array WMOAreaGroupLichKing = { 50038u, 50040u }; // The Frozen Throne
@@ -3933,6 +3934,10 @@ std::tuple<Unit*, Unit*> bot_ai::_getTargets(bool byspell, bool ranged, bool &re
             }
             return false;
         };
+
+        // Blackwing Lair
+        if (me->GetMapId() == 469 && GetBotClass() == BOT_CLASS_ROGUE && !HasRole(BOT_ROLE_DPS) && me->HasStealthAura() && isInWMOArea(WMOAreaGroupLashlayer)) // BWL - Bloodlord Lashlayer
+            return { nullptr, nullptr };
 
         // Icecrown Citadel - Lord Marrowgar
         if (me->GetMapId() == 631 && isInWMOArea(WMOAreaGroupMarrowgar) && me->IsInCombat() && HasRole(BOT_ROLE_DPS) && !IsTank())
@@ -4655,6 +4660,7 @@ bool bot_ai::ProcessImmediateNonAttackTarget()
     if ((me->GetMap()->GetEntry() && me->GetMap()->GetEntry()->IsWorldMap()) || IAmFree() || IsCasting())
         return false;
 
+    static constexpr std::array<uint32, 1> WMOAreaGroupLashlayer = { 29476 }; // Halls of Strife
     static constexpr std::array<uint32, 2> WMOAreaGroupMuru = { 41736, 42759 }; // Shrine of the Eclipse
     static constexpr std::array<uint32, 2> WMOAreaGroupNajentus = { 41129, 41130 }; // Karabor Sewers
     static constexpr std::array<uint32, 1> WMOAreaGroupVashj = { 37594 }; // Serpentshrine Cavern
@@ -4667,6 +4673,32 @@ bool bot_ai::ProcessImmediateNonAttackTarget()
         }
         return false;
     };
+
+    if (me->GetMapId() == 469 && GetBotClass() == BOT_CLASS_ROGUE && isInWMOArea(_lastWMOAreaId, WMOAreaGroupLashlayer)) // BWL - Bloodlord Lashlayer
+    {
+        static const uint32 SPELL_DISARM_TRAP_1 = 1842u;
+
+        if (!IsCasting() && IsSpellReady(SPELL_DISARM_TRAP_1, lastdiff, false) && (me->HasAuraType(SPELL_AURA_MOD_STEALTH) || IsSpellReady(1784, lastdiff, false)) && Rand() < 20) // Stealth
+        {
+            SpellInfo const* disarmTrapSpellInfo = sSpellMgr->AssertSpellInfo(SPELL_DISARM_TRAP_1);
+            float max_range = disarmTrapSpellInfo->GetMaxRange();
+            ApplyBotSpellRangeMods(disarmTrapSpellInfo, max_range);
+
+            std::list<GameObject*> goList;
+            Acore::AllGameObjectsWithEntryInRange check(me, 179784, max_range); // Suppression Device
+            Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcher(me, goList, check);
+            Cell::VisitAllObjects(me, searcher, max_range);
+
+            goList.remove_if([](GameObject const* gobject) { return gobject->HasGameObjectFlag(GO_FLAG_NOT_SELECTABLE); });
+
+            if (GameObject* device = goList.empty() ? nullptr : goList.size() == 1u ? goList.front() : Acore::Containers::SelectRandomContainerElement(goList))
+            {
+                if (me->HasAuraType(SPELL_AURA_MOD_STEALTH) || doCast(me, GetSpell(1784)))
+                me->CastSpell(device, SPELL_DISARM_TRAP_1, false);
+                return true;
+            }
+        }
+    }
 
     if (me->GetMapId() == 580 && isInWMOArea(_lastWMOAreaId, WMOAreaGroupMuru)) // Sunwell - M'uru
     {
@@ -5603,6 +5635,12 @@ void bot_ai::MoveBehind(Unit const* target) const
 //MOUNT SUPPORT
 uint32 bot_ai::_selectMountSpell() const
 {
+    uint8 minLevel60 = BotMgr::GetNpcBotMountLevel60();
+    uint8 minLevel100 = BotMgr::GetNpcBotMountLevel100();
+
+    if (me->GetLevel() < minLevel60)
+        return 0;
+
     uint32 myMountSpellId = 0;
     uint32 masterMountSpellId = 0;
 
@@ -5650,50 +5688,33 @@ uint32 bot_ai::_selectMountSpell() const
 
     if (!myMountSpellId)
     {
-
         using MountArray = std::array<uint32, NUM_MOUNTS_PER_SPEED>;
 
         bool can_fly = !IAmFree() ? master->CanFly() : false; //(!instt && me->GetMap()->GetEntry()->addon > 0);
-        bool useSlowMount;
-        if (me->GetLevel() < 40) {
-            return 0;  // No mount if below level 40
-        }
-        else if (me->GetLevel() >= 40 && me->GetLevel() <= 59) {
-            maxMountSpeed = 60;  // Set max speed to 100 for level 40-59
-            useSlowMount = true;
-        }
-        else if (me->GetLevel() >= 60) {
-            if (can_fly) {
-                useSlowMount = (maxMountSpeed < 210);
-            }
-            else {
-                maxMountSpeed = 110;  // Set max speed to 110 for level 60+ ground mounts
-                useSlowMount = (maxMountSpeed < 110);
-            }
-        }
+        bool useSlowMount = can_fly ? (me->GetLevel() < 70 || maxMountSpeed < 220) : (me->GetLevel() < minLevel100 || maxMountSpeed < 80);
 
         if (!can_fly)
         {
             //Select by class
             switch (_botclass)
             {
-                case BOT_CLASS_DARK_RANGER:
-                    myMountSpellId = BOT_DARK_RANGER_MOUNT;
-                    break;
-                case BOT_CLASS_WARLOCK:
-                    myMountSpellId = useSlowMount ? BOT_WARLOCK_MOUNT : BOT_WARLOCK_FAST_MOUNT;
-                    break;
-                case BOT_CLASS_PALADIN:
-                    if (me->GetRace() == RACE_BLOODELF)
-                        myMountSpellId = useSlowMount ? BOT_BE_PALLY_MOUNT : BOT_BE_PALLY_FAST_MOUNT;
-                    else
-                        myMountSpellId = useSlowMount ? BOT_ALLI_PALLY_MOUNT : BOT_ALLI_PALLY_FAST_MOUNT;
-                    break;
-                case BOT_CLASS_DEATH_KNIGHT:
-                    myMountSpellId = BOT_DEATH_KNIGHT_MOUNT;
-                    break;
-                default:
-                    break;
+            case BOT_CLASS_DARK_RANGER:
+                myMountSpellId = BOT_DARK_RANGER_MOUNT;
+                break;
+            case BOT_CLASS_WARLOCK:
+                myMountSpellId = useSlowMount ? BOT_WARLOCK_MOUNT : BOT_WARLOCK_FAST_MOUNT;
+                break;
+            case BOT_CLASS_PALADIN:
+                if (me->GetRace() == RACE_BLOODELF)
+                    myMountSpellId = useSlowMount ? BOT_BE_PALLY_MOUNT : BOT_BE_PALLY_FAST_MOUNT;
+                else
+                    myMountSpellId = useSlowMount ? BOT_ALLI_PALLY_MOUNT : BOT_ALLI_PALLY_FAST_MOUNT;
+                break;
+            case BOT_CLASS_DEATH_KNIGHT:
+                myMountSpellId = BOT_DEATH_KNIGHT_MOUNT;
+                break;
+            default:
+                break;
             }
             //Select by race
             if (!myMountSpellId)
@@ -5795,7 +5816,7 @@ void bot_ai::_updateMountedState()
 
     if (IAmFree())
     {
-        if (!IsWanderer() || me->GetLevel() < 40 || me->HasAuraType(SPELL_AURA_PERIODIC_DAMAGE) ||
+        if (!IsWanderer() || me->GetLevel() < BotMgr::GetNpcBotMountLevel60() || me->HasAuraType(SPELL_AURA_PERIODIC_DAMAGE) ||
             Feasting() || GetHealthPCT(me) < 80 || (CanDrink() && me->GetMaxPower(POWER_MANA) > 1 && GetManaPCT(me) < 70))
             return;
     }
@@ -7745,7 +7766,7 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
                 reason = -1;
             if (!reason && _ownerGuid)
                 reason = 1;
-            if (!reason && BotDataMgr::GetOwnedBotsCount(player->GetGUID()) >= BotMgr::GetMaxNpcBots())
+            if (!reason && BotDataMgr::GetOwnedBotsCount(player->GetGUID()) >= BotMgr::GetMaxNpcBots(player->GetLevel()))
                 reason = 2;
             if (!reason && !player->HasEnoughMoney(cost))
                 reason = 3;
@@ -7886,6 +7907,12 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
             //class-specific for owner: poisons, enchants, etc.
             switch (_botclass)
             {
+                case BOT_CLASS_MAGE:
+                {
+                    if (me->GetLevel() >= 40)
+                        AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_I_NEED_A_PORTAL), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 4);
+                    break;
+                }
                 case BOT_CLASS_ROGUE:
                 {
                     if (me->GetLevel() >= 20)
@@ -8127,6 +8154,32 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
 
                         BotWhisper(LocalizedNpcText(player, BOT_TEXT_DONE), player);
                         break;
+                    }
+                    else if (option == 4) // portal
+                    {
+                        subMenu = true;
+
+                        if (player->GetTeamId() == TEAM_ALLIANCE)
+                        {
+                            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_STORMWIND), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_STORMWIND));
+                            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_IRONFORGE), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_IRONFORGE));
+                            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_DARNASSUS), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_DARNASSUS));
+                            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_EXORDAR), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_EXODAR));
+                            if (me->GetLevel() >= 65)
+                                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_SHATTRATH), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_SHATTRATH_A));
+                        }
+                        else
+                        {
+                            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_ORGRIMMAR), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_ORGRIMMAR));
+                            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_UNDERCITY), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_UNDERCITY));
+                            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_THUNDER_BLUFF), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_THUNDERBLUFF));
+                            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_SILVERMOON), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_SILVERMOON));
+                            if (me->GetLevel() >= 65)
+                                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_SHATTRATH), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_SHATTRATH_H));
+                        }
+                        if (me->GetLevel() >= 74)
+                            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_DALARAN), GOSSIP_SENDER_CLASS_ACTION1, GOSSIP_ACTION_INFO_DEF + uint32(PORTAL_DALARAN));
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 7);
                     }
                     break;
                 }
@@ -8526,10 +8579,51 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             }
             break;
         }
-        case GOSSIP_SENDER_CLASS_ACTION1:
-        {
-            switch (_botclass)
+            case GOSSIP_SENDER_CLASS_ACTION1:
             {
+                switch (_botclass)
+                {
+                case BOT_CLASS_MAGE:
+                {
+                    if (!IsCasting())
+                    {
+                        uint32 portal_spell_id = action - GOSSIP_ACTION_INFO_DEF;
+                        if (!portal_spell_id)
+                            break;
+
+                        if (!player->HasItemCount(17032, 1))
+                        {
+                            me->Say("|cffffffffSorry, I'm fresh out of Rune of Portals. Please go buy one and I'll happily give you a port.|r", LANG_UNIVERSAL);
+                            player->PlayerTalkClass->SendCloseGossip(); 
+                            return false;
+                        }
+
+                        if (!IsSpellReady(portal_spell_id, lastdiff, false))
+                        {
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_NOT_READY_YET), player);
+                            return OnGossipSelect(player, creature, GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 4);
+                        }
+
+                        player->DestroyItemCount(17032, 1, true); 
+
+                        const char* portalDialogues[] = {
+                            "|cffffffffHang on to your helm, portal coming right up!|r",
+                            "|cffffffffOne-way ticket coming up! Keep your arms and legs inside the portal at all times.|r",
+                            "|cffffffffBuckle up, this portal might get a bit... bumpy.|r",
+                            "|cffffffffWho needs a flight path when you've got me?|r",
+                            "|cffffffffWith the magic word and a flick of the wrist, off you go! Just don't ask me to bring you back...|r",
+                            "|cffffffffLet's hope this one doesn't go sideways, eh? Portal coming through!|r",
+                            "|cffffffffWhoops! Last time I did this, I ended up in a murloc village... Just kidding|r",
+                        };
+
+                        std::string message = portalDialogues[urand(0, sizeof(portalDialogues) / sizeof(char*) - 1)];
+                        me->Say(message.c_str(), LANG_UNIVERSAL);
+
+                        me->CastCustomSpell(me, portal_spell_id, nullptr, nullptr, nullptr, false, nullptr, nullptr, player->GetGUID());
+                        player->PlayerTalkClass->SendCloseGossip(); 
+                    }
+                    break;
+                }
                 case BOT_CLASS_ROGUE:
                 {
                     if (!IsCasting())
@@ -8538,9 +8632,23 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         uint32 picklock = InitSpell(me, 1804);
                         if (!picklock)
                         {
-                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_NO_LOCKPICKING), player);
+                            me->Say("|cffffffffSorry, I don't seem to have my lockpicking tools on me.|r", LANG_UNIVERSAL);
                             break;
                         }
+
+                        // Add dialogue for lockpicking
+                        const char* lockpickingDialogues[] = {
+                            "|cffffffffLet's see what secrets this lock holds...|r",
+                            "|cffffffffA little twist here, a little nudge there...|r",
+                            "|cffffffffThey say patience is a thief's virtue, or was it silence? Ah well, let's get this open!|r",
+                            "|cffffffffEvery lock has a key, or in our case, a skilled Rogue!|r",
+                            "|cffffffffKeep a lookout, won't you? This requires delicate handling.|r",
+                            "|cffffffffIf this lock could talk, it would surely be begging for mercy by now!|r",
+                            "|cffffffffAlmost got it... there! No lock is a match for me.|r"
+                        };
+
+                        std::string message = lockpickingDialogues[urand(0, sizeof(lockpickingDialogues) / sizeof(char*) - 1)];
+                        me->Say(message.c_str(), LANG_UNIVERSAL);
 
                         SpellInfo const* Info = sSpellMgr->GetSpellInfo(picklock);
                         Spell* lockpickspell = new Spell(player, Info, TRIGGERED_NONE, me->GetGUID());
@@ -10309,7 +10417,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         break;
                     }
                     case 2: //max npcbots exceed
-                        ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_MAXBOTS).c_str(), BotMgr::GetMaxNpcBots());
+                        ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_MAXBOTS).c_str(), BotMgr::GetMaxNpcBots(player->GetLevel()));
                         BotSay("...", player);
                         break;
                     case 3: //not enough money

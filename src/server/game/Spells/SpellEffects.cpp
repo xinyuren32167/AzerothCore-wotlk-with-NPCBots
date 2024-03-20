@@ -2279,6 +2279,11 @@ void Spell::EffectOpenLock(SpellEffIndex effIndex)
                 return;
             }
         }
+        else if (botGoInfo->type == GAMEOBJECT_TYPE_TRAP)
+        {
+            gameObjTarget->SetLootState(GO_ACTIVATED);
+            return;
+        }
 
         return;
     }
