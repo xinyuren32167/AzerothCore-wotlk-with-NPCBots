@@ -69,7 +69,9 @@ void AddSC_npc_murky();
 void AddSC_gobject_corn_kennels();
 void AddSC_custom_player_murky_scripts();
 void AddSC_boss_lethtendris();
-
+void AddSC_spell_priest_starshards();
+void AddSC_spell_burning_rush();
+void AddSC_spell_spatial_rift();
 
 //void AddSC_PlayerTeleportRevive();
 //void AddSC_transform_race_command();
@@ -132,8 +134,11 @@ void AddCustomScripts()
     AddSC_gobject_corn_kennels();
     AddSC_custom_player_murky_scripts();
     AddSC_boss_lethtendris();
+    AddSC_spell_priest_starshards();
+    AddSC_spell_burning_rush();
+    AddSC_spell_spatial_rift();
 
-    //AddSC_PlayerTeleportRevive();
+        //AddSC_PlayerTeleportRevive();
     //AddSC_transform_race_command();
     //AddSC_boss_the_hidden_watcher();
     //AddSC_SymbiosisScript();
