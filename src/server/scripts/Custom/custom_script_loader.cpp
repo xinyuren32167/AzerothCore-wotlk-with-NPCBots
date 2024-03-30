@@ -72,6 +72,9 @@ void AddSC_boss_lethtendris();
 void AddSC_spell_priest_starshards();
 void AddSC_spell_burning_rush();
 void AddSC_spell_spatial_rift();
+void AddSC_boss_tendris_warpwood();
+void AddSC_spell_touch_of_the_magi();
+
 
 //void AddSC_PlayerTeleportRevive();
 //void AddSC_transform_race_command();
@@ -137,6 +140,8 @@ void AddCustomScripts()
     AddSC_spell_priest_starshards();
     AddSC_spell_burning_rush();
     AddSC_spell_spatial_rift();
+    AddSC_boss_tendris_warpwood();
+    AddSC_spell_touch_of_the_magi();
 
         //AddSC_PlayerTeleportRevive();
     //AddSC_transform_race_command();
