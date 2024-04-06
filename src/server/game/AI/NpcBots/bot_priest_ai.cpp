@@ -852,7 +852,7 @@ public:
             // Dinkle: Periodic thoughtful dialogue
             if (!IsWanderer())
             {
-            if (urand(0, 999) < 1)
+            if (urand(0, 1999) < 1)
             {
                 if (!me->IsInCombat())
                 {
@@ -930,7 +930,7 @@ public:
                 if (!target->HasAuraTypeWithFamilyFlags(SPELL_AURA_MOD_STAT, SPELLFAMILY_PRIEST, 0x8) &&
                     doCast(target, PW_FORTITUDE))
                 {
-                    if (!IsWanderer() && urand(0, 100) < 15)
+                    if (!IsWanderer() && urand(0, 100) < 10)
                     {
                         const char* fortitudeMessages[] = {
                             "|cFFFFFFFFFortitude isn't just a buff, it's a state of mind.|r",

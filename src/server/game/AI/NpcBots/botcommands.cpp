@@ -652,7 +652,7 @@ public:
             { "add",        HandleNpcBotAddCommand,                 rbac::RBAC_PERM_COMMAND_NPCBOT_ADD,                Console::No  },
             { "remove",     HandleNpcBotRemoveCommand,              rbac::RBAC_PERM_COMMAND_NPCBOT_REMOVE,             Console::No  },
             { "createnew",  HandleNpcBotCreateNewCommand,           rbac::RBAC_PERM_COMMAND_NPCBOT_CREATENEW,          Console::Yes },
-            //{ "spawn",      HandleNpcBotSpawnCommand,               rbac::RBAC_PERM_COMMAND_NPCBOT_SPAWN,              Console::No  }, //Disabled
+            //{ "spawn",      HandleNpcBotSpawnCommand,               rbac::RBAC_PERM_COMMAND_NPCBOT_SPAWN,              Console::No  }, //Dinkle Disabled
             { "move",       HandleNpcBotMoveCommand,                rbac::RBAC_PERM_COMMAND_NPCBOT_MOVE,               Console::No  },
             { "delete",     npcbotDeleteCommandTable                                                                                },
             { "lookup",     HandleNpcBotLookupCommand,              rbac::RBAC_PERM_COMMAND_NPCBOT_LOOKUP,             Console::Yes },
@@ -3124,8 +3124,8 @@ public:
         if (!creVal)
         {
             handler->SendSysMessage(".npcbot spawn");
-            handler->SendSysMessage("Adds new npcbot spawn of given entry in world. You can shift-link the npc");
-            handler->SendSysMessage("Syntax: .npcbot spawn #entry");
+            handler->SendSysMessage("Disabled. Use the bot hirerer. Good reason for disabling it, just saying.");
+            handler->SendSysMessage("Disabled. Use the bot hirerer. Good reason for disabling it, just saying.");
             handler->SetSentErrorMessage(true);
             return false;
         }

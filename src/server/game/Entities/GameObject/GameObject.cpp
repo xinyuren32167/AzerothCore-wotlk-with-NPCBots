@@ -518,7 +518,7 @@ void GameObject::Update(uint32 diff)
                                 UpdateData udata;
                                 WorldPacket packet;
                                 BuildValuesUpdateBlockForPlayer(&udata, caster->ToPlayer());
-                                udata.BuildPacket(&packet);
+                                udata.BuildPacket(packet);
                                 caster->ToPlayer()->GetSession()->SendPacket(&packet);
 
                                 SendCustomAnim(GetGoAnimProgress());
@@ -541,7 +541,7 @@ void GameObject::Update(uint32 diff)
                                     UpdateData udata;
                                     WorldPacket packet; 
                                     BuildValuesUpdateBlockForPlayer(&udata, caster->ToPlayer());
-                                    udata.BuildPacket(&packet);
+                                    udata.BuildPacket(packet);
                                     caster->ToPlayer()->GetSession()->SendPacket(&packet);
 
                                     SendCustomAnim(GetGoAnimProgress());

@@ -37,9 +37,9 @@ enum Spells
 
 enum Events
 {
-    EVENT_SUMMON_EXPLOSIVE_TRAP = 3,
-    EVENT_MOLTEN_CLEAVE = 4, 
-    EVENT_LAVA_BURST = 5 
+    //EVENT_SUMMON_EXPLOSIVE_TRAP = 3,
+    EVENT_MOLTEN_CLEAVE = 3, 
+    EVENT_LAVA_BURST = 4 
 };
 
 enum GameObjects
@@ -80,7 +80,7 @@ public:
             me->CallForHelp(VISIBLE_RANGE);
             events.ScheduleEvent(SPELL_HANDOFTHAURISSAN, 4s, 7s);
             events.ScheduleEvent(SPELL_AVATAROFFLAME, 10s, 12s);
-            events.ScheduleEvent(EVENT_SUMMON_EXPLOSIVE_TRAP, 6s);
+           // events.ScheduleEvent(EVENT_SUMMON_EXPLOSIVE_TRAP, 6s);
             events.ScheduleEvent(EVENT_MOLTEN_CLEAVE, 8s); 
             events.ScheduleEvent(EVENT_LAVA_BURST, 8s, 12s);
         }
@@ -154,15 +154,15 @@ public:
                     DoCastSelf(SPELL_AVATAROFFLAME);
                     events.ScheduleEvent(SPELL_AVATAROFFLAME, 23s, 27s);
                     break;
-                case EVENT_SUMMON_EXPLOSIVE_TRAP:
-                    for (int i = 0; i < 4; ++i) 
-                    {
-                        float x, y, z;
-                        me->GetClosePoint(x, y, z, me->GetObjectSize(), frand(0, 30));
-                        me->SummonGameObject(GO_EXPLOSIVE_TRAP, x, y, z, 0, 0, 0, 0, 0, 60000);
-                    }
-                    events.ScheduleEvent(EVENT_SUMMON_EXPLOSIVE_TRAP, 6s); 
-                    break;
+                //case EVENT_SUMMON_EXPLOSIVE_TRAP:
+                //    for (int i = 0; i < 4; ++i) 
+                //    {
+                //        float x, y, z;
+                //        me->GetClosePoint(x, y, z, me->GetObjectSize(), frand(0, 30));
+                //        me->SummonGameObject(GO_EXPLOSIVE_TRAP, x, y, z, 0, 0, 0, 0, 0, 60000);
+                //    }
+                //    events.ScheduleEvent(EVENT_SUMMON_EXPLOSIVE_TRAP, 6s); 
+                //   break;
                 case EVENT_MOLTEN_CLEAVE: 
                     DoCastVictim(SPELL_MOLTEN_CLEAVE, true);
                     events.ScheduleEvent(EVENT_MOLTEN_CLEAVE, 10s, 15s);

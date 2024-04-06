@@ -55,7 +55,8 @@ enum MageSpells
     SPELL_MAGE_SUMMON_WATER_ELEMENTAL_PERMANENT  = 70908,
     SPELL_MAGE_SUMMON_WATER_ELEMENTAL_TEMPORARY  = 70907,
     SPELL_MAGE_GLYPH_OF_BLAST_WAVE               = 62126,
-    SPELL_MAGE_FINGERS_OF_FROST                  = 44543
+    SPELL_MAGE_FINGERS_OF_FROST                  = 44543,
+    SPELL_TOUCH_OF_THE_MAGI_AURA                 = 844457
 };
 
 
@@ -228,7 +229,11 @@ class spell_mage_arcane_blast : public SpellScript
 {
     PrepareSpellScript(spell_mage_arcane_blast);
 
-    bool Load() override { _triggerSpellId = 0; return true; }
+    bool Load() override
+    {
+        _triggerSpellId = 0;
+        return true;
+    }
 
     void HandleTriggerSpell(SpellEffIndex effIndex)
     {
@@ -238,7 +243,20 @@ class spell_mage_arcane_blast : public SpellScript
 
     void HandleAfterCast()
     {
+        // Original functionality
         GetCaster()->CastSpell(GetCaster(), _triggerSpellId, TRIGGERED_FULL_MASK);
+
+        if (Unit* target = GetExplTargetUnit()) // Get the target of the Arcane Blast spell
+        {
+            if (Aura* aura = target->GetAura(SPELL_TOUCH_OF_THE_MAGI_AURA, GetCaster()->GetGUID()))
+            {
+                aura->SetStackAmount(aura->GetStackAmount() + 1); // Increase stack amount
+
+                // Extend the duration of the aura by 1 second
+                const int32 newDuration = aura->GetDuration() + 1000; // 1000 milliseconds = 1 second
+                aura->SetDuration(newDuration);
+            }
+        }
     }
 
     void Register() override
@@ -251,6 +269,7 @@ class spell_mage_arcane_blast : public SpellScript
 private:
     uint32 _triggerSpellId;
 };
+
 
 class spell_mage_burning_determination : public AuraScript
 {
@@ -902,9 +921,9 @@ class spell_mage_living_bomb : public AuraScript
 
     void AfterRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
-        AuraRemoveMode removeMode = GetTargetApplication()->GetRemoveMode();
-        if (removeMode != AURA_REMOVE_BY_ENEMY_SPELL && removeMode != AURA_REMOVE_BY_EXPIRE)
-            return;
+       // AuraRemoveMode removeMode = GetTargetApplication()->GetRemoveMode();
+       // if (removeMode != AURA_REMOVE_BY_ENEMY_SPELL && removeMode != AURA_REMOVE_BY_EXPIRE)
+       //     return;
 
         if (Unit* caster = GetCaster())
             caster->CastSpell(GetTarget(), uint32(aurEff->GetAmount()), true, nullptr, aurEff);

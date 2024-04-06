@@ -11416,30 +11416,8 @@ void bot_ai::SpawnKillReward(Player* looter) const
 
     GameObject* moneyBag = looter->SummonGameObject(GO_BOT_MONEY_BAG, me->m_positionX, me->m_positionY, me->m_positionZ, me->GetOrientation(), 0, 0, 0, 0, REVIVE_TIMER_DEFAULT);
     moneyBag->SetSpellId(GO_BOT_MONEY_BAG + me->GetEntry());
-
-    if (moneyBag && looter)
-    {
-        uint32 playerLevel = looter->getLevel();
-        uint32 botLevel = me->getLevel();
-
-        // Check if the player's level is 60, 70, or 80
-        if (playerLevel == 60 || playerLevel == 70 || playerLevel == 80)
-            return;
-
-        // Check if the level difference is within 5 levels
-        if (std::abs(int(playerLevel) - int(botLevel)) > 5)
-            return;
-
-        uint32 nextLevel = playerLevel + 1;
-        uint32 currentLevelExp = sObjectMgr->GetXPForLevel(playerLevel);
-        uint32 nextLevelExp = sObjectMgr->GetXPForLevel(nextLevel);
-
-        uint32 expForNextLevel = nextLevelExp - currentLevelExp;
-        uint32 expBoost = expForNextLevel * 0.0055;
-
-        looter->GiveXP(expBoost, nullptr);
-    }
 }
+
 void bot_ai::FillKillReward(GameObject* go) const
 {
     static const uint32 MAX_KILL_REWARD_ITEMS = 2;

@@ -62,17 +62,14 @@ public:
             Medics = false;
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
             me->Yell("Reservists! Get these interlopers out of here!", LANG_UNIVERSAL);
             for (const Position& pos : anvilrageSpawnPositions)
             {
                 if (Creature* reservist = me->SummonCreature(8901, pos, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 69000))
                 {
-                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, false))
-                    {
-                        reservist->AI()->AttackStart(target);
-                    }
+                    reservist->SetInCombatWithZone(); 
                 }
             }
         }

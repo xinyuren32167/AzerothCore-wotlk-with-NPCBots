@@ -21,19 +21,24 @@
 
 enum Spells
 {
-    SPELL_REND                      = 13738,
-    SPELL_THRASH                    = 3391,
-};
-
-enum Says
-{
-    EMOTE_DEATH                     = 0
+    SPELL_REND = 13738,
+    SPELL_THRASH = 3391,
+    SPELL_HEROIC_LEAP = 52174,
+    SPELL_ENRAGE = 8269
 };
 
 enum Events
 {
-    EVENT_REND                      = 1,
-    EVENT_THRASH                    = 2,
+    EVENT_REND = 1,
+    EVENT_THRASH = 2,
+    EVENT_HEROIC_LEAP = 3,
+    EVENT_ENRAGE = 4
+};
+
+
+enum Says
+{
+    EMOTE_DEATH                     = 0
 };
 
 const Position SummonLocation = { -167.9561f, -411.7844f, 76.23057f, 1.53589f };
@@ -57,6 +62,8 @@ public:
             _JustEngagedWith();
             events.ScheduleEvent(EVENT_REND, 17s, 20s);
             events.ScheduleEvent(EVENT_THRASH, 10s, 12s);
+            events.ScheduleEvent(EVENT_HEROIC_LEAP, 8s, 15s);
+            events.ScheduleEvent(EVENT_ENRAGE, 2min);
         }
 
         void JustDied(Unit* /*killer*/) override
@@ -86,6 +93,13 @@ public:
                         break;
                     case EVENT_THRASH:
                         DoCast(me, SPELL_THRASH);
+                        break;
+                    case EVENT_HEROIC_LEAP:
+                        DoCastRandomTarget(SPELL_HEROIC_LEAP, 0, 35.0f, false, true); 
+                        events.ScheduleEvent(EVENT_HEROIC_LEAP, 20s, 30s); 
+                        break;
+                    case EVENT_ENRAGE:
+                        DoCast(me, SPELL_ENRAGE, true);
                         break;
                     default:
                         break;

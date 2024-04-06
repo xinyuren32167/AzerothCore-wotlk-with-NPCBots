@@ -32,14 +32,26 @@ enum IronhandData
     IRONHAND_N_GROUPS          = 3,
     SPELL_GOUT_OF_FLAMES       = 15529
 };
-
+//Dinkle: Hardcoded braziers because of RDF fuckery
 class go_shadowforge_brazier : public GameObjectScript
 {
 public:
     go_shadowforge_brazier() : GameObjectScript("go_shadowforge_brazier") {}
 
-    bool OnGossipHello(Player* /*player*/, GameObject* go) override
+    static bool northBrazierLit;
+    static bool southBrazierLit;
+
+    bool OnGossipHello(Player* player, GameObject* go) override
     {
+        if (!player->HasItemCount(11885)) // Check if the player has a Shadowforge Torch
+        {
+            player->GetSession()->SendNotification("You need a Shadowforge Torch to use this.");
+            return true;
+        }
+
+        // Consume a Shadowforge Torch from the player's inventory
+        player->DestroyItemCount(11885, 1, true);
+
         if (InstanceScript* instance = go->GetInstanceScript())
         {
             GameObject* northBrazier = ObjectAccessor::GetGameObject(*go, instance->GetGuidData(DATA_SF_BRAZIER_N));
@@ -50,23 +62,37 @@ public:
                 return false;
             }
 
+            // Check which brazier the player is interacting with and set the local flag
+            if (go->GetGUID() == northBrazier->GetGUID())
+            {
+                northBrazierLit = true;
+            }
+            else if (go->GetGUID() == southBrazier->GetGUID())
+            {
+                southBrazierLit = true;
+            }
+
             // should only happen on first brazier
             if (instance->GetData(TYPE_LYCEUM) == NOT_STARTED)
             {
                 instance->SetData(TYPE_LYCEUM, IN_PROGRESS);
             }
 
-            // Check if the opposite brazier is lit - if it is, open the gates.
-            if ((go->GetGUID() == northBrazier->GetGUID() && southBrazier->GetGoState() == GO_STATE_ACTIVE) || (go->GetGUID() == southBrazier->GetGUID() && northBrazier->GetGoState() == GO_STATE_ACTIVE))
+            // Check if both braziers are lit locally
+            if (northBrazierLit && southBrazierLit)
             {
                 instance->SetData(TYPE_LYCEUM, DONE);
             }
+
             return false;
         }
         return false;
     };
 };
 
+bool go_shadowforge_brazier::northBrazierLit = false;
+bool go_shadowforge_brazier::southBrazierLit = false;
+//end Dinkle
 class ironhand_guardian : public CreatureScript
 {
 public:

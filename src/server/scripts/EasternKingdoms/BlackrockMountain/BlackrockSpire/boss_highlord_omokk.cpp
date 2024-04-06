@@ -21,14 +21,16 @@
 
 enum Spells
 {
-    SPELL_FRENZY                    = 8269,
-    SPELL_KNOCK_AWAY                = 10101
+    SPELL_FRENZY = 8269,
+    SPELL_KNOCK_AWAY = 10101,
+    SPELL_CLEAVE = 19632 // Added Cleave spell ID
 };
 
 enum Events
 {
-    EVENT_FRENZY                    = 1,
-    EVENT_KNOCK_AWAY                = 2
+    EVENT_FRENZY = 1,
+    EVENT_KNOCK_AWAY = 2,
+    EVENT_CLEAVE = 3 // Added Cleave event
 };
 
 class boss_highlord_omokk : public CreatureScript
@@ -53,8 +55,9 @@ public:
         void JustEngagedWith(Unit* /*who*/) override
         {
             _JustEngagedWith();
-            events.ScheduleEvent(EVENT_FRENZY, 20s);
+            events.ScheduleEvent(EVENT_FRENZY, 20s); // Frenzy will be handled based on HP in UpdateAI
             events.ScheduleEvent(EVENT_KNOCK_AWAY, 18s);
+            events.ScheduleEvent(EVENT_CLEAVE, 10s); // Schedule the first Cleave
         }
 
         void JustDied(Unit* /*killer*/) override
@@ -72,20 +75,26 @@ public:
             if (me->HasUnitState(UNIT_STATE_CASTING))
                 return;
 
+            // Check for Frenzy condition based on HP
+            if (me->HealthBelowPct(40) && !me->HasAura(SPELL_FRENZY))
+            {
+                DoCast(me, SPELL_FRENZY);
+            }
+
             while (uint32 eventId = events.ExecuteEvent())
             {
                 switch (eventId)
                 {
-                    case EVENT_FRENZY:
-                        DoCastVictim(SPELL_FRENZY);
-                        events.ScheduleEvent(EVENT_FRENZY, 60s);
-                        break;
-                    case EVENT_KNOCK_AWAY:
-                        DoCastVictim(SPELL_KNOCK_AWAY);
-                        events.ScheduleEvent(EVENT_KNOCK_AWAY, 12s);
-                        break;
-                    default:
-                        break;
+                case EVENT_KNOCK_AWAY:
+                    DoCastVictim(SPELL_KNOCK_AWAY);
+                    events.ScheduleEvent(EVENT_KNOCK_AWAY, 12s);
+                    break;
+                case EVENT_CLEAVE:
+                    DoCastVictim(SPELL_CLEAVE);
+                    events.ScheduleEvent(EVENT_CLEAVE, 8s);
+                    break;
+                default:
+                    break;
                 }
             }
             DoMeleeAttackIfReady();
