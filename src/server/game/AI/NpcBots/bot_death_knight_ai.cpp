@@ -71,7 +71,8 @@ enum DeathKnightBaseSpells
     BLOOD_PRESENCE_1                    = 48266,
     FROST_PRESENCE_1                    = 48263,
     UNHOLY_PRESENCE_1                   = 48265,//unused
-    SPELL_ID_THORIUM_GRENADE            = 19769
+    SPELL_ID_THORIUM_GRENADE            = 19769,
+    GOLIATHS_RECKONING_ID               = 1190004
 };
 enum DeathKnightPassives
 {
@@ -173,7 +174,7 @@ static const uint32 Deathknight_spells_cc_arr[] =
 static const uint32 Deathknight_spells_support_arr[] =
 { ANTI_MAGIC_SHELL_1, ANTI_MAGIC_ZONE_1, ARMY_OF_THE_DEAD_1, BLOOD_TAP_1, BONE_SHIELD_1,DARK_COMMAND_1, DEATHCHILL_1,
 DEATH_COIL_1, EMPOWER_RUNE_WEAPON_1, HORN_OF_WINTER_1, HUNGERING_COLD_1,HYSTERIA_1, ICEBOUND_FORTITUDE_1,
-LICHBORNE_1, MARK_OF_BLOOD_1, PATH_OF_FROST_1, PESTILENCE_1, RUNE_TAP_1,UNBREAKABLE_ARMOR_1, VAMPIRIC_BLOOD_1 };
+LICHBORNE_1, MARK_OF_BLOOD_1, PATH_OF_FROST_1, PESTILENCE_1, RUNE_TAP_1,UNBREAKABLE_ARMOR_1,GOLIATHS_RECKONING_ID, VAMPIRIC_BLOOD_1 };
 
 static const std::vector<uint32> Deathknight_spells_damage(FROM_ARRAY(Deathknight_spells_damage_arr));
 static const std::vector<uint32> Deathknight_spells_cc(FROM_ARRAY(Deathknight_spells_cc_arr));
@@ -475,24 +476,55 @@ public:
                 return;
 
             uint8 newpresence = IsTank() ? DEATH_KNIGHT_FROST_PRESENCE : DEATH_KNIGHT_BLOOD_PRESENCE;
-            if (_presence == newpresence)
-            {
-                presencetimer = 5000;
-                return;
-            }
 
-            if (newpresence == DEATH_KNIGHT_FROST_PRESENCE && HaveRunes(FROST_PRESENCE_1))
+            if (_presence != newpresence)
             {
-                if (doCast(me, FROST_PRESENCE_1))
-                    return;
-            }
-            else if (newpresence == DEATH_KNIGHT_BLOOD_PRESENCE && HaveRunes(BLOOD_PRESENCE_1))
-            {
-                if (doCast(me, BLOOD_PRESENCE_1))
-                    return;
-            }
+                if (_presence == DEATH_KNIGHT_FROST_PRESENCE)
+                {
+                    me->RemoveAura(1190014);
+                    me->RemoveAura(1190013);
+                }
 
-            presencetimer = 1000; //fail
+                if (newpresence == DEATH_KNIGHT_FROST_PRESENCE && HaveRunes(FROST_PRESENCE_1))
+                {
+                    if (doCast(me, FROST_PRESENCE_1))
+                    {
+                        me->AddAura(1190014, me);
+                        me->AddAura(1190013, me);
+                        _presence = newpresence; 
+                        presencetimer = 5000;    
+                        return;
+                    }
+                }
+                else if (newpresence == DEATH_KNIGHT_BLOOD_PRESENCE && HaveRunes(BLOOD_PRESENCE_1))
+                {
+                    if (doCast(me, BLOOD_PRESENCE_1))
+                    {
+                        _presence = newpresence;  
+                        presencetimer = 5000;    
+                        return;
+                    }
+                }
+
+                presencetimer = 1000; 
+            }
+            else
+            {
+                if (_presence == DEATH_KNIGHT_FROST_PRESENCE)
+                {
+                    if (!me->HasAura(1190014))
+                        me->AddAura(1190014, me);
+                    if (!me->HasAura(1190013))
+                        me->AddAura(1190013, me);
+                }
+                else
+                {
+                    me->RemoveAura(1190014);
+                    me->RemoveAura(1190013);
+                }
+
+                presencetimer = 5000; 
+            }
         }
 
         void BreakCC(uint32 diff) override
@@ -780,6 +812,21 @@ public:
             {
                 if (doCast(me, GetSpell(UNBREAKABLE_ARMOR_1)))
                 {}
+            }
+
+            if ((GetSpec() == BOT_SPEC_DK_BLOOD) && me->GetLevel() >= 48)
+            {
+                // GOLIATH'S RECKONING
+                if (IsSpellReady(GOLIATHS_RECKONING_ID, diff, false) &&
+                    GetHealthPCT(me) < 50 &&  
+                    Rand() < 50)  
+                {
+                    if (doCast(me, GOLIATHS_RECKONING_ID))
+                    {
+                        if (!IAmFree())
+                            ReportSpellCast(GOLIATHS_RECKONING_ID, LocalizedNpcText(master, BOT_TEXT__USED), master);
+                    }
+                }
             }
 
             if (!HasRole(BOT_ROLE_DPS))

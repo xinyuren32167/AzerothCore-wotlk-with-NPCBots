@@ -4027,18 +4027,19 @@ public:
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        if (_mount0 && !sSpellMgr->GetSpellInfo(_mount0))
+        return ValidateSpell(_mount0, "mount0") && ValidateSpell(_mount60, "mount60") &&
+            ValidateSpell(_mount100, "mount100") && ValidateSpell(_mount150, "mount150") &&
+            ValidateSpell(_mount280, "mount280") && ValidateSpell(_mount310, "mount310");
+    }
+
+    bool ValidateSpell(uint32 spellId, const char* mountName)
+    {
+        if (spellId && !sSpellMgr->GetSpellInfo(spellId))
+        {
+            LOG_INFO("scripts", "spell_gen_mount: " + std::string(mountName) + " Spell ID " + std::to_string(spellId) + " is not valid");
             return false;
-        if (_mount60 && !sSpellMgr->GetSpellInfo(_mount60))
-            return false;
-        if (_mount100 && !sSpellMgr->GetSpellInfo(_mount100))
-            return false;
-        if (_mount150 && !sSpellMgr->GetSpellInfo(_mount150))
-            return false;
-        if (_mount280 && !sSpellMgr->GetSpellInfo(_mount280))
-            return false;
-        if (_mount310 && !sSpellMgr->GetSpellInfo(_mount310))
-            return false;
+        }
+        LOG_INFO("scripts", "spell_gen_mount: " + std::string(mountName) + " Spell ID " + std::to_string(spellId) + " is valid");
         return true;
     }
 
@@ -4046,68 +4047,100 @@ public:
     {
         PreventHitDefaultEffect(effIndex);
 
-        if (Player* target = GetHitPlayer())
+        Player* target = GetHitPlayer();
+        if (!target)
         {
-            uint32 petNumber = target->GetTemporaryUnsummonedPetNumber();
-            target->SetTemporaryUnsummonedPetNumber(0);
-
-            // Prevent stacking of mounts and client crashes upon dismounting
-            target->RemoveAurasByType(SPELL_AURA_MOUNTED, ObjectGuid::Empty, GetHitAura());
-
-            // Triggered spell id dependent on riding skill and zone
-            bool canFly = false;
-            uint32 map = GetVirtualMapForMapAndZone(target->GetMapId(), target->GetZoneId());
-            if (map == 530 || (map == 571 && target->HasSpell(SPELL_COLD_WEATHER_FLYING)))
-                canFly = true;
-
-            AreaTableEntry const* area = sAreaTableStore.LookupEntry(target->GetAreaId());
-            // Xinef: add battlefield check
-            Battlefield* Bf = sBattlefieldMgr->GetBattlefieldToZoneId(target->GetZoneId());
-            if ((area && canFly && (area->flags & AREA_FLAG_NO_FLY_ZONE)) || (Bf && !Bf->CanFlyIn()))
-                canFly = false;
-
-            uint32 mount = 0;
-            switch (target->GetBaseSkillValue(SKILL_RIDING))
-            {
-                case 0:
-                    mount = _mount0;
-                    break;
-                case 75:
-                    mount = _mount60;
-                    break;
-                case 150:
-                    mount = _mount100;
-                    break;
-                case 225:
-                    if (canFly)
-                        mount = _mount150;
-                    else
-                        mount = _mount100;
-                    break;
-                case 300:
-                    if (canFly)
-                    {
-                        if (_mount310 && target->Has310Flyer(false))
-                            mount = _mount310;
-                        else
-                            mount = _mount280;
-                    }
-                    else
-                        mount = _mount100;
-                    break;
-                default:
-                    break;
-            }
-
-            if (mount)
-            {
-                PreventHitAura();
-                target->CastSpell(target, mount, true);
-            }
-
-            if (petNumber)
-                target->SetTemporaryUnsummonedPetNumber(petNumber);
+            LOG_INFO("scripts", "spell_gen_mount: No target player found.");
+            return;
         }
+
+        LOG_INFO("scripts", "spell_gen_mount: Handling mount for player " + std::to_string(target->GetGUID().GetCounter()));
+
+        uint32 petNumber = target->GetTemporaryUnsummonedPetNumber();
+        target->SetTemporaryUnsummonedPetNumber(0);
+
+        target->RemoveAurasByType(SPELL_AURA_MOUNTED, ObjectGuid::Empty, GetHitAura());
+        LOG_INFO("scripts", "spell_gen_mount: Removed mounted auras from player " + std::to_string(target->GetGUID().GetCounter()));
+
+        bool canFly = CanPlayerFly(target);
+        LOG_INFO("scripts", "spell_gen_mount: Player " + std::to_string(target->GetGUID().GetCounter()) + " canFly: " + (canFly ? "true" : "false"));
+
+        uint32 mount = DetermineMountSpell(target, canFly);
+        LOG_INFO("scripts", "spell_gen_mount: Determined mount spell ID " + std::to_string(mount) + " for player " + std::to_string(target->GetGUID().GetCounter()));
+
+        if (mount)
+        {
+            PreventHitAura();
+            target->CastSpell(target, mount, true);
+            LOG_INFO("scripts", "spell_gen_mount: Casting spell " + std::to_string(mount) + " on player " + std::to_string(target->GetGUID().GetCounter()));
+        }
+
+        if (petNumber)
+        {
+            target->SetTemporaryUnsummonedPetNumber(petNumber);
+            LOG_INFO("scripts", "spell_gen_mount: Restored pet number for player " + std::to_string(target->GetGUID().GetCounter()));
+        }
+    }
+
+    bool CanPlayerFly(Player* player)
+    {
+        uint32 map = GetVirtualMapForMapAndZone(player->GetMapId(), player->GetZoneId());
+        if (map == 530 || (map == 571 && player->HasSpell(SPELL_COLD_WEATHER_FLYING)))
+        {
+            AreaTableEntry const* area = sAreaTableStore.LookupEntry(player->GetAreaId());
+            Battlefield* Bf = sBattlefieldMgr->GetBattlefieldToZoneId(player->GetZoneId());
+            if ((area && (area->flags & AREA_FLAG_NO_FLY_ZONE)) || (Bf && !Bf->CanFlyIn()))
+                return false;
+            return true;
+        }
+        return false;
+    }
+
+    uint32 DetermineMountSpell(Player* player, bool canFly)
+    {
+        uint32 ridingSkill = player->GetBaseSkillValue(SKILL_RIDING);
+        LOG_INFO("scripts", "spell_gen_mount: Player " + std::to_string(player->GetGUID().GetCounter()) +
+            " riding skill: " + std::to_string(ridingSkill) + " canFly: " + (canFly ? "true" : "false"));
+
+        // Default to mount60 if no conditions are met
+        uint32 mount = _mount60; // Default to mount60 for any skill below 150
+
+        if (ridingSkill < 150)
+        {
+            LOG_INFO("scripts", "spell_gen_mount: Using default mount ID " + std::to_string(_mount60) +
+                " for player " + std::to_string(player->GetGUID().GetCounter()));
+        }
+        else if (ridingSkill < 225)
+        {
+            mount = _mount100;
+        }
+        else if (ridingSkill < 300)
+        {
+            mount = canFly ? _mount150 : _mount100;
+        }
+        else if (ridingSkill >= 300) // Handles 300 and above
+        {
+            if (canFly)
+            {
+                if (_mount310 && player->Has310Flyer(false))
+                {
+                    LOG_INFO("scripts", "spell_gen_mount: Using 310 flyer mount ID " + std::to_string(_mount310));
+                    mount = _mount310;
+                }
+                else
+                {
+                    LOG_INFO("scripts", "spell_gen_mount: Using 280 flyer mount ID " + std::to_string(_mount280));
+                    mount = _mount280;
+                }
+            }
+            else
+            {
+                LOG_INFO("scripts", "spell_gen_mount: Using ground mount ID " + std::to_string(_mount100));
+                mount = _mount100;
+            }
+        }
+
+        return mount;
     }
 
     void Register() override

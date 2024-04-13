@@ -73,6 +73,7 @@ public:
 
         void Reset() override
         {
+            events.Reset();
             _Reset();
             Summoned = false;
         }

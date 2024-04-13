@@ -74,6 +74,8 @@ void AddSC_spell_burning_rush();
 void AddSC_spell_spatial_rift();
 void AddSC_boss_tendris_warpwood();
 void AddSC_spell_touch_of_the_magi();
+void AddSC_script_spell_custom_dungeon_corpse_explosion();
+void AddSC_boss_ras_frostwhisper();
 
 
 //void AddSC_PlayerTeleportRevive();
@@ -142,6 +144,9 @@ void AddCustomScripts()
     AddSC_spell_spatial_rift();
     AddSC_boss_tendris_warpwood();
     AddSC_spell_touch_of_the_magi();
+    AddSC_script_spell_custom_dungeon_corpse_explosion();
+    AddSC_boss_ras_frostwhisper();
+
 
         //AddSC_PlayerTeleportRevive();
     //AddSC_transform_race_command();

@@ -52,6 +52,11 @@ public:
             _conflagrateThreat = 0.0f;
         }
 
+        void Reset() override
+        {
+            events.Reset();
+        }
+
         void JustEngagedWith(Unit* /*who*/) override
         {
             _JustEngagedWith();
