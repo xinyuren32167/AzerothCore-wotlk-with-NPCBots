@@ -76,6 +76,10 @@ void AddSC_boss_tendris_warpwood();
 void AddSC_spell_touch_of_the_magi();
 void AddSC_script_spell_custom_dungeon_corpse_explosion();
 void AddSC_boss_ras_frostwhisper();
+void AddSC_npc_generic_fire_storm();
+void AddSC_spell_opening_large_cage();
+void AddSC_boss_dathrohan_balnazzar();
+
 
 
 //void AddSC_PlayerTeleportRevive();
@@ -146,6 +150,9 @@ void AddCustomScripts()
     AddSC_spell_touch_of_the_magi();
     AddSC_script_spell_custom_dungeon_corpse_explosion();
     AddSC_boss_ras_frostwhisper();
+    AddSC_npc_generic_fire_storm();
+    AddSC_spell_opening_large_cage();
+    AddSC_boss_dathrohan_balnazzar();
 
 
         //AddSC_PlayerTeleportRevive();

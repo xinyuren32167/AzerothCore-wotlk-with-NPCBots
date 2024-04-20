@@ -43,7 +43,7 @@ enum MageBaseSpells
     LIVING_BOMB_1                       = 44457,
     FLAMESTRIKE_1                       = 2120,
     COMBUSTION_1                        = 11129,
-    FROSTFIRE_BOLT_1                    = 44614,
+    FROSTFIRE_BOLT_1                    = 844614,
     FIREBALL_1                          = 133,
     FROSTBOLT_1                         = 116,
     FROST_NOVA_1                        = 122,

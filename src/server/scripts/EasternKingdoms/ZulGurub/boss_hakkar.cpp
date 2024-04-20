@@ -116,7 +116,7 @@ public:
             _JustEngagedWith();
             events.ScheduleEvent(EVENT_BLOOD_SIPHON, 90s);
             events.ScheduleEvent(EVENT_CORRUPTED_BLOOD, 25s);
-            events.ScheduleEvent(EVENT_CAUSE_INSANITY, 17s);
+//            events.ScheduleEvent(EVENT_CAUSE_INSANITY, 17s);
             events.ScheduleEvent(EVENT_ENRAGE, 1min);
             if (instance->GetBossState(DATA_JEKLIK) != DONE)
                 events.ScheduleEvent(EVENT_ASPECT_OF_JEKLIK, 21s);

@@ -8504,7 +8504,7 @@ bool Unit::HandleDummyAuraProc(Unit* victim, uint32 damage, AuraEffect* triggere
                                 SpellInfo const* windfurySpellInfo = sSpellMgr->GetSpellInfo(spellId);
                                 if (!windfurySpellInfo)
                                 {
-                                    LOG_ERROR("entities.unit", "Unit::HandleDummyAuraProc (bot): non-existing spell id: {} (Windfury)", spellId);
+                                    //LOG_ERROR("entities.unit", "Unit::HandleDummyAuraProc (bot): non-existing spell id: {} (Windfury)", spellId);
                                     return false;
                                 }
 
