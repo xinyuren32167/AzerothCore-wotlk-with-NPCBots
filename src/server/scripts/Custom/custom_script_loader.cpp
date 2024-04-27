@@ -79,6 +79,8 @@ void AddSC_boss_ras_frostwhisper();
 void AddSC_npc_generic_fire_storm();
 void AddSC_spell_opening_large_cage();
 void AddSC_boss_dathrohan_balnazzar();
+void AddSC_boss_malor_the_zealous();
+void AddSC_boss_ramstein_the_gorger();
 
 
 
@@ -153,6 +155,8 @@ void AddCustomScripts()
     AddSC_npc_generic_fire_storm();
     AddSC_spell_opening_large_cage();
     AddSC_boss_dathrohan_balnazzar();
+    AddSC_boss_malor_the_zealous();
+    AddSC_boss_ramstein_the_gorger();
 
 
         //AddSC_PlayerTeleportRevive();

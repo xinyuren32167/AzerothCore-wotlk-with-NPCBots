@@ -674,7 +674,7 @@ public:
                     doCast(mytar, GetSpell(VAMPIRIC_TOUCH_1)))
                     return;
                 if (IsSpellReady(SW_PAIN_1, diff) && can_do_shadow && Rand() < 60 &&
-                    mytar->GetHealth() > me->GetMaxHealth()/2 * (1 + mytar->getAttackers().size()) &&
+                    mytar->GetHealth() > me->GetMaxHealth()/3 * (1 + mytar->getAttackers().size()) &&
                     !mytar->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x8000, 0x0, 0x0, me->GetGUID()))
                 {
                     AuraEffect const* weav = me->GetAuraEffect(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, SPELLFAMILY_PRIEST, 0x0, 0x8, 0x0);

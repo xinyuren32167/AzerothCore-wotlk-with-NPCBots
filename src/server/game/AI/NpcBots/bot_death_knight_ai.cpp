@@ -42,6 +42,8 @@ enum DeathKnightBaseSpells
 
     DEATH_COIL_1                        = 47541,
     DEATH_GRIP_1                        = 49576,
+    GOREFIENDS_GRASP_1                  = 1190009,
+    FROST_LATCH_1                       = 1190001,
     PESTILENCE_1                        = 50842,
     MIND_FREEZE_1                       = 47528,
     STRANGULATE_1                       = 47476,
@@ -166,10 +168,10 @@ const uint32 THORIUM_GRENADE_SPELL_ID = 19769;
 static const uint32 Deathknight_spells_damage_arr[] =
 { BLOOD_BOIL_1, BLOOD_STRIKE_1, DEATH_AND_DECAY_1, DEATH_COIL_1,DEATH_STRIKE_1,
 FROST_STRIKE_1, HEART_STRIKE_1, HOWLING_BLAST_1, HUNGERING_COLD_1, ICY_TOUCH_1,
-OBLITERATE_1, PESTILENCE_1, PLAGUE_STRIKE_1, RUNE_STRIKE_1, SCOURGE_STRIKE_1 };
+OBLITERATE_1, PESTILENCE_1, PLAGUE_STRIKE_1, RUNE_STRIKE_1, SCOURGE_STRIKE_1, FROST_LATCH_1 };
 
 static const uint32 Deathknight_spells_cc_arr[] =
-{ DEATH_GRIP_1, CHAINS_OF_ICE_1, MIND_FREEZE_1, STRANGULATE_1 };
+{ DEATH_GRIP_1, CHAINS_OF_ICE_1, MIND_FREEZE_1, STRANGULATE_1, GOREFIENDS_GRASP_1 };
 
 static const uint32 Deathknight_spells_support_arr[] =
 { ANTI_MAGIC_SHELL_1, ANTI_MAGIC_ZONE_1, ARMY_OF_THE_DEAD_1, BLOOD_TAP_1, BONE_SHIELD_1,DARK_COMMAND_1, DEATHCHILL_1,
@@ -558,6 +560,24 @@ public:
                 if (doCast(me->GetVictim(), GetSpell(MIND_FREEZE_1)))
                     getpower();
             }
+
+            // Dinkle: Gorefiend's Grasp logic
+            if (GetSpec() == BOT_SPEC_DK_BLOOD && IsSpellReady(GOREFIENDS_GRASP_1, diff)) 
+            {
+                std::list<Unit*> targets;
+                GetNearbyTargetsList(targets, 10.0f, 0); 
+                for (Unit* target : targets)
+                {
+                    if (target->IsAlive() && !me->IsFriendlyTo(target) && me->IsWithinDistInMap(target, 10.0f))
+                    {
+                        if (doCast(target, GOREFIENDS_GRASP_1))
+                        {
+                            SetSpellCooldown(GOREFIENDS_GRASP_1, 35000); 
+                            break;
+                        }
+                    }
+                }
+            }        
         }
 
         void UpdateAI(uint32 diff) override
@@ -791,20 +811,26 @@ public:
                 }
             }
 
-            ////DEATH GRIP - DISABLED
-            //if (DEATH_GRIP && DeathGrip_cd <= diff && dist < 30 &&
-            //    (tank == me && mytar->GetVictim() != me) ||
-            //    (mytar->GetVictim() == me && mytar->ToPlayer() && mytar->IsNonMeleeSpellCast(false)) &&
-            //    Rand() < 75)
-            //{
-            //    if (doCast(mytar, DEATH_GRIP))
-            //    {
-            //        DeathGrip_cd = 25000;
-            //        return;
-            //    }
+            // FROST LATCH Logic
+            if (IsSpellReady(FROST_LATCH_1, diff) && mytar->GetDistance(me) > 10.0f && mytar->GetDistance(me) < 30.0f)
+            {
+                if (doCast(mytar, FROST_LATCH_1))
+                {
+                    SetSpellCooldown(FROST_LATCH_1, 30000);
+                    return; 
+                }
+            }
 
-            //    DeathGrip_cd = 1000; //fail
-            //}
+            // DEATH GRIP Logic
+            if (IsSpellReady(DEATH_GRIP_1, diff) && me->IsInCombat() && !me->HasAuraType(SPELL_AURA_MOD_ROOT) &&
+               mytar->GetDistance(me) > 10.0f && mytar->GetDistance(me) < 30.0f && !mytar->IsFlying())
+            {
+                if (doCast(mytar, DEATH_GRIP_1))
+                {
+                    SetSpellCooldown(DEATH_GRIP_1, 25000); 
+                    return; 
+                }
+            }
 
             //UNBREAKABLE ARMOR
             if (IsSpellReady(UNBREAKABLE_ARMOR_1, diff, false) && dist < 10 && HaveRunes(UNBREAKABLE_ARMOR_1) &&
@@ -1867,6 +1893,7 @@ public:
             InitSpellMap(DEATH_AND_DECAY_1);
             InitSpellMap(DEATH_COIL_1);
             InitSpellMap(DEATH_GRIP_1);
+            InitSpellMap(GOREFIENDS_GRASP_1);
             InitSpellMap(PESTILENCE_1);
             InitSpellMap(MIND_FREEZE_1);
             InitSpellMap(STRANGULATE_1);

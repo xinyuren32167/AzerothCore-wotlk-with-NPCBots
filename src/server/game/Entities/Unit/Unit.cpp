@@ -10679,20 +10679,33 @@ ReputationRank Unit::GetReactionTo(Unit const* target, bool checkOriginalFaction
 
     Player const* selfPlayerOwner = GetAffectingPlayer();
     Player const* targetPlayerOwner = target->GetAffectingPlayer();
-
-    // check forced reputation to support SPELL_AURA_FORCE_REACTION
+    //Dinkle
+    // Check forced reputation to support SPELL_AURA_FORCE_REACTION
     if (selfPlayerOwner)
     {
-        if (FactionTemplateEntry const* targetFactionTemplateEntry = target->GetFactionTemplateEntry())
+        FactionTemplateEntry const* targetFactionTemplateEntry = target->GetFactionTemplateEntry();
+        if (targetFactionTemplateEntry) // Ensure faction template entry is valid
+        {
             if (ReputationRank const* repRank = selfPlayerOwner->GetReputationMgr().GetForcedRankIfAny(targetFactionTemplateEntry))
-                return *repRank;
+            {
+                if (repRank) // Ensure the reputation rank pointer is valid
+                    return *repRank;
+            }
+        }
     }
     else if (targetPlayerOwner)
     {
-        if (FactionTemplateEntry const* selfFactionTemplateEntry = GetFactionTemplateEntry())
+        FactionTemplateEntry const* selfFactionTemplateEntry = GetFactionTemplateEntry();
+        if (selfFactionTemplateEntry) // Ensure faction template entry is valid
+        {
             if (ReputationRank const* repRank = targetPlayerOwner->GetReputationMgr().GetForcedRankIfAny(selfFactionTemplateEntry))
-                return *repRank;
+            {
+                if (repRank) // Ensure the reputation rank pointer is valid
+                    return *repRank;
+            }
+        }
     }
+    //endDinkle
 
     //npcbot
     /*
