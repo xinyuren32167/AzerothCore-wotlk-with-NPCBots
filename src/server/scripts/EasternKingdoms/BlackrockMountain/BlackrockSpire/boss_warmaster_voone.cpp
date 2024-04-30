@@ -86,6 +86,11 @@ public:
             events.ScheduleEvent(EVENT_RAGE_BURST, 5s); // Initial rage burst
         }
 
+        void Reset() override
+        {
+            events.Reset();
+        }
+
         void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*type*/, SpellSchoolMask /*school*/) override
         {
             if (me->HealthBelowPctDamaged(65, damage) && events.IsInPhase(PHASE_BRAWLER))

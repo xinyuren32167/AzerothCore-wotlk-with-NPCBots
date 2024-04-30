@@ -410,7 +410,7 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
         }
     }
 
-    LastUsedScriptID = GetGOInfo()->ScriptId;
+    LastUsedScriptID = GetScriptId();
     AIM_Initialize();
 
     if (uint32 linkedEntry = GetGOInfo()->GetLinkedGameObjectEntry())

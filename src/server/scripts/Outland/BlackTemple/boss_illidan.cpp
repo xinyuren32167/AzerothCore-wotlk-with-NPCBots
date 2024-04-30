@@ -462,9 +462,12 @@ public:
                     Talk(SAY_ILLIDAN_MAIEV3);
                     events2.ScheduleEvent(EVENT_OUTRO_3, 17000);
                     break;
+                    //Dinkle
                 case EVENT_OUTRO_3:
-                    Unit::Kill(nullptr, me);
+                    Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true);
+                    Unit::Kill(target, me);
                     break;
+                    //end Dinkle
             }
 
             if (!UpdateVictim())

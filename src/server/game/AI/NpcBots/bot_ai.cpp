@@ -5116,6 +5116,27 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
         }
     }
 
+    // Dinkle Zul'Gurub
+    if (unit->GetMapId() == 309)  
+    {
+        std::list<GameObject*> gList;
+        Acore::AllGameObjectsWithEntryInRange check(unit, 180125, 60.f);  // GameObject ID for LIQUID_FIRE
+        Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcher(unit, gList, check);
+        Cell::VisitAllObjects(unit, searcher, 60.f);
+
+        for (auto* gameObject : gList)
+        {
+            if (!gameObject)
+                continue;
+
+            float radius = 15.0f + DEFAULT_COMBAT_REACH * 2.2f;  
+
+
+            spots.push_back(AoeSpotsVec::value_type(*gameObject, radius));
+        }
+    }
+
+
     //STUB
     //if (!unit->IsPlayer() || !unit->ToPlayer()->HaveBot())
     //    return;

@@ -65,7 +65,8 @@ enum Events
     EVENT_WATCH_PLAYER        = 8,
     EVENT_CHARGE_PLAYER       = 9,
     EVENT_EXECUTE             = 10,
-    EVENT_CLEAVE              = 11
+    EVENT_CLEAVE              = 11,
+    EVENT_CAST_LIGHTNING_AND_THUNDER = 12
 };
 
 enum Action
@@ -192,8 +193,9 @@ public:
             events.ScheduleEvent(EVENT_MORTAL_STRIKE, 14s, 28s);
             events.ScheduleEvent(EVENT_WHIRLWIND, 24s, 30s);
             events.ScheduleEvent(EVENT_CHECK_OHGAN, 1s);
-            events.ScheduleEvent(EVENT_WATCH_PLAYER, 12s, 24s);
+            events.ScheduleEvent(EVENT_WATCH_PLAYER, 24s, 24s);
             events.ScheduleEvent(EVENT_CHARGE_PLAYER, 30s, 40s);
+            events.ScheduleEvent(EVENT_CAST_LIGHTNING_AND_THUNDER, 20s, 40s);
             events.ScheduleEvent(EVENT_CLEAVE, 1s);
             me->SetHomePosition(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation());
             Talk(SAY_AGGRO);
@@ -436,13 +438,16 @@ public:
                         }
                         break;
                     case EVENT_WATCH_PLAYER:
-                        if (Unit* player = SelectTarget(SelectTargetMethod::Random, 0, 100, true))
+                        if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
                         {
-                            DoCast(player, SPELL_WATCH);
-                            Talk(SAY_WATCH, player);
-                            _chargeTarget = std::make_pair(player->GetGUID(), 0.f);
+                            DoCast(target, SPELL_WATCH); 
+
+                            std::string warnMsg = "Mandokir's gaze falls upon " + target->GetName() + "! Run or face your doom!";
+                            me->TextEmote(warnMsg.c_str(), nullptr, true);
+
+                            _chargeTarget = std::make_pair(target->GetGUID(), 0.f);
                         }
-                        events.ScheduleEvent(EVENT_WATCH_PLAYER, 12s, 24s);
+                        events.ScheduleEvent(EVENT_WATCH_PLAYER, 24s, 24s);
                         break;
                     case EVENT_CHARGE_PLAYER:
                         if (Unit* target = SelectTarget(SelectTargetMethod::MinDistance, 0, [this](Unit const* target)
@@ -466,6 +471,10 @@ public:
                     case EVENT_EXECUTE:
                         DoCastVictim(SPELL_EXECUTE, true);
                         events.ScheduleEvent(EVENT_EXECUTE, 7s, 14s);
+                        break;
+                    case EVENT_CAST_LIGHTNING_AND_THUNDER:
+                        CastSpellOnRandomTarget(920356, 100.0f); 
+                        events.ScheduleEvent(EVENT_CAST_LIGHTNING_AND_THUNDER, 20s, 40s); 
                         break;
                     case EVENT_CLEAVE:
                         {
@@ -496,6 +505,24 @@ public:
             }
 
             DoMeleeAttackIfReady(false);
+        }
+
+        void CastSpellOnRandomTarget(uint32 spellId, float range)
+        {
+            std::list<Unit*> targets;
+            Acore::AnyUnitInObjectRangeCheck check(me, range);
+            Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+            Cell::VisitAllObjects(me, searcher, range);
+
+            targets.remove_if([this](Unit* unit) -> bool {
+                return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+                });
+
+            if (!targets.empty())
+            {
+                Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+                DoCast(target, spellId);
+            }
         }
 
     private:
@@ -727,11 +754,15 @@ public:
                 {
                     if (Unit* caster = GetCaster())
                     {
-                        if (Creature* cCaster = caster->ToCreature())
+                        // Ensure the target is within 60 units before setting the charge action
+                        if (caster->GetDistance(target) <= 60.0f)
                         {
-                            if (cCaster->IsAIEnabled)
+                            if (Creature* cCaster = caster->ToCreature())
                             {
-                                cCaster->AI()->SetGUID(target->GetGUID(), ACTION_CHARGE);
+                                if (cCaster->IsAIEnabled)
+                                {
+                                    cCaster->AI()->SetGUID(target->GetGUID(), ACTION_CHARGE);
+                                }
                             }
                         }
                     }

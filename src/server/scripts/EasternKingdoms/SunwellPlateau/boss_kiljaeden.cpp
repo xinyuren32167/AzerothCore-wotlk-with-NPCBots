@@ -398,9 +398,14 @@ public:
             events2.Update(diff);
             switch (events2.ExecuteEvent())
             {
+                //Dinkle
                 case EVENT_KILL_SELF:
-                    me->KillSelf();
+                    if (Unit* player = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
+                        Unit::Kill(player, me);
+                    else
+                        me->KillSelf();
                     break;
+                    //end Dinkle
                 case EVENT_REBIRTH:
                     me->SetVisible(true);
                     me->CastSpell(me, SPELL_REBIRTH, false);

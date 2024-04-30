@@ -81,6 +81,7 @@ void AddSC_spell_opening_large_cage();
 void AddSC_boss_dathrohan_balnazzar();
 void AddSC_boss_malor_the_zealous();
 void AddSC_boss_ramstein_the_gorger();
+void AddSC_boss_volchan();
 
 
 
@@ -157,6 +158,7 @@ void AddCustomScripts()
     AddSC_boss_dathrohan_balnazzar();
     AddSC_boss_malor_the_zealous();
     AddSC_boss_ramstein_the_gorger();
+    AddSC_boss_volchan();
 
 
         //AddSC_PlayerTeleportRevive();

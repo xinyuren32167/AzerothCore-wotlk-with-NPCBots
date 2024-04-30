@@ -7621,6 +7621,14 @@ void Player::CastItemCombatSpell(Unit* target, WeaponAttackType attType, uint32 
                 chance = GetWeaponProcChance();
             }
 
+            // Dinkle Wallcraft - Spirit proc modifier with scalability based on player level
+            if (GetStat(STAT_SPIRIT))
+            {
+                uint32 level = GetLevel();
+                float diminishingFactor = 200.0f + 10.0f * level;
+                chance *= 1.0f + (GetStat(STAT_SPIRIT) / diminishingFactor);
+            }
+
             if (roll_chance_f(chance) && sScriptMgr->OnCastItemCombatSpell(this, target, spellInfo, item))
                 CastSpell(target, spellInfo->Id, TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD), item);
         }
@@ -7683,6 +7691,14 @@ void Player::CastItemCombatSpell(Unit* target, WeaponAttackType attType, uint32 
                     chance = GetPPMProcChance(proto->Delay, entry->PPMChance, spellInfo);
                 else if (entry->customChance)
                     chance = (float)entry->customChance;
+            }
+
+            // Dinkle Wallcraft - Spirit proc modifier with scalability based on player level
+            if (GetStat(STAT_SPIRIT))
+            {
+                uint32 level = GetLevel();
+                float diminishingFactor = 200.0f + 10.0f * level;
+                chance *= 1.0f + (GetStat(STAT_SPIRIT) / diminishingFactor);
             }
 
             // Apply spell mods

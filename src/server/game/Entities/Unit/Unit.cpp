@@ -18982,9 +18982,12 @@ bool Unit::IsTriggeredAtSpellProcEvent(Unit* victim, Aura* aura, WeaponAttackTyp
             }
     }
 
-    if (eventInfo.GetProcChance())
+    // Dinkle Wallcraft - Spirit proc modifier with scalability based on player level
+    if (GetStat(STAT_SPIRIT))
     {
-        chance = *eventInfo.GetProcChance();
+        uint32 level = GetLevel();
+        float diminishingFactor = 200.0f + 10.0f * level;
+        chance *= 1.0f + (GetStat(STAT_SPIRIT) / diminishingFactor);
     }
 
     // Apply chance modifer aura

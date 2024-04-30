@@ -20,6 +20,7 @@
 #include "Player.h"
 #include "ScriptedCreature.h"
 #include "blackrock_spire.h"
+#include "../scripts/Custom/Timewalking/10Man.h"
 
 enum Spells
 {
@@ -162,6 +163,18 @@ public:
         void JustDied(Unit* /*killer*/) override
         {
             DespawnFirewall();
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            if (players.begin() != players.end())
+            {
+                uint32 baseRewardLevel = 1;
+                bool isDungeon = me->GetMap()->IsDungeon();
+
+                Player* player = players.begin()->GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
+                }
+            }
         }
 
         void SpawnFirewall()

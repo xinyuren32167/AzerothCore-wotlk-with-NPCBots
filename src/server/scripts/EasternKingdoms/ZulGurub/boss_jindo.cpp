@@ -142,7 +142,7 @@ struct boss_jindo : public BossAI
                 events.ScheduleEvent(EVENT_DELUSIONS_OF_JINDO, 4s, 12s);
                 break;
             case EVENT_TELEPORT:
-                DoCastRandomTarget(SPELL_BANISH);
+                CastSpellOnRandomTarget(SPELL_BANISH, 150.0f);
                 events.ScheduleEvent(EVENT_TELEPORT, 15s, 23s);
                 break;
             default:
@@ -151,6 +151,24 @@ struct boss_jindo : public BossAI
         }
 
         DoMeleeAttackIfReady();
+    }
+
+    void CastSpellOnRandomTarget(uint32 spellId, float range)
+    {
+        std::list<Unit*> targets;
+        Acore::AnyUnitInObjectRangeCheck check(me, range);
+        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+        Cell::VisitAllObjects(me, searcher, range);
+
+        targets.remove_if([this](Unit* unit) -> bool {
+            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+            });
+
+        if (!targets.empty())
+        {
+            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+            DoCast(target, spellId);
+        }
     }
 
     bool CanAIAttack(Unit const* target) const override

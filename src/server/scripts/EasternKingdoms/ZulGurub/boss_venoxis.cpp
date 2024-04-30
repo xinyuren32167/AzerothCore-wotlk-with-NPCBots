@@ -116,7 +116,7 @@ public:
             context.Repeat(15s, 20s);
         }).Schedule(10s, 20s, PHASE_ONE, [this](TaskContext context)
         {
-            DoCastRandomTarget(SPELL_HOLY_FIRE);
+            CastSpellOnRandomTarget(SPELL_HOLY_FIRE, 100.0f);
             context.Repeat(10s, 24s);
         }).Schedule(30s, PHASE_ONE, [this](TaskContext context)
         {
@@ -124,7 +124,7 @@ public:
             context.Repeat(25s, 30s);
         }).Schedule(15s, 25s, PHASE_ONE, [this](TaskContext context)
         {
-            DoCastRandomTarget(SPELL_HOLY_WRATH);
+            CastSpellOnRandomTarget(SPELL_HOLY_WRATH, 100.f);
             context.Repeat(12s, 22s);
         });
 
@@ -146,19 +146,37 @@ public:
             }).Schedule(10s, PHASE_TWO, [this](TaskContext context)
             {
                 DoCastSelf(SPELL_POISON_CLOUD);
-                context.Repeat(15s, 20s);
+                context.Repeat(14s, 18s);
             }).Schedule(30s, PHASE_TWO, [this](TaskContext context)
             {
                 DoCastSelf(SPELL_SUMMON_PARASITIC_SERPENT);
                 context.Repeat(15s);
             });
 
-            // frenzy at 20% health
-            ScheduleHealthCheckEvent(20, [&]
+            // frenzy at 25% health
+            ScheduleHealthCheckEvent(25, [&]
             {
                 DoCastSelf(SPELL_FRENZY, true);
             });
         });
+    }
+
+    void CastSpellOnRandomTarget(uint32 spellId, float range)
+    {
+        std::list<Unit*> targets;
+        Acore::AnyUnitInObjectRangeCheck check(me, range);
+        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+        Cell::VisitAllObjects(me, searcher, range);
+
+        targets.remove_if([this](Unit* unit) -> bool {
+            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+            });
+
+        if (!targets.empty())
+        {
+            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+            DoCast(target, spellId);
+        }
     }
 
     void JustDied(Unit* killer) override

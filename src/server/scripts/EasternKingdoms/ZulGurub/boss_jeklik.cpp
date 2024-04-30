@@ -335,7 +335,7 @@ struct npc_batrider : public CreatureAI
         {
             _scheduler.Schedule(2s, [this](TaskContext context)
             {
-                DoCastRandomTarget(SPELL_BATRIDER_THROW_LIQUID_FIRE);
+                DoCastRandomTarget(SPELL_BATRIDER_THROW_LIQUID_FIRE, false);
                 context.Repeat(8s);
             });
         }
