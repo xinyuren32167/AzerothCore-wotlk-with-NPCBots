@@ -23,7 +23,6 @@
 #include "SpellScriptLoader.h"
 #include "zulgurub.h"
 #include <random>
-#include "../scripts/Custom/Timewalking/10Man.h"
 
 /*
 Name: Boss_Hakkar
@@ -125,6 +124,7 @@ public:
             DespawnSpecificCreatures(817263);
             DespawnSpecificCreatures(817264);
             DespawnSpecificCreatures(810986);
+            DoCastSelf(875167, true);
             Initialize();
         }
 
@@ -132,16 +132,15 @@ public:
         {
             _JustDied();
             DespawnVoodooPiles();
+            DoCastSelf(875167, true);
             Map::PlayerList const& players = me->GetMap()->GetPlayers();
             if (players.begin() != players.end())
             {
-                uint32 baseRewardLevel = 2;
-                bool isDungeon = me->GetMap()->IsDungeon();
 
                 Player* player = players.begin()->GetSource();
                 if (player)
                 {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
+                    DistributeChallengeRewards(player, me, 1, false);
                 }
             }
         }

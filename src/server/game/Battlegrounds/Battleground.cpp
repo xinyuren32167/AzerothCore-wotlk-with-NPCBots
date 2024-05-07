@@ -964,8 +964,8 @@ void Battleground::EndBattleground(PvPTeamId winnerTeamId)
         // Reward winner team
         if (bgTeamId == GetTeamId(winnerTeamId))
         {
-            if (IsRandom() || BattlegroundMgr::IsBGWeekend(GetBgTypeID(true)))
-            {
+            // Fran: Always reward arena points on BG won 
+            if (isBattleground()) {
                 UpdatePlayerScore(player, SCORE_BONUS_HONOR, GetBonusHonorFromKill(winner_kills));
 
                 // Xinef: check player level and not bracket level if (CanAwardArenaPoints())

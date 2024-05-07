@@ -65,11 +65,23 @@ public:
         void Reset() override
         {
             _Reset();
+            DoCastSelf(875167, true);
         }
 
         void JustDied(Unit* /*killer*/) override
         {
             _JustDied();
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            if (players.begin() != players.end())
+            {
+
+                Player* player = players.begin()->GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
         }
 
         void JustEngagedWith(Unit* /*who*/) override

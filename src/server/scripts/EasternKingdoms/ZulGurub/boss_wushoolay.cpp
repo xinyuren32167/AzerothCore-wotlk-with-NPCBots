@@ -56,6 +56,26 @@ public:
             events.ScheduleEvent(EVENT_CHAIN_LIGHTNING, 12s, 16s);
             events.ScheduleEvent(EVENT_FORKED_LIGHTNING, 8s, 12s);
         }
+        
+        void Reset() override
+        {
+            DoCastSelf(875167, true);
+        }
+
+        void JustDied(Unit* killer) override
+        {
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            if (players.begin() != players.end())
+            {
+
+                Player* player = players.begin()->GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
+        }
 
         void UpdateAI(uint32 diff) override
         {

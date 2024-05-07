@@ -81,6 +81,7 @@ public:
 
     void Reset() override
     {
+        DoCastSelf(875167, true);
         if (_phase == PHASE_SPIDER)
         {
             me->RemoveAura(SPELL_SPIDER_FORM);
@@ -130,6 +131,17 @@ public:
     {
         BossAI::JustDied(killer);
         Talk(SAY_DEATH);
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        if (players.begin() != players.end())
+        {
+
+            Player* player = players.begin()->GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
+        }
     }
 
 private:

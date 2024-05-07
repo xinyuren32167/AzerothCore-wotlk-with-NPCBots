@@ -526,7 +526,7 @@ class spell_gen_grow_flower_patch : public SpellScript
     }
 };
 
-// 22888 - Rallying Cry of the Dragonslayer
+/// 22888 - Rallying Cry of the Dragonslayer
 class spell_gen_rallying_cry_of_the_dragonslayer : public SpellScript
 {
     PrepareSpellScript(spell_gen_rallying_cry_of_the_dragonslayer);
@@ -535,19 +535,88 @@ class spell_gen_rallying_cry_of_the_dragonslayer : public SpellScript
     {
         targets.clear();
 
-        uint32 zoneId = 1519;
+        uint32 zoneId = 1519; // Stormwind city zone ID
         if (GetCaster()->GetMapId() == 1) // Kalimdor
-            zoneId = 1637;
+            zoneId = 1637; // Orgrimmar city zone ID
+
+        uint32 additionalZoneId = 12; // Elwynn Forest zone ID
+        if (GetCaster()->GetMapId() == 1) // Kalimdor
+            additionalZoneId = 14; // Durotar zone ID
 
         Map::PlayerList const& pList = GetCaster()->GetMap()->GetPlayers();
         for (Map::PlayerList::const_iterator itr = pList.begin(); itr != pList.end(); ++itr)
-            if (itr->GetSource()->GetZoneId() == zoneId)
+        {
+            if (itr->GetSource()->GetZoneId() == zoneId || itr->GetSource()->GetZoneId() == additionalZoneId)
                 targets.push_back(itr->GetSource());
+        }
+
+        // Include NPC Bots near the caster within 150f
+        std::list<Creature*> creatures;
+        float radius = 150.0f; // Search radius for NPC bots
+        std::list<Unit*> units;
+        Acore::AnyFriendlyUnitInObjectRangeCheck u_check(GetCaster(), GetCaster(), radius);
+        Acore::UnitListSearcher<Acore::AnyFriendlyUnitInObjectRangeCheck> searcher(GetCaster(), units, u_check);
+        Cell::VisitAllObjects(GetCaster(), searcher, radius);
+
+        for (Unit* unit : units)
+        {
+            if (unit->GetTypeId() == TYPEID_UNIT)
+            {
+                Creature* creature = unit->ToCreature();
+                if (creature && creature->IsNPCBot() && creature->IsAlive())
+                    targets.push_back(creature);
+            }
+        }
     }
 
     void Register() override
     {
         OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_gen_rallying_cry_of_the_dragonslayer::SelectTarget, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ALLY);
+    }
+};
+
+// Spirit of Zandalar
+class spell_gen_spirit_of_zandalar : public SpellScript
+{
+    PrepareSpellScript(spell_gen_spirit_of_zandalar);
+
+    void SelectTarget(std::list<WorldObject*>& targets)
+    {
+        targets.clear();
+
+        uint32 zoneId = 33; // Stranglethorn Vale zone ID
+        if (GetCaster()->GetMapId() == 0) // Eastern Kingdoms
+        {
+            Map::PlayerList const& pList = GetCaster()->GetMap()->GetPlayers();
+            for (Map::PlayerList::const_iterator itr = pList.begin(); itr != pList.end(); ++itr)
+            {
+                if (itr->GetSource()->GetZoneId() == zoneId)
+                    targets.push_back(itr->GetSource());
+            }
+        }
+
+        // Include NPC Bots near the caster within 100f, if needed
+        std::list<Creature*> creatures;
+        float radius = 100.0f; // Search radius for NPC bots
+        std::list<Unit*> units;
+        Acore::AnyFriendlyUnitInObjectRangeCheck u_check(GetCaster(), GetCaster(), radius);
+        Acore::UnitListSearcher<Acore::AnyFriendlyUnitInObjectRangeCheck> searcher(GetCaster(), units, u_check);
+        Cell::VisitAllObjects(GetCaster(), searcher, radius);
+
+        for (Unit* unit : units)
+        {
+            if (unit->GetTypeId() == TYPEID_UNIT)
+            {
+                Creature* creature = unit->ToCreature();
+                if (creature && creature->IsNPCBot() && creature->IsAlive())
+                    targets.push_back(creature);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_gen_spirit_of_zandalar::SelectTarget, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ALLY);
     }
 };
 
@@ -5195,6 +5264,7 @@ void AddSC_generic_spell_scripts()
     RegisterSpellScript(spell_pet_hit_expertise_scalling);
     RegisterSpellScript(spell_gen_grow_flower_patch);
     RegisterSpellScript(spell_gen_rallying_cry_of_the_dragonslayer);
+    RegisterSpellScript(spell_gen_spirit_of_zandalar);
     RegisterSpellScript(spell_gen_adals_song_of_battle);
     RegisterSpellScript(spell_gen_disabled_above_63);
     RegisterSpellScript(spell_gen_black_magic_enchant);

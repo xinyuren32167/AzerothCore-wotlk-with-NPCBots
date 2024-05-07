@@ -173,6 +173,7 @@ public:
             reviveGUID.Clear();
             _useExecute = false;
             _chargeTarget.first.Clear();
+            DoCastSelf(875167, true);
         }
 
         void JustDied(Unit* /*killer*/) override
@@ -184,6 +185,17 @@ public:
 
             instance->SetBossState(DATA_MANDOKIR, DONE);
             instance->SaveToDB();
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            if (players.begin() != players.end())
+            {
+
+                Player* player = players.begin()->GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
         }
 
         void JustEngagedWith(Unit* /*who*/) override
@@ -473,8 +485,8 @@ public:
                         events.ScheduleEvent(EVENT_EXECUTE, 7s, 14s);
                         break;
                     case EVENT_CAST_LIGHTNING_AND_THUNDER:
-                        CastSpellOnRandomTarget(920356, 100.0f); 
-                        events.ScheduleEvent(EVENT_CAST_LIGHTNING_AND_THUNDER, 20s, 40s); 
+                        CastCustomSpellOnRandomTarget(920356, 100.0f, 100); // Spell ID, range, and custom base points
+                        events.ScheduleEvent(EVENT_CAST_LIGHTNING_AND_THUNDER, 20s, 40s);
                         break;
                     case EVENT_CLEAVE:
                         {
@@ -507,7 +519,7 @@ public:
             DoMeleeAttackIfReady(false);
         }
 
-        void CastSpellOnRandomTarget(uint32 spellId, float range)
+        void CastCustomSpellOnRandomTarget(uint32 spellId, float range, int32 bp0)
         {
             std::list<Unit*> targets;
             Acore::AnyUnitInObjectRangeCheck check(me, range);
@@ -521,7 +533,7 @@ public:
             if (!targets.empty())
             {
                 Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
-                DoCast(target, spellId);
+                me->CastCustomSpell(target, spellId, &bp0, nullptr, nullptr, false, nullptr, nullptr, me->GetGUID());
             }
         }
 

@@ -19,6 +19,8 @@
 #define DEF_ZULGURUB_H
 
 #include "CreatureAIImpl.h"
+#include "../scripts/Custom/Timewalking/10Man.h"
+
 
 uint32 const EncounterCount = 13;
 

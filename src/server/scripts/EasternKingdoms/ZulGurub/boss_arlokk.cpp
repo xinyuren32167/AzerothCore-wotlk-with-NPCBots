@@ -98,6 +98,7 @@ public:
 
         void Reset() override
         {
+            DoCastSelf(875167, true);
             if (events.IsInPhase(PHASE_TWO))
                 me->HandleStatModifier(UNIT_MOD_DAMAGE_MAINHAND, TOTAL_PCT, 35.0f, false); // hack
             _Reset();
@@ -114,6 +115,17 @@ public:
         {
             _JustDied();
             Talk(SAY_DEATH);
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            if (players.begin() != players.end())
+            {
+
+                Player* player = players.begin()->GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
         }
 
         void JustEngagedWith(Unit* /*who*/) override

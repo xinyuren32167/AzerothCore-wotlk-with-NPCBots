@@ -5002,6 +5002,17 @@ AoeSpotsVec const& bot_ai::GetAoeSpots() const
     return IAmFree() ? _aoeSpots : master->GetBotMgr()->GetAoeSpots();
 }
 
+struct AuraCheck
+{
+    uint32 auraId;
+    AuraCheck(uint32 spellId) : auraId(spellId) {}
+
+    bool operator()(Unit* unit) const
+    {
+        return unit && unit->HasAura(auraId);
+    }
+};
+
 void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
 {
     std::list<WorldObject*> doList;
@@ -5033,8 +5044,26 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
         }
     }
 
+    // Check for units affected by Locus Swarm
+    std::list<Unit*> affectedUnits;
+    AuraCheck auraCheck(828785);  // Locus Swarm Spell ID
+    Acore::UnitListSearcher<AuraCheck> auraSearcher(unit, affectedUnits, auraCheck);
+    Cell::VisitAllObjects(unit, auraSearcher, 35.f);  // Adjusted to consider a slightly larger area than the aura's radius
+
+    for (auto* affectedUnit : affectedUnits)
+    {
+        // Check if the affected unit is not the current victim of the unit.
+        // Assuming 'unit' is the bot and 'unit->GetVictim()' returns its current target.
+        if (affectedUnit && affectedUnit != unit->GetVictim())
+        {
+            float radius = 30.f + DEFAULT_COMBAT_REACH;  // Define the total avoidance area
+            spots.push_back(AoeSpotsVec::value_type(*affectedUnit, radius));
+        }
+    }
+    
     if (unit->IsNPCBot() && unit->ToCreature()->IsFreeBot())
         return;
+
 
     //Additional: aoe coming from spawned npcs
 
@@ -5117,26 +5146,43 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
     }
 
     // Dinkle Zul'Gurub
-    if (unit->GetMapId() == 309)  
+    if (unit->GetMapId() == 309)
     {
-        std::list<GameObject*> gList;
-        Acore::AllGameObjectsWithEntryInRange check(unit, 180125, 60.f);  // GameObject ID for LIQUID_FIRE
-        Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcher(unit, gList, check);
-        Cell::VisitAllObjects(unit, searcher, 60.f);
+        std::list<GameObject*> gListZG;
+        Acore::AllGameObjectsWithEntryInRange checkZG(unit, 180125, 60.f);  // GameObject ID for LIQUID_FIRE
+        Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcherZG(unit, gListZG, checkZG);
+        Cell::VisitAllObjects(unit, searcherZG, 60.f);
 
-        for (auto* gameObject : gList)
+        for (auto* gameObject : gListZG)
         {
             if (!gameObject)
                 continue;
 
-            float radius = 15.0f + DEFAULT_COMBAT_REACH * 2.2f;  
-
-
+            float radius = 15.0f + DEFAULT_COMBAT_REACH * 2.0f;
             spots.push_back(AoeSpotsVec::value_type(*gameObject, radius));
         }
     }
 
+    /* Naxxramas
+    if (unit->GetMapId() == 533)
+    {
+        std::list<Creature*> cListNaxx;
+        Acore::AllCreaturesOfEntryInRange checkNaxx(unit, 816363, 60.f);
+        Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherNaxx(unit, cListNaxx, checkNaxx);
+        Cell::VisitAllObjects(unit, searcherNaxx, 60.f);
 
+        for (auto* creature : cListNaxx)
+        {
+            if (!creature)
+                continue;
+
+            float growthFactor = 3.5f;  
+            float baseCombatReachAdjustment = DEFAULT_COMBAT_REACH * 5.f;  
+            float radius = creature->GetObjectScale() * growthFactor + baseCombatReachAdjustment;
+            spots.push_back(AoeSpotsVec::value_type(*creature, radius));
+        }
+    }
+    */
     //STUB
     //if (!unit->IsPlayer() || !unit->ToPlayer()->HaveBot())
     //    return;
@@ -7299,6 +7345,22 @@ void bot_ai::_OnAreaUpdate(uint32 areaId)
 
     if (!IAmFree())
     {
+        //Dinkle: Challenge Auras
+        std::list<uint32> challengeAuras = { 208001, 800142, 800139, 107099, 880139, 861617 };
+        // Get current map type
+        Map* map = me->GetMap();
+        MapEntry const* mapEntry = sMapStore.LookupEntry(map->GetId());
+        if (mapEntry && mapEntry->IsDungeon() == false && mapEntry->IsRaid() == false)
+        {
+            // Only remove auras if not in a dungeon or raid
+            for (uint32 auraId : challengeAuras)
+            {
+                me->RemoveAurasDueToSpell(auraId);
+                if (botPet)
+                    botPet->RemoveAurasDueToSpell(auraId);
+            }
+        }
+        //end Dinkle
         Unit::AuraMap const& ownerAuras = me->GetOwnedAuras();
         for (Unit::AuraMap::const_iterator iter = ownerAuras.cbegin(); iter != ownerAuras.cend(); ++iter)
         {

@@ -85,7 +85,7 @@ struct boss_thekal : public BossAI
         Initialize();
 
         scheduler.CancelAll();
-
+        DoCastSelf(875167, true);
         me->SetStandState(UNIT_STAND_STATE_STAND);
         me->SetReactState(REACT_AGGRESSIVE);
         me->RemoveAurasDueToSpell(SPELL_FRENZY);
@@ -126,6 +126,17 @@ struct boss_thekal : public BossAI
     {
         _JustDied();
         Talk(SAY_DEATH);
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        if (players.begin() != players.end())
+        {
+
+            Player* player = players.begin()->GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
+        }
 
         if (Creature* zealot = instance->GetCreature(DATA_LORKHAN))
         {

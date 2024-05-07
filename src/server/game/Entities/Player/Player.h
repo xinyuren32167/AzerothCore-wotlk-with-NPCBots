@@ -44,6 +44,7 @@
 #include "WorldSession.h"
 #include <string>
 #include <vector>
+#include "Mail.h"
 
 struct CreatureTemplate;
 struct Mail;
@@ -1430,6 +1431,7 @@ public:
     static void LoadStatMultipliers();
 
     bool AddItem(uint32 itemId, uint32 count);
+    void SendItemToMailbox(uint32 itemId, uint32 count);
 
     /*********************************************************/
     /***                    GOSSIP SYSTEM                  ***/

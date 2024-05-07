@@ -62,7 +62,7 @@ struct boss_jindo : public BossAI
     void JustEngagedWith(Unit* who) override
     {
         BossAI::JustEngagedWith(who);
-        events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 20s);
+        events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 23s);
         events.ScheduleEvent(EVENT_POWERFULL_HEALING_WARD, 16s);
         events.ScheduleEvent(EVENT_HEX, 8s);
         events.ScheduleEvent(EVENT_DELUSIONS_OF_JINDO, 10s);
@@ -97,6 +97,7 @@ struct boss_jindo : public BossAI
         if (_EnterEvadeMode(evadeReason))
         {
             Reset();
+            DoCastSelf(875167, true);
             me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_DANCE);
 
             _scheduler.Schedule(4s, [this](TaskContext /*context*/)
@@ -105,6 +106,21 @@ struct boss_jindo : public BossAI
                 me->AddUnitState(UNIT_STATE_EVADE);
                 me->GetMotionMaster()->MoveTargetedHome();
             });
+        }
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        if (players.begin() != players.end())
+        {
+
+            Player* player = players.begin()->GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
         }
     }
 
@@ -126,7 +142,7 @@ struct boss_jindo : public BossAI
             {
             case EVENT_BRAIN_WASH_TOTEM:
                 DoCastSelf(SPELL_BRAIN_WASH_TOTEM);
-                events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 18s, 26s);
+                events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 20s, 28s);
                 break;
             case EVENT_POWERFULL_HEALING_WARD:
                 DoCastSelf(SPELL_POWERFULL_HEALING_WARD, true);

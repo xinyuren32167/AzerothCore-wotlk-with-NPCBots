@@ -84,6 +84,8 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "MySQLConnection.h"
+
 
 /// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
@@ -15944,13 +15946,21 @@ bool Player::AddItem(uint32 itemId, uint32 count)
     uint32 noSpaceForCount = 0;
     ItemPosCountVec dest;
     InventoryResult msg = CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, count, &noSpaceForCount);
+
     if (msg != EQUIP_ERR_OK)
         count -= noSpaceForCount;
 
     if (count == 0 || dest.empty())
     {
-        // -- TODO: Send to mailbox if no space
-        ChatHandler(GetSession()).PSendSysMessage("You don't have any space in your bags.");
+        if (noSpaceForCount > 0)
+        {
+            // Send the remaining items to the player's mailbox
+            SendItemToMailbox(itemId, noSpaceForCount);
+        }
+        else
+        {
+            ChatHandler(GetSession()).PSendSysMessage("You don't have any space in your bags.");
+        }
         return false;
     }
 
@@ -15959,9 +15969,45 @@ bool Player::AddItem(uint32 itemId, uint32 count)
         SendNewItem(item, count, true, false);
     else
         return false;
+
     return true;
 }
+// Dinkle
+void Player::SendItemToMailbox(uint32 itemId, uint32 count)
+{
+    auto trans = CharacterDatabase.BeginTransaction();
 
+    MailDraft draft("Item Recovery", "Here are the items we could not fit in your inventory.");
+
+    bool itemsCreatedSuccessfully = true;
+    for (uint32 i = 0; i < count; ++i) {
+        auto item = Item::CreateItem(itemId, 1);
+        if (!item) {
+            ChatHandler(GetSession()).PSendSysMessage("Failed to create item for mailing.");
+            itemsCreatedSuccessfully = false;
+            break;
+        }
+
+        item->SaveToDB(trans);
+
+        draft.AddItem(item);
+    }
+
+    if (itemsCreatedSuccessfully) {
+        MailSender sender(this);
+        MailReceiver receiver(this->GetGUID().GetCounter());
+
+        draft.SendMailTo(trans, receiver, sender, MAIL_CHECK_MASK_NONE, 0, 0, false, true);
+
+        CharacterDatabase.CommitTransaction(trans);
+
+        ChatHandler(GetSession()).PSendSysMessage("Items have been sent to your mailbox due to lack of inventory space.");
+    }
+    else {
+        ChatHandler(GetSession()).PSendSysMessage("Failed to send all items to your mailbox.");
+    }
+}
+//endDinkle
 PetStable& Player::GetOrInitPetStable()
 {
     if (!m_petStable)

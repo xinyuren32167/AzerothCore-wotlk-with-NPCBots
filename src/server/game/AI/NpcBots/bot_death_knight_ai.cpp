@@ -814,10 +814,14 @@ public:
             // FROST LATCH Logic
             if (IsSpellReady(FROST_LATCH_1, diff) && mytar->GetDistance(me) > 10.0f && mytar->GetDistance(me) < 30.0f)
             {
-                if (doCast(mytar, FROST_LATCH_1))
+                // Check if the target is not flying
+                if (!mytar->IsFlying())
                 {
-                    SetSpellCooldown(FROST_LATCH_1, 30000);
-                    return; 
+                    if (doCast(mytar, FROST_LATCH_1))
+                    {
+                        SetSpellCooldown(FROST_LATCH_1, 30000);
+                        return;
+                    }
                 }
             }
 

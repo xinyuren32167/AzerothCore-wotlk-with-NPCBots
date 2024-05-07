@@ -3220,6 +3220,9 @@ void World::LoadWorldStates()
 {
     uint32 oldMSTime = getMSTime();
 
+    // Dinkle: Delete the world state with entry = 70000 before loading others
+    CharacterDatabase.Execute("DELETE FROM worldstates WHERE entry = 70000");
+    //end Dinkle
     QueryResult result = CharacterDatabase.Query("SELECT entry, value FROM worldstates");
 
     if (!result)
@@ -3238,6 +3241,7 @@ void World::LoadWorldStates()
     LOG_INFO("server.loading", ">> Loaded {} World States in {} ms", _worldstates.size(), GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
+
 
 // Setting a worldstate will save it to DB
 void World::setWorldState(uint32 index, uint64 timeValue)

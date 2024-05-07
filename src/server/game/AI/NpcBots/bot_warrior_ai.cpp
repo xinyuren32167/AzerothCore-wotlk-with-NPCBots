@@ -76,7 +76,8 @@ enum WarriorBaseSpells
     SHATTERING_THROW_1                      = 64382,
     DEMORALIZING_SHOUT_1                    = 1160,
     HEROIC_FURY_1                           = 60970,
-    SPELL_ID_THORIUM_GRENADE                = 19769
+    SPELL_ID_THORIUM_GRENADE                = 19769,
+    COLOSSUS_SMASH_1                        = 994999
 };
 enum WarriorPassives
 {
@@ -167,7 +168,7 @@ const uint32 THORIUM_GRENADE_SPELL_ID = 19769;
 static  uint32 Warrior_spells_damage_arr[] =
 { BLADESTORM_1, BLOODTHIRST_1, CLEAVE_1, CONCUSSION_BLOW_1, DEVASTATE_1, EXECUTE_1, HEROIC_STRIKE_1, HEROIC_THROW_1,
 INTERCEPT_1, MOCKING_BLOW_1, MORTAL_STRIKE_1, OVERPOWER_1, REND_1, RETALIATION_1, REVENGE_1, SHATTERING_THROW_1,
-SHIELD_SLAM_1, SHOCKWAVE_1, SLAM_1, THUNDER_CLAP_1, VICTORY_RUSH_1, WHIRLWIND_1 };
+SHIELD_SLAM_1, SHOCKWAVE_1, SLAM_1, THUNDER_CLAP_1, VICTORY_RUSH_1, WHIRLWIND_1, COLOSSUS_SMASH_1 };
 
 static  uint32 Warrior_spells_cc_arr[] =
 { CHARGE_1, INTERCEPT_1, INTIMIDATING_SHOUT_1, CONCUSSION_BLOW_1, DISARM_1, HAMSTRING_1, PIERCING_HOWL_1,
@@ -889,7 +890,6 @@ public:
                 if (doCast(me, GetSpell(DEATH_WISH_1)))
                     return;
             }
-
             //VICTORY RUSH
             if (IsSpellReady(VICTORY_RUSH_1, diff) && can_do_normal && HasRole(BOT_ROLE_DPS) && Rand() < 70 && dist < 5 && _inStance(5) &&
                 me->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_WARRIOR, 0x0, 0x40000, 0x0))
@@ -949,6 +949,16 @@ public:
             {
                 if (doCast(mytar, GetSpell(REND_1)))
                     return;
+            }
+            // Dinkle COLOSSUS SMASH
+            if (IsSpellReady(COLOSSUS_SMASH_1, diff) && HasRole(BOT_ROLE_DPS) && !IsTank() &&
+                dist < 5)
+            {
+                if (doCast(mytar, GetSpell(COLOSSUS_SMASH_1)))
+                {
+                    SetSpellCooldown(COLOSSUS_SMASH_1, 34000);  // Set cooldown to 34 seconds
+                    return;
+                }
             }
             //BLOODTHIRST
             if (IsSpellReady(BLOODTHIRST_1, diff) && can_do_normal && HasRole(BOT_ROLE_DPS) &&
@@ -2110,6 +2120,7 @@ public:
             InitSpellMap(DEMORALIZING_SHOUT_1);
 
   /*Talent*/lvl >= 30 && isArms ? InitSpellMap(SWEEPING_STRIKES_1) : RemoveSpell(SWEEPING_STRIKES_1);
+  /*Talent*/lvl >= 30 && isArms ? InitSpellMap(COLOSSUS_SMASH_1) : RemoveSpell(COLOSSUS_SMASH_1);
   /*Talent*/lvl >= 40 && isArms ? InitSpellMap(MORTAL_STRIKE_1) : RemoveSpell(MORTAL_STRIKE_1);
   /*Talent*/lvl >= 60 && isArms ? InitSpellMap(BLADESTORM_1) : RemoveSpell(BLADESTORM_1);
 

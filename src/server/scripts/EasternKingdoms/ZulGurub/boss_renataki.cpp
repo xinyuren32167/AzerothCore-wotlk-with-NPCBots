@@ -61,6 +61,7 @@ public:
             _thousandBladesCount = urand(2, 5);
             _thousandBladesTargets.clear();
             _dynamicFlags = me->GetDynamicFlags();
+            DoCastSelf(875167, true);
         }
 
         void JustEngagedWith(Unit* /*who*/) override
@@ -71,6 +72,21 @@ public:
             events.ScheduleEvent(EVENT_THOUSAND_BLADES, 15s, 20s);
 
             DoCastSelf(SPELL_THRASH, true);
+        }
+
+        void JustDied(Unit* killer) override
+        {
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            if (players.begin() != players.end())
+            {
+
+                Player* player = players.begin()->GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
         }
 
         void DamageTaken(Unit*, uint32& /*damage*/, DamageEffectType, SpellSchoolMask) override

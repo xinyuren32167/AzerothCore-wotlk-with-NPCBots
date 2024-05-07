@@ -86,7 +86,7 @@ public:
     void Reset() override
     {
         BossAI::Reset();
-
+        DoCastSelf(875167, true);
         me->RemoveAllAuras();
         me->SetReactState(REACT_PASSIVE);
     }
@@ -183,7 +183,18 @@ public:
     {
         BossAI::JustDied(killer);
         Talk(SAY_VENOXIS_DEATH);
+        DoCastSelf(875167, true);
         me->RemoveAllAuras();       // removes transform
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        if (players.begin() != players.end())
+        {
+
+            Player* player = players.begin()->GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
+        }
     }
 };
 
