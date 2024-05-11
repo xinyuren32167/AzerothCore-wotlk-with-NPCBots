@@ -613,15 +613,12 @@ public:
         void JustDied(Unit* /*killer*/) override
         {
             Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (players.begin() != players.end())
+            for (auto const& playerPair : players)
             {
-                uint32 baseRewardLevel = 1; 
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                Player* player = players.begin()->GetSource();
+                Player* player = playerPair.GetSource();
                 if (player)
                 {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
+                    DistributeChallengeRewards(player, me, 5, true);
                 }
             }
         }

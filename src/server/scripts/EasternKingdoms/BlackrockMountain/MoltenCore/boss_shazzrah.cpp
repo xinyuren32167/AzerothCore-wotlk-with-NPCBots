@@ -60,6 +60,17 @@ public:
             events.ScheduleEvent(EVENT_SHAZZRAH_GATE, 30s);
         }
 
+        void Reset() override
+        {
+            BossAI::Reset();
+
+            if (Creature* npc = me->FindNearestCreature(83000, 500.0f, false))
+            {
+                if (!npc->IsAlive())
+                    npc->Respawn();
+            }
+        }
+
         void ExecuteEvent(uint32 eventId) override
         {
             switch (eventId)

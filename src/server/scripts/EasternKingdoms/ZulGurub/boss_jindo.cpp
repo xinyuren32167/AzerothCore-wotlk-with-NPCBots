@@ -111,12 +111,17 @@ struct boss_jindo : public BossAI
 
     void JustDied(Unit* /*killer*/) override
     {
+        std::list<Creature*> shades;
+        GetCreatureListWithEntryInGrid(shades, me, NPC_SHADE_OF_JINDO, 150.0f); 
+        for (Creature* shade : shades)
+        {
+            shade->DespawnOrUnsummon();
+        }
         DoCastSelf(875167, true);
         Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        if (players.begin() != players.end())
+        for (auto const& playerPair : players)
         {
-
-            Player* player = players.begin()->GetSource();
+            Player* player = playerPair.GetSource();
             if (player)
             {
                 DistributeChallengeRewards(player, me, 1, false);

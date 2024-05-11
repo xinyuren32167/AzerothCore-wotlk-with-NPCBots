@@ -665,16 +665,16 @@ public:
             if (!HasRole(BOT_ROLE_HEAL) || GetManaPCT(me) > 35 || botPet)
             {
                 if (IsSpellReady(SW_DEATH_1, diff) && can_do_shadow && Rand() < 90 && GetHealthPCT(me) > 50 &&
-                    (me->GetMap()->IsRaid() || GetHealthPCT(mytar) < 15 || mytar->GetHealth() < me->GetMaxHealth()/8) &&
+                    (me->GetMap()->IsRaid() || GetHealthPCT(mytar) < 15 || mytar->GetHealth() < me->GetMaxHealth() / 8) &&
                     doCast(mytar, GetSpell(SW_DEATH_1)))
                     return;
                 if (IsSpellReady(VAMPIRIC_TOUCH_1, diff) && can_do_shadow && Rand() < 80 &&
-                    mytar->GetHealth() > me->GetMaxHealth()/4 * (1 + mytar->getAttackers().size()) &&
+                    mytar->GetHealth() > me->GetMaxHealth() / 4 * (1 + mytar->getAttackers().size()) &&
                     !mytar->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x0, 0x400, 0x0, me->GetGUID()) &&
                     doCast(mytar, GetSpell(VAMPIRIC_TOUCH_1)))
                     return;
                 if (IsSpellReady(SW_PAIN_1, diff) && can_do_shadow && Rand() < 60 &&
-                    mytar->GetHealth() > me->GetMaxHealth()/3 * (1 + mytar->getAttackers().size()) &&
+                    mytar->GetHealth() > me->GetMaxHealth() / 2 * (1 + mytar->getAttackers().size()) &&
                     !mytar->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x8000, 0x0, 0x0, me->GetGUID()))
                 {
                     AuraEffect const* weav = me->GetAuraEffect(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, SPELLFAMILY_PRIEST, 0x0, 0x8, 0x0);
@@ -684,8 +684,8 @@ public:
                 }
                 if (IsSpellReady(DEVOURING_PLAGUE_1, diff) && can_do_shadow && !Devcheck && Rand() < 80 &&
                     (GetSpec() == BOT_SPEC_PRIEST_SHADOW || mytar->IsControlledByPlayer()) &&
-                    mytar->GetHealth() > me->GetMaxHealth()/2 * (1 + mytar->getAttackers().size()) &&
-                    !(mytar->GetTypeId() == TYPEID_UNIT && (mytar->ToCreature()->GetCreatureTemplate()->MechanicImmuneMask & (1<<(MECHANIC_INFECTED-1)))) &&
+                    mytar->GetHealth() > me->GetMaxHealth() / 2 * (1 + mytar->getAttackers().size()) &&
+                    !(mytar->GetTypeId() == TYPEID_UNIT && (mytar->ToCreature()->GetCreatureTemplate()->MechanicImmuneMask & (1 << (MECHANIC_INFECTED - 1)))) &&
                     !mytar->GetAuraEffect(SPELL_AURA_PERIODIC_LEECH, SPELLFAMILY_PRIEST, 0x02000000, 0x0, 0x0, me->GetGUID()) &&
                     doCast(mytar, GetSpell(DEVOURING_PLAGUE_1)))
                     return;
@@ -704,7 +704,7 @@ public:
                     doCast(mytar, GetSpell(HOLY_FIRE_1)))
                     return;
                 if (IsSpellReady(MIND_FLAY_1, diff) && can_do_shadow &&
-                    (!HasRole(BOT_ROLE_HEAL) || mytar->GetHealth() < me->GetMaxHealth()/2) &&
+                    (!HasRole(BOT_ROLE_HEAL) || mytar->GetHealth() < me->GetMaxHealth() / 2) &&
                     doCast(mytar, GetSpell(MIND_FLAY_1)))
                     return;
                 if (IsSpellReady(SMITE_1, diff) && can_do_holy && me->GetLevel() < 20 &&//MF is lvl 20, MB is lvl 10
@@ -724,7 +724,7 @@ public:
 
         bool HealTarget(Unit* target, uint32 diff) override
         {
-            if (!target || !target->IsAlive() || target->GetShapeshiftForm() == FORM_SPIRITOFREDEMPTION || me->GetDistance(target) > 40)
+            if (!target || !target->IsAlive() || target->GetShapeshiftForm() == FORM_SPIRITOFREDEMPTION || me->GetDistance(target) > 45)
                 return false;
 
             uint8 hp = GetHealthPCT(target);
@@ -813,13 +813,38 @@ public:
                     }
                 }
             }
+            //  Holy Priest Specific Renew Logic
+            if (_spec == BOT_SPEC_PRIEST_HOLY && IsSpellReady(RENEW_1, diff) &&
+                (hppctps < 10 || hp < 80) &&
+                !target->GetAuraEffect(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_PRIEST, 0x40, 0x0, 0x0, me->GetGUID()) &&
+                (target->IsInCombat() || !target->getAttackers().empty() || me->GetMap()->IsDungeon())) {
+                if (doCast(target, GetSpell(RENEW_1)))
+                    return true;
+            }
+
+            // Additional conditions to dynamically use Renew based on anticipated incoming damage
+            if (_spec == BOT_SPEC_PRIEST_HOLY && hppctps < 0 &&
+                !target->GetAuraEffect(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_PRIEST, 0x40, 0x0, 0x0, me->GetGUID())) {
+                if (doCast(target, GetSpell(RENEW_1)))
+                    return true;
+            }
+            // Renew for Discipline Priest, applied only to the tank
+            if (_spec == BOT_SPEC_PRIEST_DISCIPLINE && IsSpellReady(RENEW_1, diff) && IsTank(target) &&
+                !target->GetAuraEffect(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_PRIEST, 0x40, 0x0, 0x0, me->GetGUID()))
+            {
+                if (doCast(target, GetSpell(RENEW_1)))
+                {
+                    return true; 
+                }
+            }
             //Penance
-            if (IsSpellReady(PENANCE_1, diff) && !target->IsCharmed() && !target->isPossessed() && hp <= 80 &&
-                Rand() < 90 && xphploss > _heals[PENANCE_1])
+            if (IsSpellReady(PENANCE_1, diff) && !target->IsCharmed() && !target->isPossessed() && hp <= 90 && 
+                xphploss > (_heals[PENANCE_1] * 0.75)) 
             {
                 if (doCast(target, GetSpell(PENANCE_1)))
                     return true;
             }
+
             //Big Heal
             if (IsSpellReady(HEAL, diff) && (xppct > 15 || !GetSpell(FLASH_HEAL_1)) && (tanking || xphploss > _heals[HEAL]))
             {
@@ -829,19 +854,21 @@ public:
                 if (doCast(target, GetSpell(HEAL)))
                     return true;
             }
-            //Renew
-            if (IsSpellReady(RENEW_1, diff) && (tanking || !target->getAttackers().empty() || me->GetMap()->IsDungeon()) &&
-                !target->GetAuraEffect(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_PRIEST, 0x40, 0x0, 0x0, me->GetGUID())
-                /*!target->HasAura(GetSpell(RENEW_1), me->GetGUID())*/)
-            {
-                if (doCast(target, GetSpell(RENEW_1)))
-                    return true;
-            }
-            //Flash Heal
-            if (IsSpellReady(FLASH_HEAL_1, diff) && xphploss > _heals[FLASH_HEAL_1])
+            // More Aggressive Flash Heal
+            if (IsSpellReady(FLASH_HEAL_1, diff) &&
+                (hp <= 85 || xphploss > (_heals[FLASH_HEAL_1] * 0.75))) // Cast if health is below 85% or predicted healing is only slightly less than Flash Heal's capability
             {
                 if (doCast(target, GetSpell(FLASH_HEAL_1)))
                     return true;
+            }
+            //Greater Heal
+            if (IsSpellReady(GREATER_HEAL_1, diff) && hp <= 40 && !IsCasting() && !target->getAttackers().empty() &&
+                xphploss > _heals[GREATER_HEAL_1])
+            {
+                if (doCast(target, GetSpell(GREATER_HEAL_1)))
+                {
+                    return true; 
+                }
             }
 
             return false;

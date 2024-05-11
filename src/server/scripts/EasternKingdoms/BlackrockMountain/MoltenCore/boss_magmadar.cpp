@@ -83,7 +83,7 @@ public:
             events.ScheduleEvent(EVENT_PANIC, urand(20000, 25000));
             events.ScheduleEvent(EVENT_LAVA_BOMB, urand(8000, 10000));
             events.ScheduleEvent(EVENT_LAVA_BOMB_RANGED, urand(9000, 12000));
-            events.ScheduleEvent(EVENT_SUMMON_CORE_HOUND, 55000);
+            events.ScheduleEvent(EVENT_SUMMON_CORE_HOUND, 15000);
             events.ScheduleEvent(EVENT_ENRAGE, 300000);
         }
 
@@ -106,7 +106,7 @@ public:
             }
             case EVENT_LAVA_BOMB:
             {
-                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, MELEE_TARGET_LOOKUP_DIST, true))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, MELEE_TARGET_LOOKUP_DIST, false))
                 {
                     DoCast(target, SPELL_LAVA_BOMB);
                 }
@@ -119,7 +119,7 @@ public:
                 std::list<Unit*> targets;
                 SelectTargetList(targets, 1, SelectTargetMethod::Random, 1, [this](Unit* target)
                     {
-                        return target && target->IsPlayer() && target->GetDistance(me) > MELEE_TARGET_LOOKUP_DIST && target->GetDistance(me) < 100.0f;
+                        return target && target->GetDistance(me) > MELEE_TARGET_LOOKUP_DIST && target->GetDistance(me) < 100.0f;
                     });
 
                 if (!targets.empty())
@@ -132,7 +132,7 @@ public:
             case EVENT_SUMMON_CORE_HOUND:
             {
                 DoCastSelf(SPELL_SUMMON_CORE_HOUND);
-                events.RepeatEvent(55000);
+                events.RepeatEvent(45000);
                 break;
             }
             case EVENT_ENRAGE:

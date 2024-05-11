@@ -186,10 +186,9 @@ public:
         DoCastSelf(875167, true);
         me->RemoveAllAuras();       // removes transform
         Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        if (players.begin() != players.end())
+        for (auto const& playerPair : players)
         {
-
-            Player* player = players.begin()->GetSource();
+            Player* player = playerPair.GetSource();
             if (player)
             {
                 DistributeChallengeRewards(player, me, 1, false);
