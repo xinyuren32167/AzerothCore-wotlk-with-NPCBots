@@ -126,6 +126,7 @@ bool _enableConfigLevelCapBGFirst;
 bool _bothk_enable;
 bool _bothk_message_enable;
 bool _bothk_achievements_enable;
+bool _manaRegenCheatEnabled;
 float _botStatLimits_dodge;
 float _botStatLimits_parry;
 float _botStatLimits_block;
@@ -406,6 +407,7 @@ void BotMgr::LoadConfig(bool reload)
     _tankHPModifier                 = sConfigMgr->GetFloatDefault("NpcBot.TankHPModifier", 1.0f);
     //Dinkle
     _maxDarkRangerBots              = sConfigMgr->GetIntDefault("NpcBot.MaxDarkRangerBots", 1);
+    _manaRegenCheatEnabled = sConfigMgr->GetIntDefault("NpcBot.ManaRegenCheat", 0) == 1;
     
 
     _max_npcbots = {};
@@ -857,6 +859,10 @@ uint8 BotMgr::GetOwnershipExpireMode()
 uint32 BotMgr::GetDesiredWanderingBotsCount()
 {
     return _desiredWanderingBotsCount;
+}
+bool BotMgr::IsManaRegenCheatEnabled()
+{
+    return _manaRegenCheatEnabled;
 }
 uint32 BotMgr::GetBGTargetTeamPlayersCount(BattlegroundTypeId bgTypeId)
 {

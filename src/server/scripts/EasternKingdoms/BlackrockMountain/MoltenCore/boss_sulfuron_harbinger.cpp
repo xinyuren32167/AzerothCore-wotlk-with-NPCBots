@@ -56,6 +56,11 @@ public:
     {
         boss_sulfuronAI(Creature* creature) : BossAI(creature, DATA_SULFURON) {}
 
+        void Reset() override
+        {
+            _Reset();
+        }
+
         void JustEngagedWith(Unit* /*who*/) override
         {
             _JustEngagedWith();
@@ -63,6 +68,20 @@ public:
             events.ScheduleEvent(EVENT_INSPIRE, 7s, 10s);
             events.ScheduleEvent(EVENT_KNOCKDOWN, 6s);
             events.ScheduleEvent(EVENT_FLAMESPEAR, 2s);
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            _JustDied();
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
         }
 
         void ExecuteEvent(uint32 eventId) override

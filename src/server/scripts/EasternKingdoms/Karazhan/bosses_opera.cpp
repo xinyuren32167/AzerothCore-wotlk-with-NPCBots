@@ -779,9 +779,13 @@ struct boss_bigbadwolf : public ScriptedAI
         });
     }
 
-    void KilledUnit(Unit* /*victim*/) override
+    void KilledUnit(Unit* victim) override
     {
         Talk(SAY_WOLF_SLAY);
+        if (victim->HasAura(SPELL_PICNIC_BASKET_SMELL))
+        {
+            victim->RemoveAurasDueToSpell(SPELL_PICNIC_BASKET_SMELL);
+        }
     }
 
     void JustReachedHome() override

@@ -130,6 +130,23 @@ public:
             events.ScheduleEvent(EVENT_BURNING_ADRENALINE, 15s);
         }
 
+        void JustDied(Unit* /*killer*/) override
+        {
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
+            instance->SetBossState(DATA_VAELASTRAZ_THE_CORRUPT, DONE);
+            if (GameObject* gate = me->FindNearestGameObject(GO_PORTCULLIS_VAELASTRASZ, 150.0f))
+                gate->SetGoState(GO_STATE_ACTIVE);
+        }
+
         void BeginSpeech(Unit* target)
         {
             PlayerGUID = target->GetGUID();
@@ -229,10 +246,8 @@ public:
                         break;
                     case EVENT_BURNING_ADRENALINE:
                     {
-                        if (_burningAdrenalineCast < 2) // It's better to use TaskScheduler for this, but zzz
+                        if (_burningAdrenalineCast < 2)
                         {
-                            //selects a random target that isn't the current victim and is a mana user (selects mana users) but not pets
-                            //it also ignores targets who have the aura. We don't want to place the debuff on the same target twice.
                             if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, [&](Unit* u) { return u && !u->IsPet() && u->getPowerType() == POWER_MANA && !u->HasAura(SPELL_BURNING_ADRENALINE) && u != me->GetVictim(); }))
                             {
                                 me->CastSpell(target, SPELL_BURNING_ADRENALINE, true);
@@ -242,7 +257,11 @@ public:
                         }
                         else
                         {
-                            me->CastSpell(me->GetVictim(), SPELL_BURNING_ADRENALINE, true);
+                            // Find a target that is not the current victim
+                            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, [&](Unit* u) { return u && u != me->GetVictim(); }))
+                            {
+                                me->CastSpell(target, SPELL_BURNING_ADRENALINE, true);
+                            }
                             _burningAdrenalineCast = 0;
                         }
                         events.ScheduleEvent(EVENT_BURNING_ADRENALINE, 15s);

@@ -269,7 +269,7 @@ struct boss_shade_of_aran : public BossAI
                     // If we are able to cast spells, cast them.
                     _currentNormalSpell = Acore::Containers::SelectRandomContainerElement(normalSpells);
 
-                    DoCastRandomTarget(_currentNormalSpell, 0, 100.0f);
+                    CastSpellOnRandomTarget(_currentNormalSpell, 100.0f);
                     if (me->GetVictim())
                     {
                         me->GetMotionMaster()->MoveChase(me->GetVictim(), 45.0f);
@@ -373,6 +373,24 @@ struct boss_shade_of_aran : public BossAI
 
         if (!_drinking)
             DoMeleeAttackIfReady();
+    }
+
+    void CastSpellOnRandomTarget(uint32 spellId, float range)
+    {
+        std::list<Unit*> targets;
+        Acore::AnyUnitInObjectRangeCheck check(me, range);
+        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+        Cell::VisitAllObjects(me, searcher, range);
+
+        targets.remove_if([this](Unit* unit) -> bool {
+            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+            });
+
+        if (!targets.empty())
+        {
+            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+            DoCast(target, spellId);
+        }
     }
 
 private:

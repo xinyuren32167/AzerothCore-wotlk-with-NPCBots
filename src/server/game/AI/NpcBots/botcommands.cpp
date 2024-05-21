@@ -3814,34 +3814,115 @@ public:
         return true;
     }
 
-    static bool HandleNpcBotCommandFollowOnlyCommand(ChatHandler* handler)
+    static bool HandleNpcBotCommandFollowOnlyCommand(ChatHandler* handler, const char* args)
     {
         Player* owner = handler->GetSession()->GetPlayer();
 
         if (!owner->HaveBot())
         {
-            handler->SendSysMessage(".npcbot command follow only");
+            handler->SendSysMessage(".npcbot command follow only [dps|healers|melee]");
             handler->SendSysMessage("Makes npcbots follow you and do nothing else");
             handler->SetSentErrorMessage(true);
             return false;
         }
 
+        std::string argument = args ? args : "";
         std::string msg;
-        if (!owner->GetBotMgr()->GetBotMap()->begin()->second->GetBotAI()->HasBotCommandState(BOT_COMMAND_INACTION))
+
+        if (argument == "dps")
         {
-            owner->GetBotMgr()->SendBotCommandState(BOT_COMMAND_INACTION);
-            msg = "Bots' command state set to 'INACTION'";
+            bool stateChanged = false;
+            for (auto& botPair : *owner->GetBotMgr()->GetBotMap())
+            {
+                if (botPair.second->GetBotAI()->HasRole(BOT_ROLE_DPS) && !botPair.second->GetBotAI()->HasRole(BOT_ROLE_TANK) && !botPair.second->GetBotAI()->HasRole(BOT_ROLE_TANK_OFF))
+                {
+                    if (!botPair.second->GetBotAI()->HasBotCommandState(BOT_COMMAND_INACTION))
+                    {
+                        botPair.second->GetBotAI()->SetBotCommandState(BOT_COMMAND_INACTION);
+                        msg = "DPS bots' command state set to 'INACTION'";
+                        stateChanged = true;
+                    }
+                }
+            }
+            if (!stateChanged)
+            {
+                msg = "No DPS bots were found";
+            }
+        }
+        else if (argument == "healers")
+        {
+            bool stateChanged = false;
+            for (auto& botPair : *owner->GetBotMgr()->GetBotMap())
+            {
+                if (botPair.second->GetBotAI()->HasRole(BOT_ROLE_HEAL))
+                {
+                    if (!botPair.second->GetBotAI()->HasBotCommandState(BOT_COMMAND_INACTION))
+                    {
+                        botPair.second->GetBotAI()->SetBotCommandState(BOT_COMMAND_INACTION);
+                        msg = "Healer bots' command state set to 'INACTION'";
+                        stateChanged = true;
+                    }
+                }
+            }
+            if (!stateChanged)
+            {
+                msg = "No healer bots were found";
+            }
+        }
+        else if (argument == "melee")
+        {
+            bool stateChanged = false;
+            for (auto& botPair : *owner->GetBotMgr()->GetBotMap())
+            {
+                if (!botPair.second->GetBotAI()->HasRole(BOT_ROLE_RANGED))
+                {
+                    if (!botPair.second->GetBotAI()->HasBotCommandState(BOT_COMMAND_INACTION))
+                    {
+                        botPair.second->GetBotAI()->SetBotCommandState(BOT_COMMAND_INACTION);
+                        msg = "Melee bots' command state set to 'INACTION'";
+                        stateChanged = true;
+                    }
+                }
+            }
+            if (!stateChanged)
+            {
+                msg = "No melee bots were found";
+            }
         }
         else
         {
-            owner->GetBotMgr()->SendBotCommandStateRemove(BOT_COMMAND_INACTION);
-            msg = "Bots' command state 'INACTION' was removed";
+            Unit* target = owner->GetSelectedUnit();
+            if (target && owner->GetBotMgr()->GetBot(target->GetGUID()))
+            {
+                if (!target->ToCreature()->GetBotAI()->HasBotCommandState(BOT_COMMAND_INACTION))
+                {
+                    target->ToCreature()->GetBotAI()->SetBotCommandState(BOT_COMMAND_INACTION);
+                    msg = target->GetName() + "'s command state set to 'INACTION'";
+                }
+                else
+                {
+                    msg = target->GetName() + " already has command state 'INACTION'";
+                }
+            }
+            else
+            {
+                bool stateChanged = false;
+                for (auto& botPair : *owner->GetBotMgr()->GetBotMap())
+                {
+                    if (!botPair.second->GetBotAI()->HasBotCommandState(BOT_COMMAND_INACTION))
+                    {
+                        botPair.second->GetBotAI()->SetBotCommandState(BOT_COMMAND_INACTION);
+                        stateChanged = true;
+                    }
+                }
+                msg = stateChanged ? "Bots' command state set to 'INACTION'" : "No bots were found";
+            }
         }
 
         handler->SendSysMessage(msg.c_str());
         return true;
     }
-
+    
     static bool HandleNpcBotCommandFollowCommand(ChatHandler* handler)
     {
         Player* owner = handler->GetSession()->GetPlayer();
@@ -3858,13 +3939,15 @@ public:
         Unit* target = owner->GetSelectedUnit();
         if (target && owner->GetBotMgr()->GetBot(target->GetGUID()))
         {
+            target->ToCreature()->GetBotAI()->RemoveBotCommandState(BOT_COMMAND_INACTION);
             target->ToCreature()->GetBotAI()->SetBotCommandState(BOT_COMMAND_FOLLOW);
-            msg = target->GetName() + "'s command state set to 'FOLLOW'";
+            msg = target->GetName() + "'s command state set to 'FOLLOW'. Any 'INACTION' states have been removed.";
         }
         else
         {
+            owner->GetBotMgr()->SendBotCommandStateRemove(BOT_COMMAND_INACTION);
             owner->GetBotMgr()->SendBotCommandState(BOT_COMMAND_FOLLOW);
-            msg = "Bots' command state set to 'FOLLOW'";
+            msg = "Bots' command state set to 'FOLLOW'. Any 'INACTION' states have been removed.";
         }
 
         handler->SendSysMessage(msg.c_str());

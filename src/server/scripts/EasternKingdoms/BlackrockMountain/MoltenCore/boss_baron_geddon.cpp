@@ -59,7 +59,6 @@ public:
         {
             _Reset();
             armageddonCasted = false;
-
             std::list<Creature*> firewalkerList;
             me->GetCreatureListWithEntryInGrid(firewalkerList, 11666, 180.0f); // Dinkle: Despawn Flamewalkers
             for (Creature* firewalker : firewalkerList)
@@ -77,10 +76,24 @@ public:
             events.ScheduleEvent(EVENT_LIVING_BOMB, 11s, 16s);
         }
 
+        void JustDied(Unit* /*killer*/) override
+        {
+            _JustDied();
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
+        }
+
         void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*dmgType*/, SpellSchoolMask /*school*/) override
         {
-            // If boss is below 2% hp - cast Armageddon
-            if (!armageddonCasted && damage < me->GetHealth() && me->HealthBelowPctDamaged(2, damage))
+            // If boss is below 11% hp - cast Armageddon
+            if (!armageddonCasted && damage < me->GetHealth() && me->HealthBelowPctDamaged(11, damage))
             {
                 me->RemoveAurasDueToSpell(SPELL_INFERNO);
                 me->StopMoving();

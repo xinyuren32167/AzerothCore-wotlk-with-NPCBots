@@ -82,6 +82,8 @@ void AddSC_boss_dathrohan_balnazzar();
 void AddSC_boss_malor_the_zealous();
 void AddSC_boss_ramstein_the_gorger();
 void AddSC_boss_volchan();
+void AddSC_boss_setis();
+void AddSC_custom_player_map_change_handler();
 
 
 
@@ -159,6 +161,8 @@ void AddCustomScripts()
     AddSC_boss_malor_the_zealous();
     AddSC_boss_ramstein_the_gorger();
     AddSC_boss_volchan();
+    AddSC_boss_setis();
+    AddSC_custom_player_map_change_handler();
 
 
         //AddSC_PlayerTeleportRevive();

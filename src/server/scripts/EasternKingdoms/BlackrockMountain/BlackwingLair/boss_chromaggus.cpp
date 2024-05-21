@@ -137,6 +137,25 @@ public:
             }
         }
 
+        void JustDied(Unit* /*killer*/) override
+        {
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
+            // Update encounter state to done
+            instance->SetBossState(DATA_CHROMAGGUS, DONE);
+            // Open the gate
+            if (GameObject* gate = me->FindNearestGameObject(GO_PORTCULLIS_NEFARIAN, 150.0f))
+                gate->SetGoState(GO_STATE_ACTIVE);
+        }
+
         void UpdateAI(uint32 diff) override
         {
             if (!UpdateVictim())

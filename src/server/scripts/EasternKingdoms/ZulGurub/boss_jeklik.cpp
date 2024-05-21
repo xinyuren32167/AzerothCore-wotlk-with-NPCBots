@@ -138,6 +138,8 @@ struct boss_jeklik : public BossAI
 
         me->RemoveAurasDueToSpell(SPELL_GREEN_CHANNELING);
         me->SetDisableGravity(true);
+        DoCastSelf(SPELL_BAT_FORM, true);
+
         me->GetMotionMaster()->MovePath(PATH_JEKLIK_INTRO, false);
     }
 

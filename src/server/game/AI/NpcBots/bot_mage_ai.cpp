@@ -494,16 +494,16 @@ public:
                 }
             }
 
-            //ARMOR
-            uint32 MOLTENARMOR = HasRole(BOT_ROLE_DPS) ? GetSpell(MOLTEN_ARMOR_1) : GetSpell(ICE_ARMOR_1);
-            uint32 ICEARMOR = GetSpell(ICE_ARMOR_1) ? GetSpell(ICE_ARMOR_1) : GetSpell(FROST_ARMOR_1);
-            uint32 ARMOR = !MOLTENARMOR ? ICEARMOR : (me->GetMap()->IsDungeon() || !ICEARMOR) ? MOLTENARMOR : ICEARMOR;
+            // Dinkle Molten ARMOR prio
+            uint32 MOLTEN_ARMOR = HasRole(BOT_ROLE_DPS) ? GetSpell(MOLTEN_ARMOR_1) : 0;
+            uint32 ICE_ARMOR = GetSpell(ICE_ARMOR_1) ? GetSpell(ICE_ARMOR_1) : GetSpell(FROST_ARMOR_1);
+            uint32 ARMOR = MOLTEN_ARMOR ? MOLTEN_ARMOR : ICE_ARMOR;  
+
             if (ARMOR && !me->HasAura(ARMOR))
             {
                 if (doCast(me, ARMOR))
-                    return;
+                    return;  // Stop further actions if armor is successfully cast
             }
-
             if (GetSpell(CONJURE_MANA_GEM_1))
             {
                 if (manaGemCharges == 0 &&
@@ -802,7 +802,7 @@ public:
                     return;
             }
             //Fireball or Frostfire Bolt (instant cast or combustion use up)
-            if (/*fbCasted && */IsSpellReady(FROSTFIREBOLT, diff) && (can_do_frost | can_do_fire) && dist < CalcSpellMaxRange(FROSTFIREBOLT) && Rand() < 150 &&
+            if (/*fbCasted && */IsSpellReady(FROSTFIREBOLT, diff) && (can_do_frost || can_do_fire) && dist < CalcSpellMaxRange(FROSTFIREBOLT) && Rand() < 150 &&
                 ((((CCed(mytar, true) || b_attackers.empty()) && me->HasAura(COMBUSTION_BUFF)) || me->HasAura(BRAIN_FREEZE_BUFF)) ||
                 !GetSpell(FROSTBOLT_1))) //level 1-3
             {

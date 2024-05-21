@@ -674,11 +674,10 @@ public:
             }
 
             //WATER
-            //WATERsituative1 : manatide
+            //WATER situative: Mana Tide Totem
             if (TotemTimer[T_WATER] <= diff && me->IsInCombat() && !IAmFree() &&
                 IsSpellReady(MANA_TIDE_TOTEM_1, diff, false))
             {
-                //5 min cd, party members only, instant effect +4 ticks in 12 secs
                 bool cast = false;
                 if (master->IsInCombat() && master->GetPowerType() == POWER_MANA &&
                     GetManaPCT(master) < 35 && me->GetDistance(master) < 18)
@@ -692,25 +691,26 @@ public:
                     {
                         if (me->GetMap() != member->FindMap() || !member->InSamePhase(me) ||
                             !member->IsAlive() || !member->IsInCombat() || member->GetPowerType() != POWER_MANA ||
-                            (member->IsPlayer() ? member->ToPlayer()->GetSubGroup() : member->ToCreature()->GetSubGroup()) != subgr ||
-                            GetManaPCT(member) > 35 || me->GetDistance(member) > 20 ||
-                            (member->IsNPCBot() && member->ToCreature()->IsTempBot()))
+                            GetManaPCT(member) > 35 || me->GetDistance(member) > 20)
                             continue;
                         ++count;
                     }
-                    cast = (count >= (3 + 1*(!!(mask & BOT_TOTEM_MASK_MY_TOTEM_WATER))));
+                    cast = (count >= 3);  // Simplified condition for casting
                 }
                 if (cast)
                 {
                     if (doCast(me, GetSpell(MANA_TIDE_TOTEM_1), CotE ? TRIGGERED_CAST_DIRECTLY : TRIGGERED_NONE))
+                    {
+                        TotemTimer[T_WATER] = 12000;  
                         if (!CotE)
-                            return;
+                            return; 
+                    }
                 }
                 //check if casted
                 if (_totems[T_WATER].second._type != BOT_TOTEM_MANA_TIDE)
-                    SetSpellCooldown(MANA_TIDE_TOTEM_1, 3000); //fail
+                    SetSpellCooldown(MANA_TIDE_TOTEM_1, 3000); //fail safe if not casted properly
             }
-
+            
             //WATERsituative2 : cleansing
             //REMOVED CHECKS ARE TOO HEAVY
 

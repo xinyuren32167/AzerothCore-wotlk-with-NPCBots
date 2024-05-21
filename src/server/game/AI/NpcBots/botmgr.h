@@ -125,6 +125,7 @@ class AC_GAME_API BotMgr
         static bool IsBotHKEnabled();
         static bool IsBotHKMessageEnabled();
         static bool IsBotHKAchievementsEnabled();
+        static bool IsManaRegenCheatEnabled();
         static uint8 GetMaxClassBots();
         //Dinkle
         static uint8 GetMaxDarkRangerBots();

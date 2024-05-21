@@ -1196,6 +1196,10 @@ void bot_ai::MoveToSendPosition(Position const& mpos)
     {
         SetBotCommandState(BOT_COMMAND_STAY);
         me->InterruptNonMeleeSpells(true);
+        if (!me->HasAura(129996))
+        {
+            me->CastSpell(me, 2379, true);
+        }
         BotMovement(BOT_MOVE_POINT, &mpos, nullptr, false);
         if (botPet && !CCed(botPet, true))
         {
@@ -5072,13 +5076,76 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
             spots.push_back(AoeSpotsVec::value_type(*affectedUnit, radius));
         }
     }
+
+    // Dream Fog
+    std::list<Creature*> EDList;
+    Acore::AllCreaturesOfEntryInRange checkDreamFog(unit, 15224, 60.f); // Assuming 60.f as search radius, adjust as necessary
+    Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherDreamFog(unit, EDList, checkDreamFog);
+    Cell::VisitAllObjects(unit, searcherDreamFog, 60.f);
+
+    for (Creature* fog : EDList)
+    {
+        if (fog)
+        {
+            float fogRadius = DEFAULT_COMBAT_REACH + 14.0f;
+            spots.push_back(AoeSpotsVec::value_type(*fog, fogRadius));
+        }
+    }
     
     if (unit->IsNPCBot() && unit->ToCreature()->IsFreeBot())
         return;
 
-
     //Additional: aoe coming from spawned npcs
 
+    //Kara
+    if (unit->GetMapId() == 532)
+    {
+        //Void Zones
+        std::list<Creature*> voidZones;
+        Acore::AllCreaturesOfEntryInRange checkVoidZone(unit, 16697, 40.f);
+        Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherVoidZone(unit, voidZones, checkVoidZone);
+        Cell::VisitAllObjects(unit, searcherVoidZone, 40.f);
+
+        for (Creature* voidZone : voidZones)
+        {
+            if (voidZone)
+            {
+                float voidZoneRadius = DEFAULT_COMBAT_REACH + 5.0f;
+                spots.push_back(AoeSpotsVec::value_type(*voidZone, voidZoneRadius));
+            }
+        }
+
+        /* // Prince Malchezaar's Shadow Nova
+        std::list<Creature*> princeMalchezaars;
+        Acore::AllCreaturesOfEntryInRange checkPrinceMalchezaar(unit, 15690, 40.f);
+        Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherPrinceMalchezaar(unit, princeMalchezaars, checkPrinceMalchezaar);
+        Cell::VisitAllObjects(unit, searcherPrinceMalchezaar, 40.f);
+
+        for (Creature* prince : princeMalchezaars)
+        {
+            if (prince && prince->IsNonMeleeSpellCast(false) && prince->GetCurrentSpell(CURRENT_GENERIC_SPELL) && prince->GetCurrentSpell(CURRENT_GENERIC_SPELL)->GetSpellInfo()->Id == 30852)
+            {
+                float novaRadius = DEFAULT_COMBAT_REACH + 32.0f; 
+                spots.push_back(AoeSpotsVec::value_type(*prince, novaRadius));
+            }
+        }
+          */
+        // Malchezaar's Infernals
+        std::list<Creature*> malInfernals;
+        Acore::AllCreaturesOfEntryInRange checkMalInfernal(unit, 17646, 60.f);
+        Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherMalInfernal(unit, malInfernals, checkMalInfernal);
+        Cell::VisitAllObjects(unit, searcherMalInfernal, 60.f);
+
+        for (Creature* infernal : malInfernals)
+        {
+            if (infernal)
+            {
+                float infernalRadius = DEFAULT_COMBAT_REACH + 22.0f;
+                spots.push_back(AoeSpotsVec::value_type(*infernal, infernalRadius));
+            }
+        }
+    }
+    
     //Aucheai Crypts
     else if (unit->GetMapId() == 558)
     {
@@ -5156,7 +5223,6 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
             spots.push_back(AoeSpotsVec::value_type(*(*ci), radius));
         }
     }
-
     // Dinkle Zul'Gurub
     if (unit->GetMapId() == 309)
     {
@@ -5171,6 +5237,23 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
                 continue;
 
             float radius = 15.0f + DEFAULT_COMBAT_REACH * 2.0f;
+            spots.push_back(AoeSpotsVec::value_type(*gameObject, radius));
+        }
+    }
+    //Dinkle, Molten Core, Hot Coals
+    if (unit->GetMapId() == 409)  
+    {
+        std::list<GameObject*> gListMC;
+        Acore::AllGameObjectsWithEntryInRange checkMC(unit, 178164, 60.f);  
+        Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcherMC(unit, gListMC, checkMC);
+        Cell::VisitAllObjects(unit, searcherMC, 60.f);
+
+        for (auto* gameObject : gListMC)
+        {
+            if (!gameObject)
+                continue;
+
+            float radius = 15.0f + DEFAULT_COMBAT_REACH;  
             spots.push_back(AoeSpotsVec::value_type(*gameObject, radius));
         }
     }
@@ -7290,18 +7373,21 @@ void bot_ai::_OnManaRegenUpdate() const
     if ((_botclass == BOT_CLASS_SHAMAN && GetSpec() == BOT_SPEC_SHAMAN_ELEMENTAL) ||
         (_botclass == BOT_CLASS_DRUID && GetSpec() == BOT_SPEC_DRUID_BALANCE))
         power_regen_mp5 += 0.024f * _getTotalBotStat(BOT_STAT_MOD_INTELLECT);
-    //Mana regen Cheat
-    if (me->GetMap()->IsRaid())
-        power_regen_mp5 *= 2.5;
+    // Mana regen Cheat
+    if (BotMgr::IsManaRegenCheatEnabled())
+    {
+        if (me->GetMap()->IsRaid())
+            power_regen_mp5 *= 2.5;
 
-    if (me->GetMap()->IsDungeon())
-        power_regen_mp5 *= 2.5;
+        if (me->GetMap()->IsDungeon())
+            power_regen_mp5 *= 2.5;
 
-    if (me->GetMap()->IsHeroic())
-        power_regen_mp5 *= 2.5;
+        if (me->GetMap()->IsHeroic())
+            power_regen_mp5 *= 2.5;
 
-    if ((me->GetMap()->IsRaid() || me->GetMap()->IsDungeon()) && me->GetBotClass() == BOT_CLASS_PRIEST || me->GetBotClass() == BOT_CLASS_PALADIN)
-        power_regen_mp5 *= 2.5;
+        if ((me->GetMap()->IsRaid() || me->GetMap()->IsDungeon()) && (me->GetBotClass() == BOT_CLASS_PRIEST || me->GetBotClass() == BOT_CLASS_PALADIN))
+            power_regen_mp5 *= 2.5;
+    }
     me->SetStatFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER, power_regen_mp5 + CalculatePct(value, modManaRegenInterrupt));
     me->SetStatFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER, power_regen_mp5 + value);
 }

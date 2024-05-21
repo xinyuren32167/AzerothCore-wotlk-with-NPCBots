@@ -93,6 +93,8 @@ enum Events
  * ---
  */
 
+
+
 struct emerald_dragonAI : public WorldBossAI
 {
     emerald_dragonAI(Creature* creature) : WorldBossAI(creature)
@@ -102,10 +104,11 @@ struct emerald_dragonAI : public WorldBossAI
     void Reset() override
     {
         WorldBossAI::Reset();
+        DoCastSelf(875167, true);
         me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
         me->SetReactState(REACT_AGGRESSIVE);
         DoCast(me, SPELL_MARK_OF_NATURE_AURA, true);
-        events.ScheduleEvent(EVENT_TAIL_SWEEP, 4000);
+        events.ScheduleEvent(EVENT_TAIL_SWEEP, 8000);
         events.ScheduleEvent(EVENT_NOXIOUS_BREATH, urand(7500, 15000));
         events.ScheduleEvent(EVENT_SEEPING_FOG, urand(12500, 20000));
         events.ScheduleEvent(EVENT_SUMMON_PLAYER, 1s);
@@ -138,7 +141,7 @@ struct emerald_dragonAI : public WorldBossAI
             case EVENT_TAIL_SWEEP:
                 // Tail Sweep is cast every two seconds, no matter what goes on in front of the dragon
                 DoCast(me, SPELL_TAIL_SWEEP);
-                events.ScheduleEvent(EVENT_TAIL_SWEEP, 2000);
+                events.ScheduleEvent(EVENT_TAIL_SWEEP, 6000);
                 break;
             case EVENT_SUMMON_PLAYER:
                 if (Unit* target = me->GetVictim())
@@ -171,6 +174,16 @@ struct emerald_dragonAI : public WorldBossAI
             ExecuteEvent(eventId);
 
         DoMeleeAttackIfReady();
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        _JustDied();
+        DoCastSelf(875167, true);
+        std::list<Creature*> dreamFogs;
+        me->GetCreatureListWithEntryInGrid(dreamFogs, NPC_DREAM_FOG, 100.0f);
+        for (Creature* fog : dreamFogs)
+            fog->DespawnOrUnsummon();
     }
 };
 
@@ -240,7 +253,7 @@ public:
             {
                 if (dragon->GetAI())
                 {
-                    return dragon->GetAI()->SelectTarget(SelectTargetMethod::Random, 0, 0.0f, true);
+                    return dragon->GetAI()->SelectTarget(SelectTargetMethod::Random, 0, 0.0f, false, false);
                 }
             }
 
@@ -316,24 +329,38 @@ public:
         // Summon druid spirits on 75%, 50% and 25% health
         void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
         {
-            if (me->HealthBelowPctDamaged(100 - (25 * _stage), damage))
+            if (_stage <= 3 && me->HealthBelowPctDamaged(100 - (25 * _stage), damage))
             {
                 Talk(SAY_YSONDRE_SUMMON_DRUIDS);
 
-                auto const& attackers = me->GetThreatMgr().GetThreatList();
-                uint8 attackersCount = 0;
+                std::vector<Unit*> validTargets;
 
-                for (const auto attacker : attackers)
+                auto const& attackers = me->GetThreatMgr().GetThreatList();
+
+                for (const auto& threat : attackers)
                 {
-                    if ((*attacker)->ToPlayer() && (*attacker)->IsAlive())
-                        ++attackersCount;
+                    Unit* attacker = threat->GetVictim();
+                    if (attacker && attacker->IsAlive() &&
+                        ((attacker->GetTypeId() == TYPEID_PLAYER) ||
+                            (attacker->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(attacker)->IsNPCBot())))
+                    {
+                        validTargets.push_back(attacker);
+                    }
                 }
 
-                uint8 amount = attackersCount < 30 ? attackersCount * 0.5f : 15;
-                amount = amount < 1 ? 1 : amount;
+                uint8 amount = validTargets.size() < 30 ? validTargets.size() * 0.5f : 15;
+                amount = std::max<uint8>(amount, 1);  // Ensure at least one druid is summoned
 
+                // Randomly select targets from the list of valid targets and summon druids on them
                 for (uint8 i = 0; i < amount; ++i)
-                    DoCast(me, SPELL_SUMMON_DRUID_SPIRITS, true);
+                {
+                    if (!validTargets.empty())
+                    {
+                        Unit* target = Acore::Containers::SelectRandomContainerElement(validTargets);
+                        DoCast(target, SPELL_SUMMON_DRUID_SPIRITS, true);
+                    }
+                }
+
                 ++_stage;
             }
         }
@@ -343,12 +370,30 @@ public:
             switch (eventId)
             {
                 case EVENT_LIGHTNING_WAVE:
-                    DoCastVictim(SPELL_LIGHTNING_WAVE);
+                    CastSpellOnRandomTarget(SPELL_LIGHTNING_WAVE, 100.0f);
                     events.ScheduleEvent(EVENT_LIGHTNING_WAVE, urand(10000, 20000));
                     break;
                 default:
                     emerald_dragonAI::ExecuteEvent(eventId);
                     break;
+            }
+        }
+
+        void CastSpellOnRandomTarget(uint32 spellId, float range)
+        {
+            std::list<Unit*> targets;
+            Acore::AnyUnitInObjectRangeCheck check(me, range);
+            Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+            Cell::VisitAllObjects(me, searcher, range);
+
+            targets.remove_if([this](Unit* unit) -> bool {
+                return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+                });
+
+            if (!targets.empty())
+            {
+                Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+                DoCast(target, spellId);
             }
         }
 
@@ -421,7 +466,7 @@ public:
 
         void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
         {
-            if (me->HealthBelowPctDamaged(100 - (25 * _stage), damage))
+            if (_stage <= 3 && me->HealthBelowPctDamaged(100 - (25 * _stage), damage))
             {
                 Talk(SAY_LETHON_DRAW_SPIRIT);
                 DoCast(me, SPELL_DRAW_SPIRIT);
@@ -547,7 +592,7 @@ public:
 
         void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
         {
-            if (me->HealthBelowPctDamaged(100 - (25 * _stage), damage))
+            if (_stage <= 3 && me->HealthBelowPctDamaged(100 - (25 * _stage), damage))
             {
                 Talk(SAY_EMERISS_CAST_CORRUPTION);
                 DoCast(me, SPELL_CORRUPTION_OF_EARTH, true);
@@ -645,7 +690,7 @@ public:
         {
             // At 75, 50 or 25 percent health, we need to activate the shades and go "banished"
             // Note: _stage holds the amount of times they have been summoned
-            if (!_banished && me->HealthBelowPctDamaged(100 - (25 * _stage), damage))
+            if (_stage <= 3 && !_banished && me->HealthBelowPctDamaged(100 - (25 * _stage), damage))
             {
                 _banished = true;
                 _banishedTimer = 60000;

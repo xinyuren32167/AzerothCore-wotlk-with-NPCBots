@@ -70,6 +70,11 @@ public:
             }
         }
 
+        void Reset() override
+        {
+            _Reset();
+        }
+        
         void JustExitedCombat() override
         {
             DespawnCoreHounds();
@@ -87,6 +92,20 @@ public:
             events.ScheduleEvent(EVENT_ENRAGE, 300000);
         }
 
+        void JustDied(Unit* /*killer*/) override
+        {
+            _JustDied();
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
+        }
+        
         void ExecuteEvent(uint32 eventId) override
         {
             switch (eventId)

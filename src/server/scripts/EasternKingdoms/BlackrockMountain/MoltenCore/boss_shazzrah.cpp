@@ -63,11 +63,25 @@ public:
         void Reset() override
         {
             BossAI::Reset();
-
+            DoCastSelf(875167, true);
             if (Creature* npc = me->FindNearestCreature(83000, 500.0f, false))
             {
                 if (!npc->IsAlive())
                     npc->Respawn();
+            }
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            _JustDied();
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
             }
         }
 

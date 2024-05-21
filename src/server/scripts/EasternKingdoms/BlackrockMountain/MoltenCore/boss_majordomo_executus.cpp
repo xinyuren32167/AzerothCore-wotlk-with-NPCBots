@@ -143,6 +143,16 @@ public:
         void JustDied(Unit* /*killer*/) override
         {
             Talk(SAY_DEATH);
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
             me->DespawnOrUnsummon(10s, 0s);
         }
 
@@ -190,6 +200,7 @@ public:
 
         void Reset() override
         {
+            DoCastSelf(875167, true);
             me->ResetLootMode();
             events.Reset();
             aliveMinionsGUIDS.clear();

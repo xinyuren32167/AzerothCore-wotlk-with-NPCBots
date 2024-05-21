@@ -131,7 +131,7 @@ struct boss_curator : public BossAI
     void JustSummoned(Creature* summon) override
     {
         summons.Summon(summon);
-        if (Unit* target = summon->SelectNearbyTarget(nullptr, 40.0f))
+        if (Unit* target = summon->SelectNearbyTarget(nullptr, 50.0f))
         {
             summon->AI()->AttackStart(target);
             summon->AddThreat(target, 1000.0f);

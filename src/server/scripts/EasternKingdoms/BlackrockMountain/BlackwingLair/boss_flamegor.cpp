@@ -69,7 +69,17 @@ public:
         void JustDied(Unit* /*killer*/) override
         {
             BossAI::JustDied(nullptr);
-            DespawnShades();  
+            DespawnShades();
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
         }
 
         void UpdateAI(uint32 diff) override

@@ -89,6 +89,16 @@ public:
 
         void JustDied(Unit* /*killer*/) override
         {
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
             if (secondPhase)
             {
                 _JustDied();

@@ -196,7 +196,7 @@ struct boss_malchezaar : public BossAI
         {
             DoCastAOE(SPELL_ENFEEBLE);
 
-            scheduler.Schedule(9s, [this](TaskContext)
+            scheduler.Schedule(10s, [this](TaskContext)
             {
                 EnfeebleResetHealth();
             });
@@ -205,6 +205,7 @@ struct boss_malchezaar : public BossAI
             context.Repeat();
         }).Schedule(35500ms, [this](TaskContext context)
         {
+            me->TextEmote("Prince Malchezaar begins to cast Shadow Nova!", 0, true);
             DoCastAOE(SPELL_SHADOW_NOVA);
             context.SetGroup(GROUP_SHADOW_NOVA);
             context.Repeat(30s);

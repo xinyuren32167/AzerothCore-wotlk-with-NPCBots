@@ -1109,7 +1109,7 @@ public:
                         STING = VIPER_STING_1;
                 }
                 if (!STING && GetSpell(SERPENT_STING_1) && HasRole(BOT_ROLE_DPS) &&
-                    mytar->GetHealth() > me->GetMaxHealth()/2 * (1 + mytar->getAttackers().size()))
+                    mytar->GetHealth() > me->GetMaxHealth() / 3)
                 {
                     sting = mytar->GetAuraEffect(SPELL_AURA_MOD_DAMAGE_FROM_CASTER, SPELLFAMILY_HUNTER, 0x4000, 0x0, 0x0, me->GetGUID());
                     if (!sting)

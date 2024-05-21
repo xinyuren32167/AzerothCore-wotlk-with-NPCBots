@@ -86,13 +86,22 @@ public:
         {
             _JustDied();
             me->Yell("At last, the long nightmare is over...", LANG_UNIVERSAL);
-
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
             std::list<GameObject*> _goList;
             GetGameObjectListWithEntryInGrid(_goList, me, GO_SUPPRESSION_DEVICE, 200.0f);
             for (std::list<GameObject*>::const_iterator itr = _goList.begin(); itr != _goList.end(); itr++)
             {
                 ((*itr)->AI()->DoAction(ACTION_DEACTIVATE));
             }
+            instance->SetBossState(DATA_BROODLORD_LASHLAYER, DONE);
         }
 
         void KilledUnit(Unit* victim) override

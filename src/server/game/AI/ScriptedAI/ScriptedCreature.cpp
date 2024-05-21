@@ -600,7 +600,6 @@ void BossAI::_Reset()
 {
     if (!me->IsAlive())
         return;
-
     me->SetCombatPulseDelay(0);
     me->ResetLootMode();
     events.Reset();
@@ -614,6 +613,7 @@ void BossAI::_Reset()
 
 void BossAI::_JustDied()
 {
+    DoCastSelf(875167, true);
     events.Reset();
     scheduler.CancelAll();
     summons.DespawnAll();
@@ -759,13 +759,14 @@ void WorldBossAI::_Reset()
 {
     if (!me->IsAlive())
         return;
-
+    DoCastSelf(875167, true);
     events.Reset();
     summons.DespawnAll();
 }
 
 void WorldBossAI::_JustDied()
 {
+    DoCastSelf(875167, true);
     events.Reset();
     summons.DespawnAll();
 }

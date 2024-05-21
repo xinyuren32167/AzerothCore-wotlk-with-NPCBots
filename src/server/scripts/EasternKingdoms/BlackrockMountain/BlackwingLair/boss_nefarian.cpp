@@ -467,8 +467,11 @@ public:
                             events.ScheduleEvent(EVENT_SILENCE, 14s,23s);
                             break;
                         case EVENT_MIND_CONTROL:
-                            DoCastRandomTarget(SPELL_SHADOW_COMMAND, 0, 40.0f);
-                            events.ScheduleEvent(EVENT_MIND_CONTROL, 24s, 30s);
+                            if (me->GetMap()->GetPlayers().getSize() > 1)
+                            {
+                                DoCastRandomTarget(SPELL_SHADOW_COMMAND, 0, 40.0f);
+                                events.ScheduleEvent(EVENT_MIND_CONTROL, 24s, 30s);
+                            }
                             break;
                         case EVENT_SHADOWBLINK:
                             DoCastSelf(SPELL_SHADOWBLINK);
@@ -561,6 +564,15 @@ public:
     {
         _JustDied();
         Talk(SAY_DEATH);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
+        }
     }
 
     void KilledUnit(Unit* victim) override

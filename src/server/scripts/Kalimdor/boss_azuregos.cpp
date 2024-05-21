@@ -97,7 +97,7 @@ public:
                 })
                 .Schedule(5s, 17s, [this](TaskContext context)
                 {
-                    DoCastRandomTarget(SPELL_MANA_STORM);
+                    CastSpellOnRandomTarget(SPELL_MANA_STORM, 100.0f);
                     context.Repeat(7s, 13s);
                 })
                 .Schedule(10s, 30s, [this](TaskContext context)
@@ -153,6 +153,24 @@ public:
             {
                 DoMeleeAttackIfReady();
             });
+        }
+
+        void CastSpellOnRandomTarget(uint32 spellId, float range)
+        {
+            std::list<Unit*> targets;
+            Acore::AnyUnitInObjectRangeCheck check(me, range);
+            Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+            Cell::VisitAllObjects(me, searcher, range);
+
+            targets.remove_if([this](Unit* unit) -> bool {
+                return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+                });
+
+            if (!targets.empty())
+            {
+                Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+                DoCast(target, spellId);
+            }
         }
     };
 
