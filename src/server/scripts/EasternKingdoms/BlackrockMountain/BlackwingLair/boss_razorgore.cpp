@@ -158,6 +158,10 @@ public:
             events.ScheduleEvent(EVENT_CONFLAGRATION, 12s);
 
             instance->SetData(DATA_EGG_EVENT, IN_PROGRESS);
+            if (Creature* target = GetClosestCreatureWithEntry(me, 90010, 120.0f))
+            {
+                me->CastSpell(target, 5, false);
+            }
         }
 
         void DoChangePhase()

@@ -561,6 +561,9 @@ void bot_ai::CheckOwnerExpiry()
             }
             CharacterDatabase.CommitTransaction(trans);
 
+            for (uint8 slot = BOT_SLOT_MAINHAND; slot <= BOT_SLOT_RANGED; ++slot)
+                _resetEquipment(slot, ObjectGuid::Empty);
+
             BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_EQUIPS, _equips);
         }
 
@@ -622,8 +625,11 @@ void bot_ai::ResetBotAI(uint8 resetType)
         me->ReplaceAllUnitFlags2(UnitFlags2(me->GetCreatureTemplate()->unit_flags2));
     }
 
-    if (resetType == BOTAI_RESET_DISMISS && !IsTempBot())
-        EnableAllSpells();
+    if ((resetType == BOTAI_RESET_DISMISS || resetType == BOTAI_RESET_LOGOUT) && !IsTempBot())
+    {
+        EnableAllSpells(resetType == BOTAI_RESET_DISMISS);
+        InitRoles();
+    }
 
     //me->IsAIEnabled = true;
     canUpdate = true;
@@ -2626,8 +2632,8 @@ void bot_ai::SetStats(bool force)
         if (mylevel >= 20 && (_botclass == BOT_CLASS_WARRIOR || _botclass == BOT_CLASS_PALADIN || _botclass == BOT_CLASS_DEATH_KNIGHT))
             armor_mod += 0.1f;
         //Frost Presence
-        if (GetBotStance() == DEATH_KNIGHT_FROST_PRESENCE)
-            armor_mod += 0.6f;
+       // if (GetBotStance() == DEATH_KNIGHT_FROST_PRESENCE)
+       //     armor_mod += 0.5f;
         if (_botclass == BOT_CLASS_DRUID)
         {
             //Thick Hide
@@ -5146,6 +5152,18 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
         }
     }
     
+    //Molten Core
+    if (unit->GetMapId() == 409)  
+    {
+        std::list<GameObject*> gListMC;
+        Acore::AllGameObjectsWithEntryInRange checkMC(unit, GAMEOBJECT_HOT_COAL, 60.f);  
+        Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcherMC(unit, gListMC, checkMC);
+        Cell::VisitAllObjects(unit, searcherMC, 60.f);
+
+        float radius = 15.0f + DEFAULT_COMBAT_REACH;  
+        for (std::list<GameObject*>::const_iterator ci = gListMC.cbegin(); ci != gListMC.cend(); ++ci)
+            spots.push_back(AoeSpotsVec::value_type(*(*ci), radius));
+    }
     //Aucheai Crypts
     else if (unit->GetMapId() == 558)
     {
@@ -5164,7 +5182,7 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
         }
     }
     //The Eye of Eternity
-    if (unit->GetMapId() == 616 && unit->GetVehicle())
+    else if (unit->GetMapId() == 616 && unit->GetVehicle())
     {
         std::list<Creature*> cList;
         Acore::AllCreaturesOfEntryInRange check2(unit->GetVehicleBase(), CREATURE_EOE_STATIC_FIELD, 60.f);
@@ -5240,23 +5258,7 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
             spots.push_back(AoeSpotsVec::value_type(*gameObject, radius));
         }
     }
-    //Dinkle, Molten Core, Hot Coals
-    if (unit->GetMapId() == 409)  
-    {
-        std::list<GameObject*> gListMC;
-        Acore::AllGameObjectsWithEntryInRange checkMC(unit, 178164, 60.f);  
-        Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcherMC(unit, gListMC, checkMC);
-        Cell::VisitAllObjects(unit, searcherMC, 60.f);
 
-        for (auto* gameObject : gListMC)
-        {
-            if (!gameObject)
-                continue;
-
-            float radius = 15.0f + DEFAULT_COMBAT_REACH;  
-            spots.push_back(AoeSpotsVec::value_type(*gameObject, radius));
-        }
-    }
 
     /* Naxxramas
     if (unit->GetMapId() == 533)
@@ -7077,11 +7079,14 @@ void bot_ai::RemoveSpell(uint32 basespell)
 //    for (BotSpellMap::const_iterator itr = _spells.begin(); itr != _spells.end(); ++itr)
 //        itr->second->spellId = 0;
 //}
-void bot_ai::EnableAllSpells()
+void bot_ai::EnableAllSpells(bool save)
 {
-    NpcBotData* npcBotData = const_cast<NpcBotData*>(BotDataMgr::SelectNpcBotData(me->GetEntry()));
-    npcBotData->disabled_spells.clear();
-    _saveDisabledSpells = true;
+    if (save)
+    {
+        NpcBotData* npcBotData = const_cast<NpcBotData*>(BotDataMgr::SelectNpcBotData(me->GetEntry()));
+        npcBotData->disabled_spells.clear();
+        _saveDisabledSpells = true;
+    }
 
     for (BotSpellMap::const_iterator itr = _spells.begin(); itr != _spells.end(); ++itr)
         if (itr->second->enabled == false)
@@ -7489,7 +7494,7 @@ void bot_ai::_OnAreaUpdate(uint32 areaId)
             }
         }
 
-        for (uint8 slot = BOT_SLOT_MAINHAND; slot != BOT_SLOT_RANGED; ++slot)
+        for (uint8 slot = BOT_SLOT_MAINHAND; slot <= BOT_SLOT_RANGED; ++slot)
         {
             if (Item const* item = _equips[slot])
                 if (item->IsLimitedToAnotherMapOrZone(me->GetMapId(), areaId))
@@ -19216,7 +19221,7 @@ WanderNode const* bot_ai::GetNextBGTravelNode() const
                     Creature const* mboss = ASSERT_NOTNULL(av->GetBGCreature(uint32(sptype)));
                     if (mboss->IsAlive() && !mboss->IsInCombat() && me->IsWithinDist2d(mboss, SIZE_OF_GRIDS * 0.75f))
                     {
-                        WanderNode const* mineWP = ASSERT_NOTNULL(WanderNode::FindInAreaWPs(mboss->GetAreaId(), mine_pred));
+                        WanderNode const* mineWP = ASSERT_NOTNULL(WanderNode::FindInMapWPs(mboss->GetMapId(), mine_pred));
                         WanderNode const* mineLink = mineWP->GetLinks().front();
                         NodeList mlinks = curNode->GetShortestPathLinks(mineWP, links);
                         if (!mlinks.empty())

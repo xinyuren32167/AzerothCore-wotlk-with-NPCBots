@@ -22,38 +22,38 @@
 
 enum Spells
 {
-    SPELL_WEB_WRAP                      = 28622,
-    SPELL_WEB_SPRAY_10                  = 29484,
-    SPELL_WEB_SPRAY_25                  = 54125,
-    SPELL_POISON_SHOCK_10               = 28741,
-    SPELL_POISON_SHOCK_25               = 54122,
-    SPELL_NECROTIC_POISON_10            = 54121,
-    SPELL_NECROTIC_POISON_25            = 28776,
-    SPELL_FRENZY_10                     = 54123,
-    SPELL_FRENZY_25                     = 54124
+    SPELL_WEB_WRAP = 28622,
+    SPELL_WEB_SPRAY_10 = 29484,
+    SPELL_WEB_SPRAY_25 = 54125,
+    SPELL_POISON_SHOCK_10 = 28741,
+    SPELL_POISON_SHOCK_25 = 54122,
+    SPELL_NECROTIC_POISON_10 = 54121,
+    SPELL_NECROTIC_POISON_25 = 28776,
+    SPELL_FRENZY_10 = 54123,
+    SPELL_FRENZY_25 = 54124
 };
 
 enum Events
 {
-    EVENT_WEB_SPRAY                     = 1,
-    EVENT_POISON_SHOCK                  = 2,
-    EVENT_NECROTIC_POISON               = 3,
-    EVENT_WEB_WRAP                      = 4,
-    EVENT_HEALTH_CHECK                  = 5,
-    EVENT_SUMMON_SPIDERLINGS            = 6
+    EVENT_WEB_SPRAY = 1,
+    EVENT_POISON_SHOCK = 2,
+    EVENT_NECROTIC_POISON = 3,
+    EVENT_WEB_WRAP = 4,
+    EVENT_HEALTH_CHECK = 5,
+    EVENT_SUMMON_SPIDERLINGS = 6
 };
 
 enum Emotes
 {
-    EMOTE_SPIDERS                       = 0,
-    EMOTE_WEB_WRAP                      = 1,
-    EMOTE_WEB_SPRAY                     = 2
+    EMOTE_SPIDERS = 0,
+    EMOTE_WEB_WRAP = 1,
+    EMOTE_WEB_SPRAY = 2
 };
 
 enum Misc
 {
-    NPC_WEB_WRAP                        = 16486,
-    NPC_MAEXXNA_SPIDERLING              = 17055
+    NPC_WEB_WRAP = 16486,
+    NPC_MAEXXNA_SPIDERLING = 17055
 };
 
 const Position PosWrap[3] =
@@ -112,7 +112,7 @@ public:
         {
             BossAI::JustEngagedWith(who);
             me->SetInCombatWithZone();
-            events.ScheduleEvent(EVENT_WEB_WRAP, 25s);
+            events.ScheduleEvent(EVENT_WEB_WRAP, 20s);
             events.ScheduleEvent(EVENT_WEB_SPRAY, 40s);
             events.ScheduleEvent(EVENT_POISON_SHOCK, 10s);
             events.ScheduleEvent(EVENT_NECROTIC_POISON, 5s);
@@ -148,7 +148,7 @@ public:
             }
         }
 
-        void JustDied(Unit*  killer) override
+        void JustDied(Unit* killer) override
         {
             BossAI::JustDied(killer);
             summons.DespawnAll();
@@ -168,52 +168,52 @@ public:
 
             switch (events.ExecuteEvent())
             {
-                case EVENT_WEB_SPRAY:
-                    Talk(EMOTE_WEB_SPRAY);
-                    me->CastSpell(me, RAID_MODE(SPELL_WEB_SPRAY_10, SPELL_WEB_SPRAY_25), true);
-                    events.Repeat(40s);
+            case EVENT_WEB_SPRAY:
+                Talk(EMOTE_WEB_SPRAY);
+                me->CastSpell(me, RAID_MODE(SPELL_WEB_SPRAY_10, SPELL_WEB_SPRAY_25), true);
+                events.Repeat(40s);
+                break;
+            case EVENT_POISON_SHOCK:
+                me->CastSpell(me->GetVictim(), RAID_MODE(SPELL_POISON_SHOCK_10, SPELL_POISON_SHOCK_25), false);
+                events.Repeat(10s);
+                break;
+            case EVENT_NECROTIC_POISON:
+                me->CastSpell(me->GetVictim(), RAID_MODE(SPELL_NECROTIC_POISON_10, SPELL_NECROTIC_POISON_25), false);
+                events.Repeat(30s);
+                break;
+            case EVENT_SUMMON_SPIDERLINGS:
+                Talk(EMOTE_SPIDERS);
+                for (uint8 i = 0; i < 8; ++i)
+                {
+                    me->SummonCreature(NPC_MAEXXNA_SPIDERLING, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation());
+                }
+                events.Repeat(40s);
+                break;
+            case EVENT_HEALTH_CHECK:
+                if (me->GetHealthPct() < 30)
+                {
+                    me->CastSpell(me, RAID_MODE(SPELL_FRENZY_10, SPELL_FRENZY_25), true);
                     break;
-                case EVENT_POISON_SHOCK:
-                    me->CastSpell(me->GetVictim(), RAID_MODE(SPELL_POISON_SHOCK_10, SPELL_POISON_SHOCK_25), false);
-                    events.Repeat(10s);
-                    break;
-                case EVENT_NECROTIC_POISON:
-                    me->CastSpell(me->GetVictim(), RAID_MODE(SPELL_NECROTIC_POISON_10, SPELL_NECROTIC_POISON_25), false);
-                    events.Repeat(30s);
-                    break;
-                case EVENT_SUMMON_SPIDERLINGS:
-                    Talk(EMOTE_SPIDERS);
-                    for (uint8 i = 0; i < 8; ++i)
+                }
+                events.Repeat(1s);
+                break;
+            case EVENT_WEB_WRAP:
+                Talk(EMOTE_WEB_WRAP);
+                for (uint8 i = 0; i < RAID_MODE(1, 2); ++i)
+                {
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1, 0, true, true, -SPELL_WEB_WRAP))
                     {
-                        me->SummonCreature(NPC_MAEXXNA_SPIDERLING, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation());
-                    }
-                    events.Repeat(40s);
-                    break;
-                case EVENT_HEALTH_CHECK:
-                    if (me->GetHealthPct() < 30)
-                    {
-                        me->CastSpell(me, RAID_MODE(SPELL_FRENZY_10, SPELL_FRENZY_25), true);
-                        break;
-                    }
-                    events.Repeat(1s);
-                    break;
-                case EVENT_WEB_WRAP:
-                    Talk(EMOTE_WEB_WRAP);
-                    for (uint8 i = 0; i < RAID_MODE(1, 2); ++i)
-                    {
-                        if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1, 0, true, true, -SPELL_WEB_WRAP))
+                        target->RemoveAura(RAID_MODE(SPELL_WEB_SPRAY_10, SPELL_WEB_SPRAY_25));
+                        uint8 pos = urand(0, 2);
+                        if (Creature* wrap = me->SummonCreature(NPC_WEB_WRAP, PosWrap[pos].GetPositionX(), PosWrap[pos].GetPositionY(), PosWrap[pos].GetPositionZ(), 0.0f, TEMPSUMMON_TIMED_DESPAWN, 60000))
                         {
-                            target->RemoveAura(RAID_MODE(SPELL_WEB_SPRAY_10, SPELL_WEB_SPRAY_25));
-                            uint8 pos = urand(0, 2);
-                            if (Creature* wrap = me->SummonCreature(NPC_WEB_WRAP, PosWrap[pos].GetPositionX(), PosWrap[pos].GetPositionY(), PosWrap[pos].GetPositionZ(), 0.0f, TEMPSUMMON_TIMED_DESPAWN, 60000))
-                            {
-                                wrap->AI()->SetGUID(target->GetGUID());
-                                target->GetMotionMaster()->MoveJump(PosWrap[pos].GetPositionX(), PosWrap[pos].GetPositionY(), PosWrap[pos].GetPositionZ(), 20, 20);
-                            }
+                            wrap->AI()->SetGUID(target->GetGUID());
+                            target->GetMotionMaster()->MoveJump(PosWrap[pos].GetPositionX(), PosWrap[pos].GetPositionY(), PosWrap[pos].GetPositionZ(), 20, 20);
                         }
                     }
-                    events.Repeat(50s);
-                    break;
+                }
+                events.Repeat(40s);
+                break;
             }
             DoMeleeAttackIfReady();
         }

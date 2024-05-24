@@ -478,55 +478,24 @@ public:
                 return;
 
             uint8 newpresence = IsTank() ? DEATH_KNIGHT_FROST_PRESENCE : DEATH_KNIGHT_BLOOD_PRESENCE;
-
-            if (_presence != newpresence)
+            if (_presence == newpresence)
             {
-                if (_presence == DEATH_KNIGHT_FROST_PRESENCE)
-                {
-                    me->RemoveAura(1190014);
-                    me->RemoveAura(1190013);
-                }
-
-                if (newpresence == DEATH_KNIGHT_FROST_PRESENCE && HaveRunes(FROST_PRESENCE_1))
-                {
-                    if (doCast(me, FROST_PRESENCE_1))
-                    {
-                        me->AddAura(1190014, me);
-                        me->AddAura(1190013, me);
-                        _presence = newpresence; 
-                        presencetimer = 5000;    
-                        return;
-                    }
-                }
-                else if (newpresence == DEATH_KNIGHT_BLOOD_PRESENCE && HaveRunes(BLOOD_PRESENCE_1))
-                {
-                    if (doCast(me, BLOOD_PRESENCE_1))
-                    {
-                        _presence = newpresence;  
-                        presencetimer = 5000;    
-                        return;
-                    }
-                }
-
-                presencetimer = 1000; 
+                presencetimer = 5000;
+                return;
             }
-            else
+
+            if (newpresence == DEATH_KNIGHT_FROST_PRESENCE && HaveRunes(FROST_PRESENCE_1))
             {
-                if (_presence == DEATH_KNIGHT_FROST_PRESENCE)
-                {
-                    if (!me->HasAura(1190014))
-                        me->AddAura(1190014, me);
-                    if (!me->HasAura(1190013))
-                        me->AddAura(1190013, me);
-                }
-                else
-                {
-                    me->RemoveAura(1190014);
-                    me->RemoveAura(1190013);
-                }
-
-                presencetimer = 5000; 
+                if (doCast(me, FROST_PRESENCE_1))
+                    return;
             }
+            else if (newpresence == DEATH_KNIGHT_BLOOD_PRESENCE && HaveRunes(BLOOD_PRESENCE_1))
+            {
+                if (doCast(me, BLOOD_PRESENCE_1))
+                    return;
+            }
+
+            presencetimer = 1000; //fail
         }
 
         void BreakCC(uint32 diff) override
