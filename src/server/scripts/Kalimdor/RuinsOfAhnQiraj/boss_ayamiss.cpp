@@ -74,7 +74,7 @@ enum Points
     POINT_PARALYZE                          = 2
 };
 
-const Position AyamissAirPos  = { -9689.292f, 1547.912f, 48.02729f, 0.0f };
+const Position AyamissAirPos  = { -9689.292f, 1547.912f, 44.02729f, 0.0f };
 const Position AltarPos       = { -9717.18f, 1517.72f, 27.4677f, 0.0f };
 
 struct boss_ayamiss : public BossAI
@@ -203,6 +203,16 @@ struct boss_ayamiss : public BossAI
     {
         me->GetMotionMaster()->MoveFall();
         BossAI::JustDied(killer);
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 10, false);
+            }
+        }
     }
 
     void EnterEvadeMode(EvadeReason why) override
@@ -237,7 +247,7 @@ struct npc_hive_zara_larva : public ScriptedAI
     {
         if (type == POINT_MOTION_TYPE && id == POINT_PARALYZE)
         {
-            if (Player* target = ObjectAccessor::GetPlayer(*me, _instance->GetGuidData(DATA_PARALYZED)))
+            if (Unit* target = ObjectAccessor::GetUnit(*me, _instance->GetGuidData(DATA_PARALYZED)))
             {
                 DoCast(target, SPELL_FEED);
             }

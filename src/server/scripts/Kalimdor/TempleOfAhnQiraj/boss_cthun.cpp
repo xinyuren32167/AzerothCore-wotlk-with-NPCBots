@@ -39,7 +39,7 @@ enum Spells
     SPELL_RED_COLORATION = 22518,        //Probably not the right spell but looks similar
 
     //Eye Tentacles Spells
-    SPELL_MIND_FLAY = 26143,
+    SPELL_MIND_FLAY = 826143,
 
     //Claw Tentacles Spells
     SPELL_GROUND_RUPTURE = 26139,
@@ -243,7 +243,7 @@ struct boss_eye_of_cthun : public BossAI
                     {
                         scheduler.Schedule(5s, [this](TaskContext task)
                             {
-                                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 0.0f, true))
+                                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 0.0f, false))
                                 {
                                     DoCast(target, SPELL_GREEN_BEAM);
                                     DarkGlareAngle = me->GetAngle(target); //keep as the location dark glare will be at
@@ -258,7 +258,7 @@ struct boss_eye_of_cthun : public BossAI
                 })
             .Schedule(8s, [this](TaskContext task)
                 {
-                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 0.0f, true))
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 0.0f, false))
                     {
                         if (Creature* tentacle = me->SummonCreature(NPC_CLAW_TENTACLE, *target, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000))
                         {
@@ -417,6 +417,23 @@ struct boss_cthun : public BossAI
     void JustEngagedWith(Unit* /*who*/) override
     {
         DoZoneInCombat();
+
+        // Cast SPELL_DIGESTIVE_ACID on all players
+        Map* map = me->GetMap();
+        if (map && map->IsDungeon())
+        {
+            Map::PlayerList const& players = map->GetPlayers();
+            for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+            {
+                if (Player* player = itr->GetSource())
+                {
+                    if (player->IsWithinDistInMap(me, 150.0f))  // adjust the range if necessary
+                    {
+                        DoCast(player, SPELL_DIGESTIVE_ACID, true);
+                    }
+                }
+            }
+        }
     }
 
     void DoAction(int32 actionId) override
@@ -545,6 +562,17 @@ struct boss_cthun : public BossAI
 {
     BossAI::JustDied(killer);
 
+    DoCastSelf(875167, true);
+    Map::PlayerList const& players = me->GetMap()->GetPlayers();
+    for (auto const& playerPair : players)
+    {
+        Player* player = playerPair.GetSource();
+        if (player)
+        {
+            DistributeChallengeRewards(player, me, 1, false);
+        }
+    }
+
     // Despawn the C'Thun portal
     if (Creature* pPortal = me->FindNearestCreature(NPC_CTHUN_PORTAL, 10.0f))
     {
@@ -667,12 +695,8 @@ struct npc_eye_tentacle : public ScriptedAI
     {
         scheduler.Schedule(1s, 5s, [this](TaskContext context)
             {
-                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, NotInStomachSelector()))
-                {
-                    DoCast(target, SPELL_MIND_FLAY);
-                }
-
-                context.Repeat(10s, 15s);
+                CastSpellOnRandomTarget(SPELL_MIND_FLAY, 150.0f); // Range set to 100.0f as an example
+                context.Repeat(8s, 12s);
             });
     }
 
@@ -687,6 +711,24 @@ struct npc_eye_tentacle : public ScriptedAI
 
 private:
     ObjectGuid _portalGUID;
+
+    void CastSpellOnRandomTarget(uint32 spellId, float range)
+    {
+        std::list<Unit*> targets;
+        Acore::AnyUnitInObjectRangeCheck check(me, range);
+        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+        Cell::VisitAllObjects(me, searcher, range);
+
+        targets.remove_if([this](Unit* unit) -> bool {
+            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+            });
+
+        if (!targets.empty())
+        {
+            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+            DoCast(target, spellId);
+        }
+    }
 };
 
 struct npc_claw_tentacle : public ScriptedAI

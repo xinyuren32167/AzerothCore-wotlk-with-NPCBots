@@ -449,8 +449,9 @@ void World::LoadConfigSettings(bool reload)
     ///- Read ticket system setting from the config file
     _bool_configs[CONFIG_ALLOW_TICKETS] = sConfigMgr->GetOption<bool>("AllowTickets", true);
     _bool_configs[CONFIG_DELETE_CHARACTER_TICKET_TRACE] = sConfigMgr->GetOption<bool>("DeletedCharacterTicketTrace", false);
-    //Dinkle: Fishing
+    //Dinkle: 
     _bool_configs[CONFIG_FISHING_BOBBER_FAST] = sConfigMgr->GetOption<bool>("Fishing.FastBobber", false);
+    _bool_configs[CONFIG_INCLUDE_FAKE_PLAYERS] = sConfigMgr->GetOption<bool>("IncludeFakePlayers", true);
 
     ///- Get string for new logins (newly created characters)
     SetNewCharString(sConfigMgr->GetOption<std::string>("PlayerStart.String", ""));

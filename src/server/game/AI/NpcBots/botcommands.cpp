@@ -2330,7 +2330,7 @@ public:
             chandler->SendSysMessage("Syntax: .npcbot sendto point #number #names...");
             chandler->SendSysMessage("Makes selected/named bot(s) assume previously set point by #number");
             chandler->SendSysMessage("This will cancel current sendto await state");
-            chandler->SendSysMessage("Max distance is 70 yds");
+            chandler->SendSysMessage("Max distance is 150 yds");
             chandler->SetSentErrorMessage(true);
             return false;
         };

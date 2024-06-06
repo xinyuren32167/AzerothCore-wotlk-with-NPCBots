@@ -94,13 +94,14 @@ public:
             me->SetNpcFlag(UNIT_NPC_FLAG_QUESTGIVER);
             me->SetFaction(FACTION_FRIENDLY);
             me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+            DoCast(me, 81094, true);
         }
 
         void Reset() override
         {
             _Reset();
             me->SetHealth(me->CountPctFromMaxHealth(30));
-
+            DoCast(me, 81094, true);
             if (!_introDone)
             {
                 me->SetStandState(UNIT_STAND_STATE_DEAD);
@@ -122,7 +123,7 @@ public:
             DoCastAOE(SPELL_ESSENCE_OF_THE_RED);
             // now drop damage requirement to be able to take loot
             me->ResetPlayerDamageReq();
-
+            me->RemoveAurasDueToSpell(81094);
             events.ScheduleEvent(EVENT_CLEAVE, 10s);
             events.ScheduleEvent(EVENT_FLAME_BREATH, 15s);
             events.ScheduleEvent(EVENT_FIRE_NOVA, 5s);

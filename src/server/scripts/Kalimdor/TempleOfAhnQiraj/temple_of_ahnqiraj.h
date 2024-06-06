@@ -19,6 +19,7 @@
 #define DEF_TEMPLE_OF_AHNQIRAJ_H
 
 #include "CreatureAIImpl.h"
+#include "../scripts/Custom/Timewalking/10Man.h"
 
 #define DataHeader "AQT"
 #define TempleOfAhnQirajScriptName "instance_temple_of_ahnqiraj"

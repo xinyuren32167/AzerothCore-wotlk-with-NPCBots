@@ -32,14 +32,14 @@ enum Spells
     SPELL_HEAL_BROTHER = 7393,
     // Vek'lor
     SPELL_SHADOW_BOLT = 26006,
-    SPELL_BLIZZARD = 26607,
+    SPELL_BLIZZARD = 826607,
     SPELL_FRENZY = 27897,
     SPELL_ARCANE_BURST = 568,
     SPELL_EXPLODE_BUG = 804,
     SPELL_TWIN_TELEPORT_0 = 799,
     // Vek'nilash
     SPELL_UPPERCUT = 26007,
-    SPELL_UNBALANCING_STRIKE = 26613,
+    SPELL_UNBALANCING_STRIKE = 826613,
     SPELL_BERSERK = 27680,
     SPELL_MUTATE_BUG = 802,
     // Bugs
@@ -151,6 +151,17 @@ struct boss_twinemperorsAI : public BossAI
 
         Talk(SAY_DEATH);
 
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
+        }
+        
         BossAI::JustDied(killer);
     }
 
@@ -267,11 +278,11 @@ struct boss_twinemperorsAI : public BossAI
                 else
                     DoCastSelf(SPELL_BERSERK, true);
             })
-            .Schedule(3600ms, [this](TaskContext context) // according to sniffs it should be casted by both emperors.
+            .Schedule(5600ms, [this](TaskContext context) // according to sniffs it should be casted by both emperors.
                 {
                     if (Creature* twin = GetTwin())
                     {
-                        if (me->IsWithinDist(twin, 60.f))
+                        if (me->IsWithinDist(twin, 40.f))
                             DoCast(twin, SPELL_HEAL_BROTHER, true);
                     }
 
@@ -322,7 +333,7 @@ struct boss_veknilash : public boss_twinemperorsAI
                 .Schedule(16s, [this](TaskContext context)
                     {
                         DoCastAOE(SPELL_MUTATE_BUG);
-                        context.Repeat(10s, 20s);
+                        context.Repeat(25s, 35s);
                     });
     }
 };
@@ -359,24 +370,18 @@ struct boss_veklor : public boss_twinemperorsAI
             })
             .Schedule(10s, 15s, [this](TaskContext context)
                 {
-                    DoCastRandomTarget(SPELL_BLIZZARD, 0, 45.f);
+                    DoCastRandomTarget(SPELL_BLIZZARD, 0, 45.f, false);
                     context.Repeat(10s, 24s);
                 })
-                .Schedule(1s, [this](TaskContext context)
-                    {
-                        if (me->SelectNearestPlayer(NOMINAL_MELEE_RANGE))
-                            DoCastAOE(SPELL_ARCANE_BURST);
-                        context.Repeat(7s, 12s);
-                    })
-                    .Schedule(30s, [this](TaskContext context)
+                    .Schedule(40s, [this](TaskContext context)
                         {
                             DoCastSelf(SPELL_TWIN_TELEPORT_0);
-                            context.Repeat(30s, 40s);
+                            context.Repeat(45s, 45s);
                         })
                         .Schedule(5s, [this](TaskContext context)
                             {
                                 DoCastAOE(SPELL_EXPLODE_BUG);
-                                context.Repeat(4500ms, 10s);
+                                context.Repeat(8500ms, 15s);
                             });
     }
 

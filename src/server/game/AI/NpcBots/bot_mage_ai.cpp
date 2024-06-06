@@ -827,7 +827,7 @@ public:
             }
             if (GetSpec() != BOT_SPEC_MAGE_ARCANE || !GetSpell(ARCANE_BLAST_1))
             {
-                if (IsSpellReady(FROSTFIREBOLT, diff) && (can_do_frost | can_do_fire) && (GetSpec() == BOT_SPEC_MAGE_FIRE ||
+                if (IsSpellReady(FROSTFIREBOLT, diff) && (can_do_frost || can_do_fire) && (GetSpec() == BOT_SPEC_MAGE_FIRE ||
                     (GetSpec() == BOT_SPEC_MAGE_FROST && (FROSTFIREBOLT == FROSTFIRE_BOLT_1 || !GetSpell(FROSTBOLT_1)))) &&
                     dist < CalcSpellMaxRange(FROSTFIREBOLT))
                 {
@@ -1965,7 +1965,7 @@ public:
             uint8 level = master->GetLevel();
             bool isArca = GetSpec() == BOT_SPEC_MAGE_ARCANE;
             bool isFire = GetSpec() == BOT_SPEC_MAGE_FIRE;
-            bool isFros = GetSpec() == BOT_SPEC_MAGE_FROST;
+            bool isFros = GetSpec() == BOT_SPEC_MAGE_FROST;            
 
             RefreshAura(ARCANE_CONCENTRATION, level >= 15 ? 1 : 0);
             RefreshAura(ARCANE_MEDITATION, level >= 25 ? 1 : 0); //mana regen 1
@@ -1980,26 +1980,29 @@ public:
             RefreshAura(INCANTERS_ABSORPTION1, isArca && level >= 40 && level < 41 ? 1 : 0);
             RefreshAura(MISSILE_BARRAGE, isArca && level >= 45 ? 1 : 0);
 
-            RefreshAura(IGNITE, level >= 15 ? 1 : 0);
-            RefreshAura(BURNING_DETERMINATION, level >= 15 ? 1 : 0);
-            RefreshAura(IMPACT, level >= 20 ? 1 : 0);
-            RefreshAura(IMPROVED_SCORCH, level >= 25 ? 1 : 0);
-            RefreshAura(MOLTEN_SHIELDS, level >= 25 ? 1 : 0);
-            RefreshAura(MASTER_OF_ELEMENTS, level >= 25 ? 1 : 0);
+            RefreshAura(IGNITE, isFire && level >= 15 ? 1 : 0);
+            RefreshAura(BURNING_DETERMINATION, isFire && level >= 15 ? 1 : 0);
+            RefreshAura(IMPACT, isFire && level >= 20 ? 1 : 0);
+            RefreshAura(IMPROVED_SCORCH, isFire && level >= 25 ? 1 : 0);
+            RefreshAura(MOLTEN_SHIELDS, isFire && level >= 25 ? 1 : 0);
+            RefreshAura(MASTER_OF_ELEMENTS, isFire && level >= 25 ? 1 : 0);
             RefreshAura(BLAZING_SPEED, isFire && level >= 35 ? 1 : 0);
             RefreshAura(PYROMANIAC, isFire && level >= 40 ? 1 : 0); //mana regen 2
             RefreshAura(FIRESTARTER2, isFire && level >= 51 ? 1 : 0);
             RefreshAura(FIRESTARTER1, isFire && level >= 50 && level < 51 ? 1 : 0);
             RefreshAura(HOT_STREAK, isFire && level >= 50 ? 1 : 0);
 
-            RefreshAura(FROSTBITE3, level >= 12 ? 1 : 0);
-            RefreshAura(FROSTBITE2, level >= 11 && level < 12 ? 1 : 0);
-            RefreshAura(FROSTBITE1, level >= 10 && level < 11 ? 1 : 0);
-            RefreshAura(FROST_WARDING, level >= 15 ? 1 : 0);
-            RefreshAura(IMPROVED_BLIZZARD, level >= 20 ? 1 : 0);
-            RefreshAura(SHATTER3, level >= 27 ? 1 : 0);
-            RefreshAura(SHATTER2, level >= 26 && level < 27 ? 1 : 0);
-            RefreshAura(SHATTER1, level >= 25 && level < 26 ? 1 : 0);
+            RefreshAura(FROSTBITE3, isFros && level >= 12 ? 1 : 0);
+            RefreshAura(FROSTBITE2, isFros && level >= 11 && level < 12 ? 1 : 0);
+            RefreshAura(FROSTBITE1, isFros && level >= 10 && level < 11 ? 1 : 0);
+            RefreshAura(29438, level >= 13 && level < 14 ? 1 : 0); // Precision Rank 1
+            RefreshAura(29439, level >= 14 && level < 15 ? 1 : 0); // Precision Rank 2
+            RefreshAura(29440, level >= 15 ? 1 : 0); // Precision Rank 3
+            RefreshAura(FROST_WARDING, isFros && level >= 15 ? 1 : 0);
+            RefreshAura(IMPROVED_BLIZZARD, isFros && level >= 20 ? 1 : 0);
+            RefreshAura(SHATTER3, isFros && level >= 27 ? 1 : 0);
+            RefreshAura(SHATTER2, isFros && level >= 26 && level < 27 ? 1 : 0);
+            RefreshAura(SHATTER1, isFros && level >= 25 && level < 26 ? 1 : 0);
             RefreshAura(WINTERS_CHILL3, isFros && level >= 37 ? 1 : 0);
             RefreshAura(WINTERS_CHILL2, isFros && level >= 36 && level < 37 ? 1 : 0);
             RefreshAura(WINTERS_CHILL1, isFros && level >= 35 && level < 36 ? 1 : 0);

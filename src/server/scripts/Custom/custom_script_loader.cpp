@@ -84,7 +84,9 @@ void AddSC_boss_ramstein_the_gorger();
 void AddSC_boss_volchan();
 void AddSC_boss_setis();
 void AddSC_custom_player_map_change_handler();
-
+void AddSC_custom_symbiosis_remover();
+void AddSC_custom_flying_spell_scripts();
+void AddSC_DKQuestBugFix();
 
 
 //void AddSC_PlayerTeleportRevive();
@@ -163,9 +165,11 @@ void AddCustomScripts()
     AddSC_boss_volchan();
     AddSC_boss_setis();
     AddSC_custom_player_map_change_handler();
+    AddSC_custom_symbiosis_remover();
+    AddSC_custom_flying_spell_scripts();
+    AddSC_DKQuestBugFix();
 
-
-        //AddSC_PlayerTeleportRevive();
+    //AddSC_PlayerTeleportRevive();
     //AddSC_transform_race_command();
     //AddSC_boss_the_hidden_watcher();
     //AddSC_SymbiosisScript();

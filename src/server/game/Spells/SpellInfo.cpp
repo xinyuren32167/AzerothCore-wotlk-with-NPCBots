@@ -1546,6 +1546,12 @@ SpellCastResult SpellInfo::CheckLocation(uint32 map_id, uint32 zone_id, uint32 a
     // continent limitation (virtual continent)
     if (HasAttribute(SPELL_ATTR4_ONLY_FLYING_AREAS) && (area_id || zone_id))
     {
+        // Dinkle Always allow flying for map IDs 0 and 1
+        if (map_id == 0 || map_id == 1)
+        {
+            return SPELL_CAST_OK;
+        }
+
         AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(area_id);
         if (!areaEntry)
         {

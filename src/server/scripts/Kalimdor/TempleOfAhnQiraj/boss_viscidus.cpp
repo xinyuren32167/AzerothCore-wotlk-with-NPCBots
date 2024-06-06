@@ -26,7 +26,7 @@ enum Spells
 {
     // Viscidus - Glob of Viscidus
     SPELL_POISON_SHOCK          = 25993,
-    SPELL_POISONBOLT_VOLLEY     = 25991,
+    SPELL_POISONBOLT_VOLLEY     = 825991,
     SPELL_SUMMON_TOXIN_SLIME    = 26584,
     SPELL_SUMMON_TOXIN_SLIME_2  = 26577,
     SPELL_VISCIDUS_SLOWED       = 26034,
@@ -304,6 +304,20 @@ struct boss_viscidus : public BossAI
         InitSpells();
     }
 
+    void JustDied(Unit* killer) override
+    {
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
+        }
+    }
+
     void InitSpells()
     {
         events.ScheduleEvent(EVENT_TOXIN, 15s, 20s);
@@ -332,7 +346,7 @@ struct boss_viscidus : public BossAI
                     events.ScheduleEvent(EVENT_POISON_SHOCK, 7s, 12s);
                     break;
                 case EVENT_TOXIN:
-                    DoCastRandomTarget(SPELL_SUMMON_TOXIN_SLIME);
+                    CastSpellOnRandomTarget(SPELL_SUMMON_TOXIN_SLIME, 150);
                     events.ScheduleEvent(EVENT_TOXIN, 15s, 20s);
                     break;
                 case EVENT_RESET_PHASE:
@@ -352,6 +366,23 @@ struct boss_viscidus : public BossAI
 private:
     uint8 _hitcounter;
     uint8 _phase;
+    void CastSpellOnRandomTarget(uint32 spellId, float range)
+    {
+        std::list<Unit*> targets;
+        Acore::AnyUnitInObjectRangeCheck check(me, range);
+        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+        Cell::VisitAllObjects(me, searcher, range);
+
+        targets.remove_if([this](Unit* unit) -> bool {
+            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+            });
+
+        if (!targets.empty())
+        {
+            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+            DoCast(target, spellId);
+        }
+    }
 };
 
 struct boss_glob_of_viscidus : public ScriptedAI

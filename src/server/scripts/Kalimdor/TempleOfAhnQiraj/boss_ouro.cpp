@@ -294,6 +294,20 @@ struct boss_ouro : public BossAI
             std::bind(&ScriptedAI::DoMeleeAttackIfReady, this));
     }
 
+    void JustDied(Unit* killer) override
+    {
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
+        }
+    }
+
 protected:
     bool _enraged;
     uint8 _submergeMelee;
@@ -363,12 +377,15 @@ struct npc_dirt_mound : ScriptedAI
 
     void Reset() override
     {
-        DoCastSelf(SPELL_DIRTMOUND_PASSIVE, true);
-        DoCastSelf(SPELL_DREAM_FOG, true);
+        DoCastSelf(88011, true);
+        DoCastSelf(822009, true);
+
         // Schedule the casting of SPELL_QUAKE after 4 seconds
         scheduler.Schedule(4s, [this](TaskContext /*context*/)
             {
                 DoCastSelf(SPELL_QUAKE, true);
+                DoCastSelf(SPELL_DIRTMOUND_PASSIVE, true);
+                DoCastSelf(SPELL_DREAM_FOG, true);
             });
     }
 

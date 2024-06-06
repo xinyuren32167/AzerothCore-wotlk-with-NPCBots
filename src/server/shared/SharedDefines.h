@@ -81,7 +81,7 @@ enum Races
     RACE_DRAENEI = 11, // TITLE Draenei
     RACE_FEL_ORC = 12, // TITLE Void Elf
     RACE_NAGA = 13, // TITLE Vulpera
-    RACE_BROKEN = 14, // TITLE Nightborne
+    RACE_BROKEN = 14, // TITLE Highelf
     RACE_SKELETON = 15, // TITLE Pandaren Horde
     RACE_VRYKUL = 16, // TITLE Worgen
     RACE_TUSKARR = 17, // TITLE Pandaren Alliance

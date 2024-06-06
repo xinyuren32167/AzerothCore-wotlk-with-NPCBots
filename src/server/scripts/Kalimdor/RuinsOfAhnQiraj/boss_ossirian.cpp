@@ -208,6 +208,20 @@ struct boss_ossirian : public BossAI
         }
     }
 
+    void JustDied(Unit* /*killer*/) override
+    {
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 10, false);
+            }
+        }
+    }
+
     void KilledUnit(Unit* /*victim*/) override
     {
         Talk(SAY_SLAY);

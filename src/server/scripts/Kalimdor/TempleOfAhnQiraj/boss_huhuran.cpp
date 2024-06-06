@@ -74,12 +74,26 @@ struct boss_huhuran : public BossAI
 
     void DamageTaken(Unit*, uint32& /*damage*/, DamageEffectType, SpellSchoolMask) override
     {
-        if (!_berserk && HealthBelowPct(30))
+        if (!_berserk && HealthBelowPct(25))
         {
             DoCastSelf(SPELL_BERSERK, true);
             me->TextEmote(EMOTE_BERSERK);
             events.CancelEvent(EVENT_FRENZY);
             _berserk = true;
+        }
+    }
+
+    void JustDied(Unit* killer) override
+    {
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
         }
     }
 

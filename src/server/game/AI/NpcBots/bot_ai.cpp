@@ -225,6 +225,7 @@ bot_ai::bot_ai(Creature* creature) : CreatureAI(creature)
     _energyFraction = 0.f;
     _updateTimerMedium = 0;
     _updateTimerEx1 = urand(12000, 15000);
+    _updateTimerEx2 = urand(8000, 12000);
     checkAurasTimer = 0;
     roleTimer = 0;
     ordersTimer = 0;
@@ -252,6 +253,7 @@ bot_ai::bot_ai(Creature* creature) : CreatureAI(creature)
     botPet = nullptr;
     canUpdate = true;
     _duringTeleport = false;
+    _canAppearInWorld = false;
 
     teleHomeEvent = nullptr;
     teleFinishEvent = nullptr;
@@ -457,8 +459,6 @@ bool bot_ai::SetBotOwner(Player* newowner)
     _ownerGuid = newowner->GetGUID().GetCounter();
     _checkOwershipTimer = BotMgr::GetOwnershipExpireTime() ? CalculateOwnershipCheckTime() : 0;
 
-    ASSERT(me->IsInWorld());
-    AbortTeleport();
     return true;
 }
 //Check if should totally unlink from owner
@@ -2632,22 +2632,22 @@ void bot_ai::SetStats(bool force)
         if (mylevel >= 20 && (_botclass == BOT_CLASS_WARRIOR || _botclass == BOT_CLASS_PALADIN || _botclass == BOT_CLASS_DEATH_KNIGHT))
             armor_mod += 0.1f;
         //Frost Presence
-       // if (GetBotStance() == DEATH_KNIGHT_FROST_PRESENCE)
-       //     armor_mod += 0.5f;
+        //if (GetBotStance() == DEATH_KNIGHT_FROST_PRESENCE)
+        //    armor_mod += 0.6f;
         if (_botclass == BOT_CLASS_DRUID)
         {
             //Thick Hide
             if (mylevel >= 15)
                 armor_mod += 0.1f;
-            //Survival of the Fittest
-            if (myclass == DRUID_BEAR_FORM && GetSpec() == BOT_SPEC_DRUID_FERAL)
-                armor_mod += 0.33f + (me->GetShapeshiftForm() == FORM_BEAR ? 1.8f : 3.7f);
-            //Moonkin Form innate
-            else if (myclass == DRUID_MOONKIN_FORM && GetSpec() == BOT_SPEC_DRUID_BALANCE)
-                armor_mod += 3.7f;
-            //Improved Tree Form
-            else if (myclass == DRUID_TREE_FORM && GetSpec() == BOT_SPEC_DRUID_RESTORATION)
-                armor_mod += 2.0f;
+            ////Survival of the Fittest
+            //if (myclass == DRUID_BEAR_FORM)
+            //    armor_mod += (GetSpec() == BOT_SPEC_DRUID_FERAL ? 0.33f : 0.0f) + (me->GetShapeshiftForm() == FORM_BEAR ? 1.8f : 3.7f);
+            ////Moonkin Form innate
+            //else if (myclass == DRUID_MOONKIN_FORM)
+            //    armor_mod += 3.7f;
+            ////Improved Tree Form
+            //else if (myclass == DRUID_TREE_FORM)
+            //    armor_mod += 2.0f;
             //Improved Barkskin
             //else if (myclass == DRUID_TRAVEL_FORM || GetBotStance() == BOT_STANCE_NONE)
             //    armor_mod += 1.6f;
@@ -5102,7 +5102,52 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
         return;
 
     //Additional: aoe coming from spawned npcs
+    // Toxic Slime in Temple of Ahn'Qiraj
+    if (unit->GetMapId() == 531)  // Temple of Ahn'Qiraj
+    {
+        std::list<Creature*> toxicSlimeList;
+        Acore::AllCreaturesOfEntryInRange checkToxicSlime(unit, 15925, 60.f);  // Toxic Slime entry ID
+        Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherToxicSlime(unit, toxicSlimeList, checkToxicSlime);
+        Cell::VisitAllObjects(unit, searcherToxicSlime, 60.f);
 
+        for (Creature* slime : toxicSlimeList)
+        {
+            if (slime)
+            {
+                float slimeRadius = DEFAULT_COMBAT_REACH + 5.5f;
+                spots.push_back(AoeSpotsVec::value_type(*slime, slimeRadius));
+            }
+        }
+
+        // Dirt Mound avoidance for AQ40
+        std::list<Creature*> dirtMoundList;
+        Acore::AllCreaturesOfEntryInRange checkDirtMound(unit, 15712, 60.f);  // Dirt Mound entry ID
+        Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherDirtMound(unit, dirtMoundList, checkDirtMound);
+        Cell::VisitAllObjects(unit, searcherDirtMound, 60.f);
+
+        for (Creature* dirtMound : dirtMoundList)
+        {
+            if (dirtMound)
+            {
+                float dirtMoundRadius = dirtMound->GetCombatReach() + 25.0f;
+                spots.push_back(AoeSpotsVec::value_type(*dirtMound, dirtMoundRadius));
+            }
+        }
+
+        std::list<Creature*> battleguardSaturaList;
+        Acore::AllCreaturesOfEntryInRange checkBattleguardSatura(unit, 15516, 60.f);  // Battleguard Satura entry ID
+        Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherBattleguardSatura(unit, battleguardSaturaList, checkBattleguardSatura);
+        Cell::VisitAllObjects(unit, searcherBattleguardSatura, 60.f);
+
+        for (Creature* battleguardSatura : battleguardSaturaList)
+        {
+            if (battleguardSatura && battleguardSatura->HasAura(26083))  // Check for whirlwind
+            {
+                float saturaRadius = DEFAULT_COMBAT_REACH + 25.0f;
+                spots.push_back(AoeSpotsVec::value_type(*battleguardSatura, saturaRadius));
+            }
+        }
+    }
     //Kara
     if (unit->GetMapId() == 532)
     {
@@ -5245,9 +5290,9 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
     if (unit->GetMapId() == 309)
     {
         std::list<GameObject*> gListZG;
-        Acore::AllGameObjectsWithEntryInRange checkZG(unit, 180125, 60.f);  // GameObject ID for LIQUID_FIRE
+        Acore::AllGameObjectsWithEntryInRange checkZG(unit, 180125, 40.f);  // GameObject ID for LIQUID_FIRE
         Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcherZG(unit, gListZG, checkZG);
-        Cell::VisitAllObjects(unit, searcherZG, 60.f);
+        Cell::VisitAllObjects(unit, searcherZG, 40.f);
 
         for (auto* gameObject : gListZG)
         {
@@ -5257,6 +5302,18 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
             float radius = 15.0f + DEFAULT_COMBAT_REACH * 2.0f;
             spots.push_back(AoeSpotsVec::value_type(*gameObject, radius));
         }
+    }
+    // Ruins of AQ
+    else if (unit->GetMapId() == 509)
+    {
+        std::list<GameObject*> sandTrapList;
+        Acore::AllGameObjectsWithEntryInRange checkSandTrap(unit, 180647, 60.f);
+        Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcherSandTrap(unit, sandTrapList, checkSandTrap);
+        Cell::VisitAllObjects(unit, searcherSandTrap, 40.f);
+
+        float radius = 13.0f + DEFAULT_COMBAT_REACH;
+        for (std::list<GameObject*>::const_iterator ci = sandTrapList.cbegin(); ci != sandTrapList.cend(); ++ci)
+            spots.push_back(AoeSpotsVec::value_type(*(*ci), radius));
     }
 
 
@@ -8193,14 +8250,7 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
 //GossipSelect
 bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32 sender, uint32 action)
 {
-    //if (!IsInBotParty(player))
-    //{
-    //    player->PlayerTalkClass->SendCloseGossip();
-    //    return true;
-    //}
-
-    if (!BotMgr::IsNpcBotModEnabled() || me->HasUnitState(UNIT_STATE_CASTING) || CCed(me) || IsDuringTeleport() ||
-        HasBotCommandState(BOT_COMMAND_ISSUED_ORDER) ||
+    if (!BotMgr::IsNpcBotModEnabled() || me->HasUnitState(UNIT_STATE_CASTING) || CCed(me) || HasBotCommandState(BOT_COMMAND_ISSUED_ORDER) ||
         (me->GetVehicle() && me->GetVehicle()->GetBase()->IsInCombat()))
     {
         player->PlayerTalkClass->SendCloseGossip();
@@ -15619,7 +15669,7 @@ void bot_ai::FindMaster()
     //totally free
     if (!_ownerGuid)
         return;
-    if (!_atHome || _evadeMode)
+    if (me->IsInWorld() && (!_atHome || _evadeMode))
         return;
     if (!BotMgr::IsClassEnabled(_botclass))
         return;
@@ -15632,8 +15682,6 @@ void bot_ai::FindMaster()
 
     //already have master
     if (!IAmFree())
-        return;
-    if (IsDuringTeleport())
         return;
     if (HasBotCommandState(BOT_COMMAND_UNBIND))
         return;
@@ -17687,14 +17735,44 @@ bool bot_ai::GlobalUpdate(uint32 diff)
         }
     }
 
+    if (_updateTimerEx2 <= diff)
+    {
+        _updateTimerEx2 = urand(2000, 4000);
+
+        if (BotMgr::HideBotSpawns() && IAmFree() && !IsWanderer())
+        {
+            // !!bot may be out of world!!
+            Map* mymap = me->FindMap();
+            if (mymap)
+            {
+                std::list<Player*> plist;
+                Acore::AllWorldObjectsInExactRange pcheck(me, 15.0f, false);
+                Acore::PlayerListSearcher<decltype(pcheck)> searcher(me, plist, pcheck);
+                Cell::VisitWorldObjects(me, searcher, 20.f);
+                _canAppearInWorld = std::any_of(plist.cbegin(), plist.cend(), [](Player const* pl) { return pl->GetSession()->GetSecurity() > SEC_PLAYER; });
+                if (!CanAppearInWorld() && !IsDuringTeleport())
+                    BotMgr::TeleportBot(me, mymap, me, true);
+            }
+            else
+            {
+                _canAppearInWorld = false;
+                LOG_ERROR("npcbots", "Bot {} tried to check hide status but doesn't have a valid map set", me->GetEntry());
+            }
+        }
+        else
+            _canAppearInWorld = true;
+    }
+
     ReduceCD(diff);
 
     UpdateContestedPvP();
 
+    lastdiff = diff;
+
+    FindMaster();
+
     if (IsDuringTeleport())
         return false;
-
-    lastdiff = diff;
 
     if (_updateTimerMedium <= diff)
     {
@@ -18252,8 +18330,6 @@ bool bot_ai::GlobalUpdate(uint32 diff)
     if (Wait())
         return false;
 
-    FindMaster();
-
     GenerateRand();
 
     if (CanBotAttackOnVehicle())
@@ -18432,6 +18508,7 @@ void bot_ai::CommonTimers(uint32 diff)
 
     if (_updateTimerMedium > diff)  _updateTimerMedium -= diff;
     if (_updateTimerEx1 > diff)     _updateTimerEx1 -= diff;
+    if (_updateTimerEx2 > diff)     _updateTimerEx2 -= diff;
 
     if (_saveDisabledSpellsTimer > diff) _saveDisabledSpellsTimer -= diff;
 }
@@ -18556,7 +18633,7 @@ void bot_ai::Evade()
             return;
         }
     }
-    else if (mapid != me->GetMapId() || _evadeCount >= 10 || me->GetDistance(pos) > float(SIZE_OF_GRIDS * 0.5f))
+    else if (mapid != me->GetMapId() || _evadeCount >= 10 || me->GetDistance(pos) > float(SIZE_OF_GRIDS * 0.5f) || !CanAppearInWorld())
     {
         if (!teleHomeEvent || !teleHomeEvent->IsActive())
         {
@@ -18767,6 +18844,10 @@ void bot_ai::GetNextEvadeMovePoint(Position& pos, bool& use_path) const
         mypos.m_positionZ = orig_z;
     pos.Relocate(mypos);
 }
+bool bot_ai::CanAppearInWorld() const
+{
+    return _canAppearInWorld;
+}
 void bot_ai::TeleportHomeStart(bool reset)
 {
     AbortTeleport();
@@ -18793,7 +18874,7 @@ void bot_ai::TeleportHome(bool reset)
 
     Map* map = sMapMgr->CreateBaseMap(mapid);
     ASSERT(!map->Instanceable(), map->GetDebugInfo().c_str());
-    BotMgr::TeleportBot(me, map, &pos, false, reset);
+    BotMgr::TeleportBot(me, map, &pos, false, reset, this);
 
     spawned = false;
     _evadeCount = 0;
@@ -18810,7 +18891,7 @@ bool bot_ai::FinishTeleport(bool reset)
     //1) Cannot teleport: master disappeared - return home
     if (IAmFree()/* || master->GetSession()->isLogingOut()*/)
     {
-        TeleportHomeStart(true);
+        TeleportHomeStart(!BotMgr::HideBotSpawns() || !CanAppearInWorld());
         _evadeMode = false;
 
         return false;
@@ -18827,6 +18908,9 @@ bool bot_ai::FinishTeleport(bool reset)
             Events.AddEvent(teleFinishEvent, Events.CalculateTime(5000));
             return;
         }
+
+        if (me->FindMap())
+            me->ResetMap();
 
         me->SetMap(map);
         if (master->GetTransport())

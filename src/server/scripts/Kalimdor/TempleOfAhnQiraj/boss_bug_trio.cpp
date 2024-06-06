@@ -307,6 +307,16 @@ public:
         instance->SetData(DATA_BUG_TRIO_DEATH, 1);
         if (instance->GetData(DATA_BUG_TRIO_DEATH) < 3)
         {
+            DoCastSelf(875167, true);
+            Map::PlayerList const& players = me->GetMap()->GetPlayers();
+            for (auto const& playerPair : players)
+            {
+                Player* player = playerPair.GetSource();
+                if (player)
+                {
+                    DistributeChallengeRewards(player, me, 1, false);
+                }
+            }
             me->RemoveDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
             DoFinalSpell();
             Talk(EMOTE_DEVOURED);

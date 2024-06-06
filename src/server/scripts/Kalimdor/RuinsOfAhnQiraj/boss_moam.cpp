@@ -34,7 +34,7 @@ enum Spells
     SPELL_TRAMPLE               = 15550,
     SPELL_DRAIN_MANA_SERVERSIDE = 25676,
     SPELL_DRAIN_MANA            = 25671,
-    SPELL_ARCANE_ERUPTION       = 25672,
+    SPELL_ARCANE_ERUPTION       = 825672,
     SPELL_SUMMON_MANA_FIENDS    = 25684,
     SPELL_SUMMON_MANA_FIEND_1   = 25681, // TARGET_DEST_CASTER_FRONT
     SPELL_SUMMON_MANA_FIEND_2   = 25682, // TARGET_DEST_CASTER_LEFT
@@ -82,6 +82,16 @@ struct boss_moam : public BossAI
     {
         _JustDied();
         DoCastAOE(SPELL_LARGE_OBSIDIAN_CHUNK, true);
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 10, false);
+            }
+        }
     }
 
     void SummonedCreatureDies(Creature* /*creature*/, Unit* /*killer*/) override
@@ -152,9 +162,15 @@ class spell_moam_mana_drain_filter : public SpellScript
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         targets.remove_if([&](WorldObject* target) -> bool
-        {
-            return !target->IsPlayer() || target->ToPlayer()->getPowerType() != POWER_MANA;
-        });
+            {
+                if (Player* player = target->ToPlayer())
+                    return player->getPowerType() != POWER_MANA;
+
+                if (Creature* creature = target->ToCreature())
+                    return !creature->IsNPCBot() || creature->getPowerType() != POWER_MANA;
+
+                return true;
+            });
 
         if (!targets.empty())
         {
@@ -166,7 +182,10 @@ class spell_moam_mana_drain_filter : public SpellScript
     {
         if (Unit* caster = GetCaster())
         {
-            caster->CastSpell(GetHitUnit(), SPELL_DRAIN_MANA, true);
+            if (Unit* hitUnit = GetHitUnit())
+            {
+                caster->CastSpell(hitUnit, SPELL_DRAIN_MANA, true);
+            }
         }
     }
 

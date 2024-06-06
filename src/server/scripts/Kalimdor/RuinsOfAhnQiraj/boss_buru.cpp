@@ -102,6 +102,16 @@ struct boss_buru : public BossAI
     {
         instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_CREEPING_PLAGUE);
         BossAI::JustDied(killer);
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 10, false);
+            }
+        }
     }
 
     void KilledUnit(Unit* victim) override

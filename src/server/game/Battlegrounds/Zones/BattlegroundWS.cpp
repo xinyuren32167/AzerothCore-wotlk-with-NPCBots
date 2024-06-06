@@ -783,8 +783,27 @@ void BattlegroundWS::EndBattleground(TeamId winnerTeamId)
     RewardHonorToTeam(GetBonusHonorFromKill(_honorEndKills), TEAM_ALLIANCE);
     RewardHonorToTeam(GetBonusHonorFromKill(_honorEndKills), TEAM_HORDE);
 
+    // Reward players mark of honor 20558 based on win or loss
+    BattlegroundPlayerMap const& players = GetPlayers();
+    for (BattlegroundPlayerMap::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+    {
+        Player* player = ObjectAccessor::FindPlayer(itr->first);
+        if (!player || !player->GetSession())
+            continue;
+
+        if (player->GetTeamId() == winnerTeamId)
+        {
+            player->AddItem(20558, 3); // Reward 3 items to the winning team
+        }
+        else
+        {
+            player->AddItem(20558, 1); // Reward 1 item to the losing team
+        }
+    }
+
     Battleground::EndBattleground(winnerTeamId);
 }
+
 
 void BattlegroundWS::HandleKillPlayer(Player* player, Player* killer)
 {

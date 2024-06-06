@@ -87,6 +87,16 @@ struct boss_sartura : public BossAI
     {
         _JustDied();
         Talk(SAY_DEATH);
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 1, false);
+            }
+        }
     }
 
     void KilledUnit(Unit* /*victim*/) override

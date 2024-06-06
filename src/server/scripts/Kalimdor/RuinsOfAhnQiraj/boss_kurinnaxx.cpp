@@ -57,10 +57,7 @@ struct boss_kurinnaxx : public BossAI
                 context.Repeat(8s, 10s);
             }).Schedule(5s, 15s, [this](TaskContext context)
                 {
-                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1, 100.f, true))
-                    {
-                        target->CastSpell(target, SPELL_SAND_TRAP, true, nullptr, nullptr, me->GetGUID());
-                    }
+                    CastSpellOnRandomTarget(SPELL_SAND_TRAP, 100.f);
                     context.Repeat(10s, 21s);
                 }).Schedule(10s, 15s, [this](TaskContext context)
                     {
@@ -80,6 +77,7 @@ struct boss_kurinnaxx : public BossAI
 
     void JustDied(Unit* killer) override
     {
+       
         if (killer)
         {
             killer->GetMap()->LoadGrid(-9502.80f, 2042.65f); // Ossirian grid
@@ -101,6 +99,34 @@ struct boss_kurinnaxx : public BossAI
                 ossirian->AI()->Talk(SAY_KURINNAXX_DEATH);
         }
         BossAI::JustDied(killer);
+        DoCastSelf(875167, true);
+        Map::PlayerList const& players = me->GetMap()->GetPlayers();
+        for (auto const& playerPair : players)
+        {
+            Player* player = playerPair.GetSource();
+            if (player)
+            {
+                DistributeChallengeRewards(player, me, 10, false);
+            }
+        }
+    }
+
+    void CastSpellOnRandomTarget(uint32 spellId, float range)
+    {
+        std::list<Unit*> targets;
+        Acore::AnyUnitInObjectRangeCheck check(me, range);
+        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+        Cell::VisitAllObjects(me, searcher, range);
+
+        targets.remove_if([this](Unit* unit) -> bool {
+            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+            });
+
+        if (!targets.empty())
+        {
+            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+            DoCast(target, spellId);
+        }
     }
 };
 
