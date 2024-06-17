@@ -1026,7 +1026,7 @@ public:
             }
             //Tiger's Fury (no GCD) cannot use while Berserk is active
             if (IsSpellReady(TIGERS_FURY_1, diff, false) && mytar->GetHealth() > me->GetHealth() / 4 &&
-                (me->GetLevel() < 55 || energy <= 40) && Rand() < 40 &&
+                (me->GetLevel() < 55 || energy <= 40) && Rand() < 60 &&
                 !me->GetAuraEffect(SPELL_AURA_MECHANIC_IMMUNITY, SPELLFAMILY_DRUID, 0x0, 0x0, 0x40))
             {
                 if (doCast(me, GetSpell(TIGERS_FURY_1)))
@@ -1090,9 +1090,9 @@ public:
                         return;
                 }
                 //Rip
-                if (IsSpellReady(RIP_1, diff) && (comboPoints < 4 || !GetSpell(FEROCIOUS_BITE_1)) &&
-                    energy >= acost(RIP_1) && mytar->GetHealth() > me->GetMaxHealth() / 4 &&
-                    Rand() < (50 + 40 * (mytar->GetTypeId() == TYPEID_PLAYER && IsMeleeClass(mytar->GetClass()))) &&
+                if (IsSpellReady(RIP_1, diff) && (comboPoints >= 3 || !GetSpell(FEROCIOUS_BITE_1)) &&
+                    energy >= acost(RIP_1) && mytar->GetHealth() > me->GetMaxHealth() / 5 &&
+                    Rand() < (75 + 40 * (mytar->GetTypeId() == TYPEID_PLAYER && IsMeleeClass(mytar->GetClass()))) &&
                     !mytar->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, 0x800000, 0x0, 0x0, me->GetGUID()))
                 {
                     if (doCast(mytar, GetSpell(RIP_1)))
@@ -1117,18 +1117,18 @@ public:
                 if (doCast(mytar, GetSpell(SHRED_1)))
                     return;
             }
+            //Rake
+            if (IsSpellReady(RAKE_1, diff) && comboPoints < 3 && energy >= acost(RAKE_1) && Rand() < 95 &&
+                !mytar->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, 0x1000, 0x0, 0x0, me->GetGUID()))
+            {
+                if (doCast(mytar, GetSpell(RAKE_1)))
+                    return;
+            }
             //Mangle (Cat)
             if (IsSpellReady(MANGLE_CAT_1, diff) && comboPoints < 5 && energy >= acost(MANGLE_CAT_1) &&
                 (Rand() < 20 || !mytar->GetAuraEffect(SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT, SPELLFAMILY_DRUID, 0x0, 0x400, 0x0)))
             {
                 if (doCast(mytar, GetSpell(MANGLE_CAT_1)))
-                    return;
-            }
-            //Rake
-            if (IsSpellReady(RAKE_1, diff) && comboPoints < 3 && energy >= acost(RAKE_1) && Rand() < 60 &&
-                !mytar->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, 0x1000, 0x0, 0x0, me->GetGUID()))
-            {
-                if (doCast(mytar, GetSpell(RAKE_1)))
                     return;
             }
             //Claw
@@ -1625,7 +1625,7 @@ public:
             {
                 Unit* target = master;
                 if (master->IsAlive()) return;
-                if (master->isResurrectRequested()) return; //resurrected
+                if (master->isResurrectRequested() || master->GetUInt32Value(PLAYER_SELF_RES_SPELL)) return; //resurrected
                 if (master->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST))
                     target = (Unit*)master->GetCorpse();
                 if (!target || !target->IsInWorld())
@@ -1652,7 +1652,7 @@ public:
                     Player* tPlayer = itr->GetSource();
                     Unit* target = tPlayer;
                     if (!tPlayer || tPlayer->IsAlive()) continue;
-                    if (tPlayer->isResurrectRequested()) continue; //resurrected
+                    if (tPlayer->isResurrectRequested() || tPlayer->GetUInt32Value(PLAYER_SELF_RES_SPELL)) continue; //resurrected
                     if (tPlayer->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST))
                         target = (Unit*)tPlayer->GetCorpse();
                     if (!target || !target->IsInWorld()) continue;
@@ -1666,7 +1666,7 @@ public:
             for (BotMap::const_iterator itr = botMap->begin(); itr != botMap->end(); ++itr)
             {
                 Creature* bot = itr->second;
-                if (bot && bot->IsInWorld() && !bot->IsAlive() && IsTank(bot) && me->GetDistance(bot) < 80)
+                if (bot && bot->IsInWorld() && !bot->IsAlive() && !bot->GetBotAI()->GetSelfRezSpell() && IsTank(bot) && me->GetDistance(bot) < 80)
                     targets.push_back(bot);
             }
 

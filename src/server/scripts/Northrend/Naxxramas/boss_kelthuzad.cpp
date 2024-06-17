@@ -310,7 +310,7 @@ public:
             events.ScheduleEvent(EVENT_SUMMON_SOLDIER, 6400ms);
             events.ScheduleEvent(EVENT_SUMMON_UNSTOPPABLE_ABOMINATION, 10s);
             events.ScheduleEvent(EVENT_SUMMON_SOUL_WEAVER, 12s);
-            events.ScheduleEvent(EVENT_PHASE_2, 228s);
+            events.ScheduleEvent(EVENT_PHASE_2, 180s);
             events.ScheduleEvent(EVENT_ENRAGE, 15min);
             if (pInstance)
             {

@@ -17,6 +17,8 @@
 
 #include "CreatureScript.h"
 #include "ScriptedCreature.h"
+#include "SpellScript.h"
+#include "SpellScriptLoader.h"
 #include "hyjal.h"
 
 enum Spells
@@ -28,6 +30,11 @@ enum Spells
     SPELL_ENRAGE              = 26662,
     SPELL_INFERNAL_STUN       = 31302,
     SPELL_INFERNAL_IMMOLATION = 31304
+};
+
+enum Misc
+{
+    NPC_TOWERING_INFERNAL   = 17818
 };
 
 enum Texts
@@ -52,24 +59,39 @@ public:
             });
     }
 
+    void EnterEvadeMode(EvadeReason why) override
+    {
+        std::list<Creature* > infernalList;
+        me->GetCreatureListWithEntryInGrid(infernalList, NPC_TOWERING_INFERNAL, 100.0f);
+        if (infernalList.size() > 0)
+        {
+            for (Creature* infernal : infernalList)
+            {
+                infernal->DespawnOrUnsummon();
+            }
+        }
+        infernalList.clear();
+        instance->SetData(DATA_RESET_ALLIANCE, 0);
+        me->DespawnOrUnsummon();
+    }
+
     void JustEngagedWith(Unit * who) override
     {
         BossAI::JustEngagedWith(who);
 
         scheduler.Schedule(20s, 28s, [this](TaskContext context)
         {
-            if (DoCastRandomTarget(SPELL_CARRION_SWARM, 0, 60.f))
+            if (DoCastRandomTarget(SPELL_CARRION_SWARM, 0, 60.f) == SPELL_CAST_OK)
                 Talk(SAY_SWARM);
             context.Repeat(10s, 15s);
         }).Schedule(25s, 32s, [this](TaskContext context)
         {
-            if (DoCastRandomTarget(SPELL_SLEEP))
-                Talk(SAY_SLEEP);
-
+            Talk(SAY_SLEEP);
+            DoCastRandomTarget(SPELL_SLEEP, 1, 0.0f, true, false, false);
             context.Repeat(35s, 48s);
         }).Schedule(30s, 48s, [this](TaskContext context)
         {
-            if (DoCastRandomTarget(SPELL_INFERNO))
+            if (DoCastRandomTarget(SPELL_INFERNO) == SPELL_CAST_OK)
                 Talk(SAY_INFERNO);
 
             context.Repeat(50s, 55s);
@@ -138,7 +160,24 @@ private:
 
 };
 
+class spell_anetheron_sleep : public SpellScript
+{
+    PrepareSpellScript(spell_anetheron_sleep);
+
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        if (!targets.empty())
+            Acore::Containers::RandomResize(targets, 3);
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_anetheron_sleep::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+    }
+};
+
 void AddSC_boss_anetheron()
 {
     RegisterHyjalAI(boss_anetheron);
+    RegisterSpellScript(spell_anetheron_sleep);
 }

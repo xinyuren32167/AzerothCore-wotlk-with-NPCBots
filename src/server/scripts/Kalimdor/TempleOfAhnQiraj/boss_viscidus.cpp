@@ -306,6 +306,8 @@ struct boss_viscidus : public BossAI
 
     void JustDied(Unit* killer) override
     {
+        summons.DespawnAll();
+
         DoCastSelf(875167, true);
         Map::PlayerList const& players = me->GetMap()->GetPlayers();
         for (auto const& playerPair : players)

@@ -2222,6 +2222,9 @@ void Player::SetInWater(bool apply)
     RemoveAurasWithInterruptFlags(apply ? AURA_INTERRUPT_FLAG_NOT_ABOVEWATER : AURA_INTERRUPT_FLAG_NOT_UNDERWATER);
 
     getHostileRefMgr().updateThreatTables();
+
+    if (InstanceScript* instance = GetInstanceScript())
+        instance->OnPlayerInWaterStateUpdate(this, apply);
 }
 
 bool Player::IsInAreaTriggerRadius(AreaTrigger const* trigger, float delta) const
@@ -6783,25 +6786,24 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
         return;
 
     uint32 statcount = proto->StatsCount;
-    ReforgeData * reforgeData = NULL;
+    ReforgeData* reforgeData = nullptr;
     bool decreased = false;
     if (statcount < MAX_ITEM_PROTO_STATS)
-         {
+    {
         if (Item* invItem = GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
-             {
+        {
             if (reforgeMap.find(invItem->GetGUID().GetCounter()) != reforgeMap.end())
-                {
+            {
                 reforgeData = &reforgeMap[invItem->GetGUID().GetCounter()];
                 ++statcount;
-                }
-             }
-         }
-    
+            }
+        }
+    }
 
     for (uint8 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
     {
         uint32 statType = 0;
-        int32  val = 0;
+        int32 val = 0;
         // If set ScalingStatDistribution need get stats and values from it
         if (ssv)
         {
@@ -6829,20 +6831,23 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
 
             statType = proto->ItemStat[i].ItemStatType;
             val = proto->ItemStat[i].ItemStatValue;
+
             if (reforgeData)
-                {
+            {
                 if (i == statcount - 1)
-                     {
+                {
                     statType = reforgeData->increase;
                     val = reforgeData->stat_value;
-                    }
-                 else if (!decreased && reforgeData->decrease == statType)
-                     {
+                }
+                else if (!decreased && reforgeData->decrease == statType)
+                {
                     val -= reforgeData->stat_value;
                     decreased = true;
-                    }
                 }
-            }       
+            }
+
+            sScriptMgr->OnApplyItemModsBefore(this, slot, apply, i, statType, val);
+        }
 
         if (val == 0)
             continue;

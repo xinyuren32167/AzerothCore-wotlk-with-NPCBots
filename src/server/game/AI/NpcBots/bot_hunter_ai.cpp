@@ -736,11 +736,10 @@ public:
 
         void CheckMisdirect(uint32 diff)
         {
-            if (!IsSpellReady(MISDIRECTION_1, diff) || misdirectionTimer > diff || IAmFree() ||
-                !master->GetGroup() || Rand() > 20)
+            if (!IsSpellReady(MISDIRECTION_1, diff) || misdirectionTimer > diff || IAmFree() || !master->GetGroup())
                 return;
 
-            misdirectionTimer = urand(3000, 6000);
+            misdirectionTimer = urand(1000, 2000);
 
             // Find tank
             std::list<Unit*> tanks;
@@ -900,16 +899,19 @@ public:
 
             bool inposition = !mytar->HasAuraType(SPELL_AURA_MOD_CONFUSE) || dist > maxRangeNormal - 15.f;
 
+            CheckMisdirect(diff);
+
             //Auto Shot
             if (Spell const* shot = me->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
             {
                 if (shot->GetSpellInfo()->Id == AUTO_SHOT_1 && (shot->m_targets.GetUnitTarget() != mytar || !inposition))
                     me->InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
             }
-            else if (HasRole(BOT_ROLE_DPS) && dist > 5 && dist < maxRangeNormal)
+            else if (HasRole(BOT_ROLE_DPS))
             {
                 if (doCast(mytar, AUTO_SHOT_1))
-                {}
+                {
+                }
             }
 
             CheckScatter(diff);
@@ -924,7 +926,7 @@ public:
 
             //scatter pvp
             if (IsSpellReady(SCATTER_SHOT_1, diff) && can_do_normal && HasRole(BOT_ROLE_DPS) &&
-                mytar->GetTypeId() == TYPEID_PLAYER && dist < 10 && Rand() < 60)
+                mytar->GetTypeId() == TYPEID_PLAYER && Rand() < 60)
             {
                 if (doCast(mytar, GetSpell(SCATTER_SHOT_1)))
                 {
@@ -938,8 +940,7 @@ public:
             //DISENGAGE
             if (IsSpellReady(DISENGAGE_1, diff, false) && me->IsInCombat() && !IsTank() && Rand() < 70 &&
                 !HasBotCommandState(BOT_COMMAND_STAY) &&
-                !me->getAttackers().empty() && me->GetDistance(*me->getAttackers().begin()) < 5 &&
-                me->HasInArc(float(M_PI), *me->getAttackers().begin()))
+                !me->getAttackers().empty() && me->HasInArc(float(M_PI), *me->getAttackers().begin()))
             {
                 if (doCast(me, GetSpell(DISENGAGE_1)))
                     return;
@@ -948,40 +949,35 @@ public:
             MoveBehind(mytar);
 
             //MELEE SECTION
-            if (dist < 5)
+            if (!can_do_normal)
+                return;
+
+            //MONGOOSE BITE
+            if (IsSpellReady(MONGOOSE_BITE_1, diff) && HasRole(BOT_ROLE_DPS) && Rand() < 50)
             {
-                if (!can_do_normal)
+                if (doCast(mytar, GetSpell(MONGOOSE_BITE_1)))
                     return;
-
-                //MONGOOSE BITE
-                if (IsSpellReady(MONGOOSE_BITE_1, diff) && HasRole(BOT_ROLE_DPS) && Rand() < 50)
-                {
-                    if (doCast(mytar, GetSpell(MONGOOSE_BITE_1)))
-                        return;
-                }
-                //COUNTERATTACK
-                if (IsSpellReady(COUNTERATTACK_1, diff) && HasRole(BOT_ROLE_DPS) &&
-                    me->HasReactive(REACTIVE_HUNTER_PARRY) && Rand() < 90)
-                {
-                    if (doCast(mytar, GetSpell(COUNTERATTACK_1)))
-                        return;
-                }
-                //WING CLIP
-                if (IsSpellReady(WING_CLIP_1, diff) && (!IsTank() || mytar->isMoving()) &&
-                    Rand() < 80 && !CCed(mytar, true) && !mytar->HasAuraWithMechanic(1<<MECHANIC_SNARE))
-                {
-                    if (doCast(mytar, GetSpell(WING_CLIP_1)))
-                        return;
-                }
-                //RAPTOR STRIKE
-                if (IsSpellReady(RAPTOR_STRIKE_1, diff, false) && HasRole(BOT_ROLE_DPS) && Rand() < 40 &&
-                    !me->GetCurrentSpell(CURRENT_MELEE_SPELL))
-                {
-                    if (doCast(mytar, GetSpell(RAPTOR_STRIKE_1)))
-                        return;
-                }
-
-                return; //don't try to do anything else in melee
+            }
+            //COUNTERATTACK
+            if (IsSpellReady(COUNTERATTACK_1, diff) && HasRole(BOT_ROLE_DPS) &&
+                me->HasReactive(REACTIVE_HUNTER_PARRY) && Rand() < 90)
+            {
+                if (doCast(mytar, GetSpell(COUNTERATTACK_1)))
+                    return;
+            }
+            //WING CLIP
+            if (IsSpellReady(WING_CLIP_1, diff) && (!IsTank() || mytar->isMoving()) &&
+                Rand() < 80 && !CCed(mytar, true) && !mytar->HasAuraWithMechanic(1 << MECHANIC_SNARE))
+            {
+                if (doCast(mytar, GetSpell(WING_CLIP_1)))
+                    return;
+            }
+            //RAPTOR STRIKE
+            if (IsSpellReady(RAPTOR_STRIKE_1, diff, false) && HasRole(BOT_ROLE_DPS) && Rand() < 40 &&
+                !me->GetCurrentSpell(CURRENT_MELEE_SPELL))
+            {
+                if (doCast(mytar, GetSpell(RAPTOR_STRIKE_1)))
+                    return;
             }
 
             //RANGED SECTION
@@ -993,8 +989,6 @@ public:
                 if (doCast(mytar, GetSpell(HUNTERS_MARK_1)))
                     return;
             }
-
-            CheckMisdirect(diff);
 
             //attack range check 1
             if (dist > maxRangeLong)
@@ -1008,16 +1002,12 @@ public:
                     return;
             }
 
-            //attack range check 2
-            if (dist > maxRangeNormal)
-                return;
-
             if (!inposition && me->getAttackers().empty())
                 return;
 
             //CONCUSSIVE SHOT
             if (IsSpellReady(CONCUSSIVE_SHOT_1, diff) && can_do_arcane && Rand() < 35 &&
-                !CCed(mytar, true) && !mytar->HasAuraWithMechanic(1<<MECHANIC_SNARE))
+                !CCed(mytar, true) && !mytar->HasAuraWithMechanic(1 << MECHANIC_SNARE))
             {
                 if (doCast(mytar, GetSpell(CONCUSSIVE_SHOT_1)))
                     return;
@@ -1051,16 +1041,17 @@ public:
             //RAPID FIRE
             if (IsSpellReady(RAPID_FIRE_1, diff, false) && can_do_normal && HasRole(BOT_ROLE_DPS) && !me->isMoving() && Rand() < 55 &&
                 (mytar->GetHealth() > me->GetMaxHealth() * (1 + mytar->getAttackers().size()) ||
-                mytar->GetTypeId() == TYPEID_PLAYER) &&
+                    mytar->GetTypeId() == TYPEID_PLAYER) &&
                 !me->HasAuraTypeWithFamilyFlags(SPELL_AURA_MOD_RANGED_HASTE, SPELLFAMILY_HUNTER, 0x20))
             {
                 if (doCast(me, GetSpell(RAPID_FIRE_1)))
-                {}
+                {
+                }
             }
             //BLACK ARROW
             //Black Arrow shares cooldown with fire traps
             if (IsSpellReady(BLACK_ARROW_1, diff) && can_do_shadow && HasRole(BOT_ROLE_DPS) &&
-                mytar->GetHealth() > me->GetMaxHealth()/4 * (1 + mytar->getAttackers().size()))
+                mytar->GetHealth() > me->GetMaxHealth() / 6 * (1 + mytar->getAttackers().size()))
             {
                 if (doCast(mytar, GetSpell(BLACK_ARROW_1)))
                     return;
@@ -1101,7 +1092,7 @@ public:
                 }
                 //VIPER STING: pvp only
                 if (!STING && GetSpell(VIPER_STING_1) && mytar->GetTypeId() == TYPEID_PLAYER &&
-                    mytar->GetPowerType() == POWER_MANA && mytar->GetHealth() > me->GetMaxHealth()/2 &&
+                    mytar->GetPowerType() == POWER_MANA && mytar->GetHealth() > me->GetMaxHealth() / 2 &&
                     mytar->GetMaxPower(POWER_MANA) > me->GetMaxPower(POWER_MANA))
                 {
                     sting = mytar->GetAuraEffect(SPELL_AURA_PERIODIC_MANA_LEECH, SPELLFAMILY_HUNTER, 0x0, 0x80, 0x0, me->GetGUID());

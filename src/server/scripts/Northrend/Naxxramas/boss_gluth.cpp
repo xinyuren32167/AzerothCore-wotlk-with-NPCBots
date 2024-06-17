@@ -239,15 +239,18 @@ public:
         {
             if (Unit* unitTarget = GetHitUnit())
             {
-                int32 damage = int32(unitTarget->GetHealth()) - int32(unitTarget->CountPctFromMaxHealth(5));
+                int32 damage = int32(unitTarget->GetHealth()) - int32(unitTarget->CountPctFromMaxHealth(15));
                 if (damage <= 0)
                     return;
 
                 if (Creature* cTarget = unitTarget->ToCreature())
                 {
-                    cTarget->SetWalk(true);
-                    cTarget->GetMotionMaster()->MoveFollow(GetCaster(), 0.0f, 0.0f, MOTION_SLOT_CONTROLLED);
-                    cTarget->SetReactState(REACT_PASSIVE);
+                    if (!cTarget->IsNPCBot())
+                    {
+                        cTarget->SetWalk(true);
+                        cTarget->GetMotionMaster()->MoveFollow(GetCaster(), 0.0f, 0.0f, MOTION_SLOT_CONTROLLED);
+                        cTarget->SetReactState(REACT_PASSIVE);
+                    }
                     Unit::DealDamage(GetCaster(), cTarget, damage);
                     return;
                 }

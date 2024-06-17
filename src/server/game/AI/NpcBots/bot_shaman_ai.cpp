@@ -67,6 +67,8 @@ enum ShamanBaseSpells
     NATURES_SWIFTNESS_1                 = 16188,//castegory = 1202
     ELEMENTAL_MASTERY_1                 = 16166,//castegory = 1202
     ELEMENTAL_MASTERY_BONUS             = 64701,
+    LAVA_LASH_1                         = 60103,
+
 
     TIDAL_FORCE_1                       = 55198,
 
@@ -262,7 +264,7 @@ enum BotTotemType : uint32
 const uint32 THORIUM_GRENADE_SPELL_ID = 19769; 
 
 static const uint32 Shaman_spells_damage_arr[] =
-{ EARTH_SHOCK_1, FLAME_SHOCK_1, FROST_SHOCK_1, STORMSTRIKE_1, CHAIN_LIGHTNING_1, LAVA_BURST_1, LIGHTNING_BOLT_1,
+{ EARTH_SHOCK_1, FLAME_SHOCK_1, FROST_SHOCK_1, STORMSTRIKE_1, CHAIN_LIGHTNING_1, LAVA_BURST_1, LIGHTNING_BOLT_1, LAVA_LASH_1,
 FIRE_NOVA_1, MAGMA_TOTEM_1, SEARING_TOTEM_1, LIGHTNING_SHIELD_1, THUNDERSTORM_1, EARTH_ELEMENTAL_TOTEM_1, FIRE_ELEMENTAL_TOTEM_1 };
 
 static const uint32 Shaman_spells_cc_arr[] =
@@ -1140,8 +1142,18 @@ public:
 
             MoveBehind(mytar);
 
-            //STORMSTRIKE
-            if (IsSpellReady(STORMSTRIKE_1, diff) && can_do_nature && HasRole(BOT_ROLE_DPS) && IsMelee() && dist <= 5 && Rand() < 120)
+            // LAVA LASH
+            if (IsSpellReady(LAVA_LASH_1, diff) && can_do_fire && HasRole(BOT_ROLE_DPS) && GetSpec() == BOT_SPEC_SHAMAN_ENHANCEMENT && IsMelee() && dist <= 5)
+            {
+                if (doCast(mytar, GetSpell(LAVA_LASH_1)))
+                {
+                    SetSpellCooldown(LAVA_LASH_1, 6000);  // Set cooldown to 6 seconds
+                    return;
+                }
+            }
+
+            // STORMSTRIKE
+            if (IsSpellReady(STORMSTRIKE_1, diff) && can_do_nature && HasRole(BOT_ROLE_DPS) && GetSpec() == BOT_SPEC_SHAMAN_ENHANCEMENT && IsMelee() && dist <= 5 && Rand() < 120)
             {
                 if (doCast(mytar, GetSpell(STORMSTRIKE_1)))
                     return;
@@ -1617,13 +1629,17 @@ public:
 
             //SHAMAN_T8_ENCHANCEMENT_2P_BONUS: 20% bonus damage for Lava Lash and Stormstrike
             if (lvl >= 60 &&
-                (spellId == STORMSTRIKE_DAMAGE || spellId == STORMSTRIKE_DAMAGE_OFFHAND/* || spellId == LAVA_LASH*/))
+                (spellId == STORMSTRIKE_DAMAGE || spellId == STORMSTRIKE_DAMAGE_OFFHAND || spellId == LAVA_LASH_1))
                 pctbonus += 0.2f;
 
             //custom bonus to make stormstrike useful
             if (spellId == STORMSTRIKE_DAMAGE || spellId == STORMSTRIKE_DAMAGE_OFFHAND)
-                pctbonus += 1.0f;
+                pctbonus += 1.1f;
 
+            //custom bonus to make lavalash useful
+            if (spellId == LAVA_LASH_1)
+                pctbonus += 1.25f;
+            
             damage = int32(fdamage * (1.0f + pctbonus));
         }
 
@@ -2707,6 +2723,7 @@ public:
   /*Talent*/lvl >= 60 && isElem ? InitSpellMap(THUNDERSTORM_1) : RemoveSpell(THUNDERSTORM_1);
 
   /*Talent*/lvl >= 40 && isEnha ? InitSpellMap(STORMSTRIKE_1) : RemoveSpell(STORMSTRIKE_1);
+  /*Talent*/lvl >= 45 && isEnha ? InitSpellMap(LAVA_LASH_1) : RemoveSpell(LAVA_LASH_1);
   /*Talent*/lvl >= 50 && isEnha ? InitSpellMap(SHAMANISTIC_RAGE_1) : RemoveSpell(SHAMANISTIC_RAGE_1);
   /*Talent*/lvl >= 60 && isEnha ? InitSpellMap(FERAL_SPIRIT_1) : RemoveSpell(FERAL_SPIRIT_1); //not casted
 

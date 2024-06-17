@@ -129,7 +129,7 @@ struct boss_ouro : public BossAI
 
                     context.Repeat();
                 })
-                .Schedule(20s, [this](TaskContext context)
+                .Schedule(25s, [this](TaskContext context)
                     {
                         DoCastSelf(SPELL_SUMMON_OURO_MOUNDS, true);
                         context.Repeat();
@@ -296,6 +296,8 @@ struct boss_ouro : public BossAI
 
     void JustDied(Unit* killer) override
     {
+        summons.DespawnAll();
+
         DoCastSelf(875167, true);
         Map::PlayerList const& players = me->GetMap()->GetPlayers();
         for (auto const& playerPair : players)

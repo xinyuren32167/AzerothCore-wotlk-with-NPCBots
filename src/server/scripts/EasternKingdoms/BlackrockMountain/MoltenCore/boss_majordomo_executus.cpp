@@ -328,6 +328,10 @@ public:
 
         void UpdateAI(uint32 diff) override
         {
+            if (me->HasAura(800139))
+            {
+                DoCast(me, 17683, true);
+            }
 
             switch (events.GetPhaseMask())
             {

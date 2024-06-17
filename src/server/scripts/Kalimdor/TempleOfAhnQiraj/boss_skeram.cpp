@@ -33,7 +33,7 @@ enum Spells
 {
     SPELL_ARCANE_EXPLOSION      = 26192,
     SPELL_EARTH_SHOCK           = 26194,
-    SPELL_CHAIN_LIGHTNING             = 825021,
+    SPELL_CHAIN_LIGHTNING       = 825021,
     SPELL_INITIALIZE_IMAGE      = 3730,
     SPELL_SUMMON_IMAGES         = 747,
     SPELL_BIRTH                 = 34115
@@ -42,7 +42,7 @@ enum Spells
 enum Events
 {
     EVENT_ARCANE_EXPLOSION      = 1,
-    EVENT_CHAIN_LIGHTNING           = 2,
+    EVENT_CHAIN_LIGHTNING       = 2,
     EVENT_BLINK                 = 3,
     EVENT_EARTH_SHOCK           = 4,
     EVENT_TELEPORT              = 5,
@@ -189,7 +189,7 @@ struct boss_skeram : public BossAI
                     break;
                 case EVENT_BLINK:
                     DoCast(me, BlinkSpells[urand(0, 2)]);
-                    DoResetThreatList();
+                    //DoResetThreatList();
                     events.ScheduleEvent(EVENT_BLINK, 10s, 30s);
                     break;
                 case EVENT_EARTH_SHOCK:
@@ -207,7 +207,7 @@ struct boss_skeram : public BossAI
                             DoTeleport(image);
                         }
                     }
-                    DoResetThreatList();
+                    //DoResetThreatList();
                     events.RescheduleEvent(EVENT_BLINK, 10s, 30s);
                     break;
                 case EVENT_INIT_IMAGE:

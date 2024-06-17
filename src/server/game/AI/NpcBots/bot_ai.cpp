@@ -6,6 +6,7 @@
 #include "bot_Events.h"
 #include "bot_GridNotifiers.h"
 #include "botdatamgr.h"
+#include "botlog.h"
 #include "botmgr.h"
 #include "botgearscore.h"
 #include "botgossip.h"
@@ -696,13 +697,9 @@ SpellCastResult bot_ai::CheckBotCast(Unit const* victim, uint32 spellId) const
     if (!IsSpellReady(spellInfo->GetFirstRankSpell()->Id, lastdiff, false))
         return SPELL_FAILED_NOT_READY;
 
-    //if (victim->isType(TYPEMASK_UNIT) && InDuel(victim))
-    //    return SPELL_FAILED_BAD_TARGETS;
-
     if (!CanBotAttackOnVehicle())
         return SPELL_FAILED_CASTER_AURASTATE;
 
-    //forced to follow but not close enough to master
     if (!IAmFree() && !master->GetBotMgr()->GetBotAllowCombatPositioning())
     {
         Position mpos;
@@ -712,7 +709,6 @@ SpellCastResult bot_ai::CheckBotCast(Unit const* victim, uint32 spellId) const
             return SPELL_FAILED_NOT_IDLE;
     }
 
-    //scaling aura
     if (victim->isType(TYPEMASK_UNIT) && victim != me &&
         !spellInfo->IsPassive() && spellInfo->SpellLevel && !spellInfo->IsChanneled() &&
         (victim->GetLevel() + 10) < int32(spellInfo->GetFirstRankSpell()->SpellLevel))
@@ -721,25 +717,22 @@ SpellCastResult bot_ai::CheckBotCast(Unit const* victim, uint32 spellId) const
         {
             if (spellInfo->Effects[i].Effect == SPELL_EFFECT_APPLY_AURA && spellInfo->IsPositiveEffect(i))
             {
-                //TC_LOG_ERROR("scripts", "CheckBotCast(): deny cast of %s by %s on low-level target %s (lvl %u)",
-                //    spellInfo->SpellName[0], me->GetName().c_str(), victim->GetName().c_str(), victim->GetLevel());
                 return SPELL_FAILED_LOWLEVEL;
             }
         }
     }
 
-    //disarmed
     if (spellInfo->EquippedItemClass == ITEM_CLASS_WEAPON)
     {
         if (spellInfo->EquippedItemInventoryTypeMask != 0)
         {
-            if ((spellInfo->EquippedItemInventoryTypeMask & (1<<INVTYPE_WEAPONMAINHAND)) &&
+            if ((spellInfo->EquippedItemInventoryTypeMask & (1 << INVTYPE_WEAPONMAINHAND)) &&
                 !me->CanUseAttackType(BASE_ATTACK))
                 return SPELL_FAILED_EQUIPPED_ITEM_CLASS_MAINHAND;
-            if ((spellInfo->EquippedItemInventoryTypeMask & (1<<INVTYPE_WEAPONOFFHAND)) &&
+            if ((spellInfo->EquippedItemInventoryTypeMask & (1 << INVTYPE_WEAPONOFFHAND)) &&
                 !me->CanUseAttackType(OFF_ATTACK))
                 return SPELL_FAILED_EQUIPPED_ITEM_CLASS_OFFHAND;
-            if ((spellInfo->EquippedItemInventoryTypeMask & ((1<<INVTYPE_RANGED)|(1<<INVTYPE_RANGEDRIGHT)|(1<<INVTYPE_THROWN))) &&
+            if ((spellInfo->EquippedItemInventoryTypeMask & ((1 << INVTYPE_RANGED) | (1 << INVTYPE_RANGEDRIGHT) | (1 << INVTYPE_THROWN))) &&
                 !me->CanUseAttackType(RANGED_ATTACK))
                 return SPELL_FAILED_EQUIPPED_ITEM_CLASS;
         }
@@ -747,12 +740,10 @@ SpellCastResult bot_ai::CheckBotCast(Unit const* victim, uint32 spellId) const
             return SPELL_FAILED_EQUIPPED_ITEM_CLASS_MAINHAND;
     }
 
-    //immunities
     if (victim->isType(TYPEMASK_UNIT))
     {
         if (spellInfo->HasEffect(SPELL_EFFECT_HEAL) || spellInfo->HasAura(SPELL_AURA_PERIODIC_HEAL))
         {
-            //banish or something
             Unit::AuraEffectList const& healPctEffects = victim->GetAuraEffectsByType(SPELL_AURA_MOD_HEALING_PCT);
             if (!healPctEffects.empty())
             {
@@ -764,49 +755,90 @@ SpellCastResult bot_ai::CheckBotCast(Unit const* victim, uint32 spellId) const
                         return SPELL_FAILED_BAD_TARGETS;
             }
         }
-        else if (//spells that ignore immunities
-            spellId != 64382 && //shattering throw
-            spellId != 32375 && //mass dispel
+        else if (spellId != 64382 && spellId != 32375 &&
             (spellInfo->HasEffect(SPELL_EFFECT_SCHOOL_DAMAGE) ||
-            spellInfo->HasEffect(SPELL_EFFECT_WEAPON_PERCENT_DAMAGE) ||
-            spellInfo->HasEffect(SPELL_EFFECT_WEAPON_DAMAGE) ||
-            spellInfo->HasEffect(SPELL_EFFECT_POWER_BURN) ||
-            spellInfo->HasEffect(SPELL_EFFECT_NORMALIZED_WEAPON_DMG)) &&
+                spellInfo->HasEffect(SPELL_EFFECT_WEAPON_PERCENT_DAMAGE) ||
+                spellInfo->HasEffect(SPELL_EFFECT_WEAPON_DAMAGE) ||
+                spellInfo->HasEffect(SPELL_EFFECT_POWER_BURN) ||
+                spellInfo->HasEffect(SPELL_EFFECT_NORMALIZED_WEAPON_DMG)) &&
             !_checkImmunities(victim, spellInfo))
             return SPELL_FAILED_BAD_TARGETS;
     }
 
     switch (_botclass)
     {
-        case BOT_CLASS_PALADIN:
-        case BOT_CLASS_MAGE:
-        case BOT_CLASS_PRIEST:
-        case BOT_CLASS_DRUID:
-        case BOT_CLASS_WARLOCK:
-        case BOT_CLASS_SHAMAN:
-            if (Feasting() && !master->IsInCombat() && !master->HasAuraType(SPELL_AURA_PERIODIC_DAMAGE))
-                return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
-            break;
-        case BOT_CLASS_WARRIOR: //BladeStorm
-        case BOT_CLASS_BM: //BladeStorm PLACEHOLDER
-        case BOT_CLASS_ROGUE: //Killing Spree
-            if (me->HasAuraType(SPELL_AURA_ALLOW_ONLY_ABILITY))
-                return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
-            break;
-        case BOT_CLASS_HUNTER:
-        case BOT_CLASS_DEATH_KNIGHT:
-        case BOT_CLASS_SPHYNX:
-        case BOT_CLASS_ARCHMAGE:
-        case BOT_CLASS_DREADLORD:
-        case BOT_CLASS_SPELLBREAKER:
-        case BOT_CLASS_DARK_RANGER:
-        case BOT_CLASS_NECROMANCER:
-        case BOT_CLASS_SEA_WITCH:
-        case BOT_CLASS_CRYPT_LORD:
-            break;
-        default:
-            LOG_ERROR("entities.player", "CheckBotCast(): Unknown bot class {}", _botclass);
-            break;
+    case BOT_CLASS_PALADIN:
+    case BOT_CLASS_MAGE:
+    case BOT_CLASS_PRIEST:
+    case BOT_CLASS_DRUID:
+    case BOT_CLASS_WARLOCK:
+    case BOT_CLASS_SHAMAN:
+        if (Feasting() && !master->IsInCombat() && !master->HasAuraType(SPELL_AURA_PERIODIC_DAMAGE))
+            return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+        break;
+    case BOT_CLASS_WARRIOR:
+    case BOT_CLASS_BM:
+    case BOT_CLASS_ROGUE:
+        if (me->HasAuraType(SPELL_AURA_ALLOW_ONLY_ABILITY))
+            return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+        break;
+    case BOT_CLASS_HUNTER:
+    case BOT_CLASS_DEATH_KNIGHT:
+    case BOT_CLASS_SPHYNX:
+    case BOT_CLASS_ARCHMAGE:
+    case BOT_CLASS_DREADLORD:
+    case BOT_CLASS_SPELLBREAKER:
+    case BOT_CLASS_DARK_RANGER:
+    case BOT_CLASS_NECROMANCER:
+    case BOT_CLASS_SEA_WITCH:
+    case BOT_CLASS_CRYPT_LORD:
+        break;
+    default:
+        LOG_ERROR("entities.player", "CheckBotCast(): Unknown bot class {}", _botclass);
+        break;
+    }
+
+    // Dinkle: Add logic for moving bots based on auras.
+    // Thaddius Polarity:
+    if (me->GetMapId() == 533)
+    {
+        Position positivePos = { 3522.4340820312f, -2934.12109375f, 302.88565063477f, 2.3949143886566f };
+        Position negativePos = { 3508.3127441406f, -2920.0598144531f, 302.86047363281f, 5.4680323600769f };
+
+        if (me->HasAura(28059)) // Positive charge
+        {
+            if (me->GetDistance(positivePos) > 1.0f)
+            {
+                me->AttackStop();
+                me->InterruptNonMeleeSpells(true);
+                me->GetBotAI()->MoveToSendPosition(positivePos);
+                return SPELL_FAILED_NOT_READY;
+            }
+        }
+        else if (me->HasAura(28084)) // Negative charge
+        {
+            if (me->GetDistance(negativePos) > 1.0f)
+            {
+                me->AttackStop();
+                me->InterruptNonMeleeSpells(true);
+                me->GetBotAI()->MoveToSendPosition(negativePos);
+                return SPELL_FAILED_NOT_READY;
+            }
+        }
+    }
+
+    // BWL Vael Burning Adrenaline
+    if (me->GetMapId() == 469 && me->HasAura(18173))
+    {
+        Position newMapPosition = { -7502.1435546875f, -984.95782470703f, 408.56799316406f, 5.3043179512024f };
+
+        if (me->GetDistance(newMapPosition) > 1.0f)
+        {
+            me->AttackStop();
+            me->InterruptNonMeleeSpells(true);
+            me->GetBotAI()->MoveToSendPosition(newMapPosition);
+            return SPELL_FAILED_NOT_READY;
+        }
     }
 
     return SPELL_CAST_OK;
@@ -1705,7 +1737,7 @@ void bot_ai::ResurrectGroup(uint32 spell_id)
     if (!group)
     {
         player = master;
-        if (!player->IsAlive() && !player->isResurrectRequested())
+        if (!player->IsAlive() && !player->isResurrectRequested() && !player->GetUInt32Value(PLAYER_SELF_RES_SPELL))
         {
             target = player->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST) ? player->ToUnit() : (Unit*)player->GetCorpse();
             if (target && target->IsInWorld() && me->GetMap() == target->FindMap() &&
@@ -1733,7 +1765,7 @@ void bot_ai::ResurrectGroup(uint32 spell_id)
         {
             target = bitr->second;
             if (!target || !target->IsInWorld() || target->IsAlive()) continue;
-            if (bitr->second->GetBotAI()->GetReviveTimer() < 15000) continue;
+            if (bitr->second->GetBotAI()->GetReviveTimer() < 15000 || bitr->second->GetBotAI()->GetSelfRezSpell()) continue;
             if (me->GetDistance(target) < 30 && target->IsWithinLOSInMap(me, VMAP::ModelIgnoreFlags::M2, LINEOFSIGHT_ALL_CHECKS) &&
                 !player->GetBotMgr()->IsBeingResurrected(target))
                 bottargets.push_back(bitr->second);
@@ -1749,7 +1781,7 @@ void bot_ai::ResurrectGroup(uint32 spell_id)
             if (!player || player->FindMap() != me->GetMap()) continue;
             if (!Bots && player->HaveBot())
                 Bots = true;
-            if (player->IsAlive() || player->isResurrectRequested()) continue;
+            if (player->IsAlive() || player->isResurrectRequested() || player->GetUInt32Value(PLAYER_SELF_RES_SPELL)) continue;
             if (player->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST))
                 target = (Unit*)player->GetCorpse();
             if (!target || !target->IsInWorld()) continue;
@@ -1790,7 +1822,7 @@ void bot_ai::ResurrectGroup(uint32 spell_id)
             {
                 target = bitr->second;
                 if (!target || !target->IsInWorld() || target->IsAlive()) continue;
-                if (bitr->second->GetBotAI()->GetReviveTimer() < 15000) continue;
+                if (bitr->second->GetBotAI()->GetReviveTimer() < 15000 || bitr->second->GetBotAI()->GetSelfRezSpell()) continue;
                 if (me->GetDistance(target) < 30 && target->IsWithinLOSInMap(me, VMAP::ModelIgnoreFlags::M2, LINEOFSIGHT_ALL_CHECKS) &&
                     !player->GetBotMgr()->IsBeingResurrected(target))
                     bottargets.push_back(bitr->second);
@@ -4674,6 +4706,49 @@ bool bot_ai::CheckAttackTarget()
     if (mytar != me->GetVictim())
         me->Attack(mytar, !ranged);
 
+    // Dinkle: Add logic for moving bots based on auras.
+    // Thaddius Polarity:
+    if (me->GetMapId() == 533)
+    {
+        Position positivePos = { 3522.4340820312f, -2934.12109375f, 302.88565063477f, 2.3949143886566f };
+        Position negativePos = { 3508.3127441406f, -2920.0598144531f, 302.86047363281f, 5.4680323600769f };
+
+        if (me->HasAura(28059)) // Positive charge
+        {
+            if (me->GetDistance(positivePos) > 1.0f)
+            {
+                me->AttackStop();
+                me->InterruptNonMeleeSpells(true);
+                me->GetBotAI()->MoveToSendPosition(positivePos);
+                return false;
+            }
+        }
+        else if (me->HasAura(28084)) // Negative charge
+        {
+            if (me->GetDistance(negativePos) > 1.0f)
+            {
+                me->AttackStop();
+                me->InterruptNonMeleeSpells(true);
+                me->GetBotAI()->MoveToSendPosition(negativePos);
+                return false;
+            }
+        }
+    }
+
+    // BWL Vael Burning Adrenaline
+    if (me->GetMapId() == 469 && me->HasAura(18173))
+    {
+        Position newMapPosition = { -7502.1435546875f, -984.95782470703f, 408.56799316406f, 5.3043179512024f };
+
+        if (me->GetDistance(newMapPosition) > 1.0f)
+        {
+            me->AttackStop();
+            me->InterruptNonMeleeSpells(true);
+            me->GetBotAI()->MoveToSendPosition(newMapPosition);
+            return false;
+        }
+    }
+
     return true;
 }
 //IMMEDIATE TARGETS
@@ -5316,27 +5391,25 @@ void bot_ai::CalculateAoeSpots(Unit const* unit, AoeSpotsVec& spots)
             spots.push_back(AoeSpotsVec::value_type(*(*ci), radius));
     }
 
-
-    /* Naxxramas
+    //Naxxramas
     if (unit->GetMapId() == 533)
     {
-        std::list<Creature*> cListNaxx;
-        Acore::AllCreaturesOfEntryInRange checkNaxx(unit, 816363, 60.f);
-        Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherNaxx(unit, cListNaxx, checkNaxx);
-        Cell::VisitAllObjects(unit, searcherNaxx, 60.f);
+        //Void Zones
+        std::list<Creature*> voidZonestwo;
+        Acore::AllCreaturesOfEntryInRange checkVoidZonetwo(unit, 16697, 40.f);
+        Acore::CreatureListSearcher<Acore::AllCreaturesOfEntryInRange> searcherVoidZone(unit, voidZonestwo, checkVoidZonetwo);
+        Cell::VisitAllObjects(unit, searcherVoidZone, 40.f);
 
-        for (auto* creature : cListNaxx)
+        for (Creature* voidZonetwo : voidZonestwo)
         {
-            if (!creature)
-                continue;
-
-            float growthFactor = 3.5f;  
-            float baseCombatReachAdjustment = DEFAULT_COMBAT_REACH * 5.f;  
-            float radius = creature->GetObjectScale() * growthFactor + baseCombatReachAdjustment;
-            spots.push_back(AoeSpotsVec::value_type(*creature, radius));
+            if (voidZonetwo)
+            {
+                float voidZoneRadiustwo = DEFAULT_COMBAT_REACH + 5.0f;
+                spots.push_back(AoeSpotsVec::value_type(*voidZonetwo, voidZoneRadiustwo));
+            }
         }
     }
-    */
+    
     //STUB
     //if (!unit->IsPlayer() || !unit->ToPlayer()->HaveBot())
     //    return;
@@ -7505,8 +7578,8 @@ void bot_ai::_OnAreaUpdate(uint32 areaId)
 
     if (!IAmFree())
     {
-        //Dinkle: Challenge Auras
-        std::list<uint32> challengeAuras = { 208001, 800142, 800139, 107099, 880139, 861617 };
+        //Dinkle: Challenge Auras + Xaveric
+        std::list<uint32> challengeAuras = { 208001, 800142, 800139, 107099, 880139, 861617, 103368 };
         // Get current map type
         Map* map = me->GetMap();
         MapEntry const* mapEntry = sMapStore.LookupEntry(map->GetId());
@@ -7727,6 +7800,7 @@ void bot_ai::OnSpellHit(Unit* caster, SpellInfo const* spell)
                 }
 
                 BotMgr::ReviveBot(me, caster);
+                _selfrez_spell_id = 0;
 
                 me->SetHealth(health);
                 if (me->GetMaxPower(POWER_MANA) > 1)
@@ -10963,7 +11037,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         bool prio = i == _primaryIconTank;
                         ObjectGuid guid = gr->GetTargetIcons()[i];
                         if (guid && BotMgr::GetTankTargetIconFlags() & GroupIconsFlags[i])
-                            AddGossipItemFor(player, prio ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, player->GetBotMgr()->GetTargetIconString(uint8(i + 1)), GOSSIP_SENDER_PRIORITY_TARGET_SET_TANK, uint32(GOSSIP_ACTION_INFO_DEF) + uint32(i));
+                            AddGossipItemFor(player, prio ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, player->GetBotMgr()->GetTargetIconString(uint8(i)), GOSSIP_SENDER_PRIORITY_TARGET_SET_TANK, uint32(GOSSIP_ACTION_INFO_DEF) + uint32(i));
                     }
                     AddGossipItemFor(player, (_primaryIconTank == -1) ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_NONE2), GOSSIP_SENDER_PRIORITY_TARGET_SET_TANK, uint32(GOSSIP_ACTION_INFO_DEF - 1));
                     break;
@@ -10976,7 +11050,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         if (HasRole(BOT_ROLE_RANGED))
                             iconMask |= BotMgr::GetRangedDPSTargetIconFlags();
                         if (guid && iconMask & GroupIconsFlags[i])
-                            AddGossipItemFor(player, prio ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, player->GetBotMgr()->GetTargetIconString(uint8(i + 1)), GOSSIP_SENDER_PRIORITY_TARGET_SET_DPS, uint32(GOSSIP_ACTION_INFO_DEF) + uint32(i));
+                            AddGossipItemFor(player, prio ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, player->GetBotMgr()->GetTargetIconString(uint8(i)), GOSSIP_SENDER_PRIORITY_TARGET_SET_DPS, uint32(GOSSIP_ACTION_INFO_DEF) + uint32(i));
                     }
                     AddGossipItemFor(player, (_primaryIconDamage == -1) ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_NONE2), GOSSIP_SENDER_PRIORITY_TARGET_SET_DPS, uint32(GOSSIP_ACTION_INFO_DEF - 1));
                     break;
@@ -12946,6 +13020,8 @@ bool bot_ai::_unequip(uint8 slot, ObjectGuid receiver)
 
     uint32 itemId = item->GetEntry();
 
+    BotLogger::Log(NPCBOT_LOG_UNEQUIP, me, uint32(slot), uint32(item->GetGUID().GetCounter()), uint32(itemId), uint32(receiver.GetCounter()));
+
     _removeEquipment(slot);
 
     //hand old weapon to master
@@ -13048,6 +13124,9 @@ bool bot_ai::_equip(uint8 slot, Item* newItem, ObjectGuid receiver)
         newItem->SetBinding(true);
     }
     //end Dinkle
+
+    BotLogger::Log(NPCBOT_LOG_EQUIP, me, uint32(slot), uint32(newItem->GetGUID().GetCounter()), uint32(newItemId), uint32(receiver.GetCounter()));
+
     if (receiver && (slot > BOT_SLOT_RANGED || einfo->ItemEntry[slot] != newItemId))
     {
         ASSERT(receiver == master->GetGUID());
@@ -13211,9 +13290,13 @@ bool bot_ai::_resetEquipment(uint8 slot, ObjectGuid receiver)
     ASSERT(einfo, "Trying to reset equipment for bot with no equip info!");
 
     uint32 itemId = einfo->ItemEntry[slot];
+    Item const* oldItem = _equips[slot];
+
+    BotLogger::Log(NPCBOT_LOG_EQUIP_RESET, me, uint32(slot), uint32(oldItem ? oldItem->GetGUID().GetCounter() : 0), uint32(oldItem ? oldItem->GetEntry() : 0), uint32(receiver.GetCounter()), uint32(itemId));
+
     if (!itemId)
         return _unequip(slot, receiver);
-    else if (Item const* oldItem = _equips[slot])
+    else if (oldItem)
         if (oldItem->GetEntry() == itemId)
             return true;
 
@@ -14741,6 +14824,7 @@ void bot_ai::DefaultInit()
         ASSERT(!me->GetBotAI());
         ASSERT(!me->GetBotPetAI());
         me->SetBotAI(this);
+        BotLogger::Log(NPCBOT_LOG_SPAWN, me);
     }
 
     me->SetPvP(master->IsPvP() || IsWanderer());
@@ -15499,8 +15583,12 @@ void bot_ai::InitEquips()
         //"SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, guid, itemEntry, owner_guid "
         //  "FROM item_instance WHERE guid IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_SYNCH
 
+        std::array<uint32, BOT_INVENTORY_SIZE> assigned_item_guids{};
         for (uint8 i = 0; i != BOT_INVENTORY_SIZE; ++i)
+        {
             stmt->SetData(i, npcBotData->equips[i]);
+            assigned_item_guids[i] = npcBotData->equips[i];
+        }
 
         PreparedQueryResult iiresult = CharacterDatabase.Query(stmt);
 
@@ -15535,15 +15623,25 @@ void bot_ai::InitEquips()
                     {
                         _equips[i] = item;
                         found = true;
+                        BotLogger::Log(NPCBOT_LOG_INIT_EQUIP, me, uint32(i), uint32(itemGuidLow), uint32(itemId));
                         break;
                     }
                 }
                 ASSERT(found);
-                //ItemTemplate const* proto = item->GetTemplate();
-                //TC_LOG_ERROR("entities.player", "minion_ai::InitEquips(): bot %s (id: %u): found item: for slot %u: %s (id: %u, guidLow: %u)",
-                //    me->GetName().c_str(), me->GetEntry(), i, proto->Name1.c_str(), itemId, itemGuidLow);
+                for (uint8 i = 0; i != BOT_INVENTORY_SIZE; ++i)
+                {
+                    if (assigned_item_guids[i] == itemGuidLow)
+                        assigned_item_guids[i] = 0;
+                }
 
             } while (iiresult->NextRow());
+        }
+
+        for (uint8 i = 0; i != BOT_INVENTORY_SIZE; ++i)
+        {
+            if (assigned_item_guids[i] != 0)
+                LOG_ERROR("npcbots", "InitEquips: bot {} {} owner {} has item guid {} assigned to slot {} which doesn't exist in DB!",
+                    me->GetEntry(), me->GetName(), _ownerGuid, assigned_item_guids[i], uint32(i));
         }
     }
 
@@ -16366,7 +16464,7 @@ void bot_ai::OnBotSpellGo(Spell const* spell, bool ok)
                 StartPotionTimer();
             if (curInfo->Id == ACTIVATE_SPEC)
                 SetSpec(_newspec);
-            if (curInfo->Id == _selfrez_spell_id)
+            if (curInfo->Id == GetSelfRezSpell())
                 OnSpellHit(me, curInfo);
 
             OnClassSpellGo(curInfo);
@@ -17679,8 +17777,8 @@ void bot_ai::UpdateDeadAI(uint32 diff)
         SendUpdateToOutOfRangeBotGroupMembers();
 
     // soulstone
-    if (_selfrez_spell_id && (IAmFree() || !master->GetBotMgr()->IsPartyInCombat()) && Rand() < 15)
-        me->CastSpell(me, _selfrez_spell_id);
+    if (GetSelfRezSpell() && (IAmFree() || !master->GetBotMgr()->IsPartyInCombat()) && Rand() < 15)
+        me->CastSpell(me, GetSelfRezSpell());
 }
 //opponent unsafe
 bool bot_ai::GlobalUpdate(uint32 diff)
@@ -18891,11 +18989,24 @@ bool bot_ai::FinishTeleport(bool reset)
     //1) Cannot teleport: master disappeared - return home
     if (IAmFree()/* || master->GetSession()->isLogingOut()*/)
     {
-        TeleportHomeStart(!BotMgr::HideBotSpawns() || !CanAppearInWorld());
-        _evadeMode = false;
+        uint16 mapid = uint16(me->GetMapId());
+        Position pos;
+        if (BotMgr::HideBotSpawns() && !CanAppearInWorld())
+            GetHomePosition(mapid, &pos);
+        if (BotMgr::HideBotSpawns() && !CanAppearInWorld() && me->GetMapId() == mapid && me->GetExactDist2d(pos) < 10.0f)
+        {
+            TeleportFinishEvent* delayedTeleportEvent = new TeleportFinishEvent(this, reset);
+            Events.AddEvent(delayedTeleportEvent, Events.CalculateTime(urand(5000, 8000)));
+            SetTeleportFinishEvent(delayedTeleportEvent);
+        }
+        else
+            TeleportHomeStart(!BotMgr::HideBotSpawns());
 
+        _evadeMode = false;
         return false;
     }
+
+    BotLogger::Log(NPCBOT_LOG_TELEPORT_FINISH, me, me->IsInGrid(), me->IsWandererBot(), CanAppearInWorld());
 
     BotMgr::AddDelayedTeleportCallback([this, reset]() {
         Map* map = master->FindMap();

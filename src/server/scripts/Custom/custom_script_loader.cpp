@@ -87,6 +87,7 @@ void AddSC_custom_player_map_change_handler();
 void AddSC_custom_symbiosis_remover();
 void AddSC_custom_flying_spell_scripts();
 void AddSC_DKQuestBugFix();
+void AddSC_spell_prismatic_guard();
 
 
 //void AddSC_PlayerTeleportRevive();
@@ -168,6 +169,7 @@ void AddCustomScripts()
     AddSC_custom_symbiosis_remover();
     AddSC_custom_flying_spell_scripts();
     AddSC_DKQuestBugFix();
+    AddSC_spell_prismatic_guard();
 
     //AddSC_PlayerTeleportRevive();
     //AddSC_transform_race_command();

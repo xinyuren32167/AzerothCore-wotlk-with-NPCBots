@@ -149,7 +149,8 @@ enum MageSpecial
     IMPROVED_BLIZZARD_CHILL             = 12486,//rank 3
     FROSTBITE_TRIGGERED                 = 12494,
     WINTERS_CHILL_TRIGGERED             = 12579,
-    IGNITE_TRIGGERED                    = 12654
+    IGNITE_TRIGGERED                    = 12654,
+    NETHERWIND_PRESENCE_BUFF            = 22008,
 };
 
 const uint32 THORIUM_GRENADE_SPELL_ID = 19769;
@@ -745,6 +746,39 @@ public:
                 if (doCast(mytar, GetSpell(PYROBLAST_1)))
                     return;
             }
+            // Pyroblast2 NETHERWIND
+            if (IsSpellReady(PYROBLAST_1, diff) && can_do_fire && dist < CalcSpellMaxRange(PYROBLAST_1) &&
+                GetSpec() != BOT_SPEC_MAGE_FROST &&  // Prevent Frost Mages from casting this
+                ((mytar->IsPolymorphed() && (b_attackers.size() < 2 || (*b_attackers.begin()) == mytar)) ||
+                    (me->HasAura(NETHERWIND_PRESENCE_BUFF) && (GetSpec() != BOT_SPEC_MAGE_ARCANE || !GetSpell(ARCANE_BLAST_1)))))
+            {
+                if (doCast(mytar, GetSpell(PYROBLAST_1)))
+                    return;
+            }
+            // FFB FROST NETHERWIND
+            if (IsSpellReady(FROSTFIRE_BOLT_1, diff) && can_do_fire && dist < CalcSpellMaxRange(PYROBLAST_1) &&
+                GetSpec() == BOT_SPEC_MAGE_FROST &&  // Allow only Frost Mages to cast this
+                ((mytar->IsPolymorphed() && (b_attackers.size() < 2 || (*b_attackers.begin()) == mytar)) ||
+                    (me->HasAura(NETHERWIND_PRESENCE_BUFF))))
+            {
+                if (DoCast(mytar, GetSpell(FROSTFIRE_BOLT_1), true)) // hackfix
+                {
+                    me->RemoveAurasDueToSpell(NETHERWIND_PRESENCE_BUFF);
+                    return;
+                }
+            }
+            // AB ARCANE NETHERWIND
+            if (IsSpellReady(ARCANE_BLAST_1, diff) && can_do_fire && dist < CalcSpellMaxRange(PYROBLAST_1) &&
+                GetSpec() == BOT_SPEC_MAGE_ARCANE &&  // Allow only Arcane Mages to cast this
+                ((mytar->IsPolymorphed() && (b_attackers.size() < 2 || (*b_attackers.begin()) == mytar)) ||
+                    (me->HasAura(NETHERWIND_PRESENCE_BUFF))))
+            {
+                if (doCast(mytar, GetSpell(ARCANE_BLAST_1)))
+                {
+                    me->RemoveAurasDueToSpell(NETHERWIND_PRESENCE_BUFF);
+                    return;
+                }
+            }
             //Scorch
             if (IsSpellReady(SCORCH_1, diff) && can_do_fire && GetSpec() == BOT_SPEC_MAGE_FIRE && dist < CalcSpellMaxRange(SCORCH_1) && me->GetLevel() >= 25 &&
                 !mytar->GetAuraEffect(SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE, SPELLFAMILY_MAGE, 0x0, 0x2000, 0x0))
@@ -801,10 +835,10 @@ public:
                 if (doCast(mytar, GetSpell(ICE_LANCE_1)))
                     return;
             }
-            //Fireball or Frostfire Bolt (instant cast or combustion use up)
+            // Fireball or Frostfire Bolt (instant cast or combustion use up)
             if (/*fbCasted && */IsSpellReady(FROSTFIREBOLT, diff) && (can_do_frost || can_do_fire) && dist < CalcSpellMaxRange(FROSTFIREBOLT) && Rand() < 150 &&
-                ((((CCed(mytar, true) || b_attackers.empty()) && me->HasAura(COMBUSTION_BUFF)) || me->HasAura(BRAIN_FREEZE_BUFF)) ||
-                !GetSpell(FROSTBOLT_1))) //level 1-3
+                (((CCed(mytar, true) || b_attackers.empty()) && me->HasAura(COMBUSTION_BUFF)) || me->HasAura(BRAIN_FREEZE_BUFF) ||
+                    !GetSpell(FROSTBOLT_1))) //level 1-3
             {
                 if (doCast(mytar, GetSpell(FROSTFIREBOLT)))
                     return;
@@ -1362,19 +1396,26 @@ public:
             int32 timebonus = 0;
             //float pctbonus = 0.0f;
 
-            //100% mods
-            //Firestarter part 1: -100% cast time for Flamestrike
+            // 100% mods
+            // Firestarter part 1: -100% cast time for Flamestrike
             if (baseId == FLAMESTRIKE_1)
                 if (me->HasAura(FIRESTARTER_BUFF))
                     timebonus += casttime;
-            //Brain Freeze: -100% cast time for Fireball and Frostfire Bolt
-            //we can check spellFamilyFlags or just use ids, going easy way here
+
+            // Brain Freeze: -100% cast time for Fireball and Frostfire Bolt
+            // we can check spellFamilyFlags or just use ids, going easy way here
             if (baseId == FROSTFIRE_BOLT_1 || baseId == FIREBALL_1)
                 if (me->HasAura(BRAIN_FREEZE_BUFF))
                     timebonus += casttime;
-            //Hot Streak: -100% cast time for Pyroblast
+
+            // NETHERWIND: -100% cast time for ARCANE_BLAST_1
+            if (baseId == ARCANE_BLAST_1)
+                if (me->HasAura(NETHERWIND_PRESENCE_BUFF))
+                    timebonus += casttime;
+
+            // Hot Streak: -100% cast time for Pyroblast
             if (baseId == PYROBLAST_1)
-                if (me->HasAura(HOT_STREAK_BUFF))
+                if (me->HasAura(HOT_STREAK_BUFF) || me->HasAura(NETHERWIND_PRESENCE_BUFF))
                     timebonus += casttime;
             //Presence of Mind: -100% cast time
             if (AuraEffect const* eff = me->GetAuraEffect(SPELL_AURA_ADD_PCT_MODIFIER, SPELLFAMILY_MAGE, 0x0, 0x20, 0x0))
@@ -1527,7 +1568,7 @@ public:
             //special cases
             //Pyroblast (special): ensure no double pyroblast casts
             if (baseId == PYROBLAST_1)
-                SetSpellCooldown(PYROBLAST_1, 3000);
+                SetSpellCooldown(PYROBLAST_1, 500);
 
             if (baseId == ICE_BLOCK_1)
             {
@@ -1578,6 +1619,11 @@ public:
                 //Hot Streak
                 if (baseId == PYROBLAST_1)
                     me->RemoveAurasDueToSpell(HOT_STREAK_BUFF);
+                if (baseId == PYROBLAST_1)
+                {
+                    if (me->HasAura(NETHERWIND_PRESENCE_BUFF) && !me->HasAura(HOT_STREAK_BUFF))
+                        me->RemoveAurasDueToSpell(NETHERWIND_PRESENCE_BUFF);
+                }
             }
             //Handle Cold Snap
             if (baseId == COLD_SNAP_1)

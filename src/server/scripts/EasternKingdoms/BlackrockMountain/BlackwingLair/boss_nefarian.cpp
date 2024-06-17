@@ -263,7 +263,7 @@ public:
         void Reset() override
         {
             Initialize();
-
+            summons.DespawnAll();
             if (me->GetMapId() == 469)
             {
                 if (Creature* nefarian = me->FindNearestCreature(NPC_NEFARIAN, 1000.0f, true))
@@ -451,7 +451,7 @@ public:
                     switch (eventId)
                     {
                         case EVENT_SHADOW_BOLT:
-                            DoCastRandomTarget(SPELL_SHADOWBOLT, 0, 150.f);
+                            CastSpellOnRandomTarget(SPELL_SHADOWBOLT, 150.0f);
                             events.ScheduleEvent(EVENT_SHADOW_BOLT, 2s, 4s);
                             break;
                         case EVENT_SHADOW_BOLT_VOLLEY:
@@ -459,11 +459,11 @@ public:
                             events.ScheduleEvent(EVENT_SHADOW_BOLT_VOLLEY, 19s, 25s);
                             break;
                         case EVENT_FEAR:
-                            DoCastRandomTarget(SPELL_FEAR, 0, 40.0f);
+                            CastSpellOnRandomTarget(SPELL_FEAR, 40.0f);
                             events.ScheduleEvent(EVENT_FEAR, 10s, 20s);
                             break;
                         case EVENT_SILENCE:
-                            DoCastRandomTarget(SPELL_SILENCE, 0, 150.f);
+                            CastSpellOnRandomTarget(SPELL_SILENCE, 150.0f);
                             events.ScheduleEvent(EVENT_SILENCE, 14s,23s);
                             break;
                         case EVENT_MIND_CONTROL:
@@ -487,6 +487,24 @@ public:
                     if (me->HasUnitState(UNIT_STATE_CASTING))
                         return;
                 }
+            }
+        }
+
+        void CastSpellOnRandomTarget(uint32 spellId, float range)
+        {
+            std::list<Unit*> targets;
+            Acore::AnyUnitInObjectRangeCheck check(me, range);
+            Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
+            Cell::VisitAllObjects(me, searcher, range);
+
+            targets.remove_if([this](Unit* unit) -> bool {
+                return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
+                });
+
+            if (!targets.empty())
+            {
+                Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
+                DoCast(target, spellId);
             }
         }
 

@@ -160,7 +160,7 @@ class spell_huhuran_wyvern_sting : public AuraScript
         {
             if (Unit* caster = GetCaster())
             {
-                caster->CastCustomSpell(SPELL_WYVERN_STING_DAMAGE, SPELLVALUE_BASE_POINT0, 3000, GetUnitOwner(), true);
+                caster->CastCustomSpell(SPELL_WYVERN_STING_DAMAGE, SPELLVALUE_BASE_POINT0, 2000, GetUnitOwner(), true);
             }
         }
     }

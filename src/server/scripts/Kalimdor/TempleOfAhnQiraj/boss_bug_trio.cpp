@@ -307,6 +307,7 @@ public:
         instance->SetData(DATA_BUG_TRIO_DEATH, 1);
         if (instance->GetData(DATA_BUG_TRIO_DEATH) < 3)
         {
+            summons.DespawnAll();
             DoCastSelf(875167, true);
             Map::PlayerList const& players = me->GetMap()->GetPlayers();
             for (auto const& playerPair : players)
