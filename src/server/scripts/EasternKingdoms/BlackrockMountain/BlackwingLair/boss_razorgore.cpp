@@ -110,11 +110,12 @@ public:
 
         bool CanAIAttack(Unit const* target) const override
         {
-            if (target->IsCreature() && !secondPhase)
+            //npcbot: In the first phase, do not attack non-player units (except NPC bots)
+            if (!secondPhase && target->GetTypeId() == TYPEID_UNIT && !target->ToCreature()->IsNPCBot())
             {
                 return false;
             }
-
+            //npcbot end
             if (me->GetThreatMgr().GetThreatListSize() > 1)
             {
                 ThreatContainer::StorageType::const_iterator lastRef = me->GetThreatMgr().GetOnlineContainer().GetThreatList().end();
